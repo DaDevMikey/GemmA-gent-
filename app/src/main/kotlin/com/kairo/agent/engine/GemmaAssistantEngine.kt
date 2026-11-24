@@ -6,10 +6,16 @@ import com.google.mlkit.genai.common.DownloadStatus
 import com.google.mlkit.genai.common.FeatureStatus
 import com.google.mlkit.genai.common.StreamingCallback
 import com.google.mlkit.genai.prompt.Generation
+import com.google.mlkit.genai.prompt.GenerativeModel
 import com.google.mlkit.genai.prompt.ImagePart
+import com.google.mlkit.genai.prompt.ModelPreference
+import com.google.mlkit.genai.prompt.ModelReleaseStage
 import com.google.mlkit.genai.prompt.TextPart
 import com.google.mlkit.genai.prompt.generateContentRequest
+import com.google.mlkit.genai.prompt.generationConfig
+import com.google.mlkit.genai.prompt.modelConfig
 import com.kairo.agent.data.AgentSettings
+import com.kairo.agent.data.AiCoreModelProfile
 import com.kairo.agent.data.EngineBackendMode
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.channels.awaitClose
@@ -23,6 +29,7 @@ import org.json.JSONObject
 import java.io.ByteArrayOutputStream
 import java.net.HttpURLConnection
 import java.net.URL
+import java.util.concurrent.ConcurrentHashMap
 
 enum class ModelAvailability {
     CHECKING,
@@ -32,29 +39,158 @@ enum class ModelAvailability {
     UNAVAILABLE
 }
 
+data class AiCoreModelOption(
+    val profile: AiCoreModelProfile,
+    val label: String,
+    val baseModelName: String?,
+    val availability: ModelAvailability
+)
+
 /**
  * Unified local inference engine supporting:
- * 1) Android AICore (Gemma 4 via ML Kit GenAI Prompt API)
- * 2) Local OpenAI-compatible HTTP endpoint (for non-AICore devices running local models like Z Fold 8 / llama.cpp / Ollama)
+ * 1) Android AICore (Gemma 4 / Gemini Nano via ML Kit GenAI Prompt API, across Stable & Preview Fast/Full models)
+ * 2) Local OpenAI-compatible HTTP endpoint (for non-AICore devices running local models like llama.cpp / Ollama)
  */
 class GemmaAssistantEngine {
 
-    private val generativeClient by lazy { Generation.getClient() }
+    private val clients = ConcurrentHashMap<AiCoreModelProfile, GenerativeModel>()
 
-    suspend fun queryAvailability(): ModelAvailability {
-        val status = runCatching { generativeClient.checkStatus() }.getOrNull()
-        return when (status) {
-            FeatureStatus.AVAILABLE -> ModelAvailability.AVAILABLE
-            FeatureStatus.DOWNLOADABLE -> ModelAvailability.DOWNLOADABLE
-            FeatureStatus.DOWNLOADING -> ModelAvailability.DOWNLOADING
-            else -> ModelAvailability.UNAVAILABLE
+    private fun getOrCreateClient(profile: AiCoreModelProfile): GenerativeModel {
+        return clients.getOrPut(profile) {
+            when (profile) {
+                AiCoreModelProfile.AUTO -> Generation.getClient()
+                AiCoreModelProfile.STABLE_FULL -> Generation.getClient(
+                    generationConfig {
+                        modelConfig = modelConfig {
+                            releaseStage = ModelReleaseStage.STABLE
+                            preference = ModelPreference.FULL
+                        }
+                    }
+                )
+                AiCoreModelProfile.STABLE_FAST -> Generation.getClient(
+                    generationConfig {
+                        modelConfig = modelConfig {
+                            releaseStage = ModelReleaseStage.STABLE
+                            preference = ModelPreference.FAST
+                        }
+                    }
+                )
+                AiCoreModelProfile.PREVIEW_FULL -> Generation.getClient(
+                    generationConfig {
+                        modelConfig = modelConfig {
+                            releaseStage = ModelReleaseStage.PREVIEW
+                            preference = ModelPreference.FULL
+                        }
+                    }
+                )
+                AiCoreModelProfile.PREVIEW_FAST -> Generation.getClient(
+                    generationConfig {
+                        modelConfig = modelConfig {
+                            releaseStage = ModelReleaseStage.PREVIEW
+                            preference = ModelPreference.FAST
+                        }
+                    }
+                )
+            }
         }
     }
 
-    fun downloadModel(): Flow<DownloadStatus> = generativeClient.download()
+    private fun mapStatus(status: Int?): ModelAvailability = when (status) {
+        FeatureStatus.AVAILABLE -> ModelAvailability.AVAILABLE
+        FeatureStatus.DOWNLOADABLE -> ModelAvailability.DOWNLOADABLE
+        FeatureStatus.DOWNLOADING -> ModelAvailability.DOWNLOADING
+        else -> ModelAvailability.UNAVAILABLE
+    }
 
-    suspend fun warmupModel() {
-        runCatching { generativeClient.warmup() }
+    suspend fun discoverAiCoreModels(): List<AiCoreModelOption> {
+        val concreteProfiles = listOf(
+            AiCoreModelProfile.STABLE_FULL,
+            AiCoreModelProfile.STABLE_FAST,
+            AiCoreModelProfile.PREVIEW_FULL,
+            AiCoreModelProfile.PREVIEW_FAST
+        )
+        return concreteProfiles.map { profile ->
+            val client = getOrCreateClient(profile)
+            val status = runCatching { client.checkStatus() }.getOrNull()
+            val availability = mapStatus(status)
+            val baseName = if (availability != ModelAvailability.UNAVAILABLE) {
+                runCatching { client.getBaseModelName() }.getOrNull()?.takeIf { it.isNotBlank() }
+            } else {
+                null
+            }
+            AiCoreModelOption(
+                profile = profile,
+                label = profile.label,
+                baseModelName = baseName,
+                availability = availability
+            )
+        }
+    }
+
+    private suspend fun resolveClient(
+        profile: AiCoreModelProfile,
+        thinkHarder: Boolean = false
+    ): Pair<GenerativeModel, Int?> {
+        if (profile != AiCoreModelProfile.AUTO) {
+            val client = getOrCreateClient(profile)
+            val status = runCatching { client.checkStatus() }.getOrNull()
+            return client to status
+        }
+
+        val priority = if (thinkHarder) {
+            listOf(
+                AiCoreModelProfile.STABLE_FULL,
+                AiCoreModelProfile.PREVIEW_FULL,
+                AiCoreModelProfile.STABLE_FAST,
+                AiCoreModelProfile.PREVIEW_FAST
+            )
+        } else {
+            listOf(
+                AiCoreModelProfile.STABLE_FULL,
+                AiCoreModelProfile.STABLE_FAST,
+                AiCoreModelProfile.PREVIEW_FULL,
+                AiCoreModelProfile.PREVIEW_FAST
+            )
+        }
+
+        var bestFallback: Pair<GenerativeModel, Int?>? = null
+        for (candidate in priority) {
+            val client = getOrCreateClient(candidate)
+            val status = runCatching { client.checkStatus() }.getOrNull()
+            if (status == FeatureStatus.AVAILABLE) {
+                return client to status
+            }
+            if (bestFallback == null && (status == FeatureStatus.DOWNLOADABLE || status == FeatureStatus.DOWNLOADING)) {
+                bestFallback = client to status
+            }
+        }
+        return bestFallback ?: (getOrCreateClient(AiCoreModelProfile.AUTO) to runCatching {
+            getOrCreateClient(AiCoreModelProfile.AUTO).checkStatus()
+        }.getOrNull())
+    }
+
+    suspend fun queryAvailability(profile: AiCoreModelProfile = AiCoreModelProfile.AUTO): ModelAvailability {
+        if (profile != AiCoreModelProfile.AUTO) {
+            val status = runCatching { getOrCreateClient(profile).checkStatus() }.getOrNull()
+            return mapStatus(status)
+        }
+        val options = discoverAiCoreModels()
+        return when {
+            options.any { it.availability == ModelAvailability.AVAILABLE } -> ModelAvailability.AVAILABLE
+            options.any { it.availability == ModelAvailability.DOWNLOADING } -> ModelAvailability.DOWNLOADING
+            options.any { it.availability == ModelAvailability.DOWNLOADABLE } -> ModelAvailability.DOWNLOADABLE
+            else -> mapStatus(runCatching { getOrCreateClient(AiCoreModelProfile.AUTO).checkStatus() }.getOrNull())
+        }
+    }
+
+    fun downloadModel(profile: AiCoreModelProfile = AiCoreModelProfile.AUTO): Flow<DownloadStatus> {
+        val target = if (profile == AiCoreModelProfile.AUTO) AiCoreModelProfile.STABLE_FULL else profile
+        return getOrCreateClient(target).download()
+    }
+
+    suspend fun warmupModel(profile: AiCoreModelProfile = AiCoreModelProfile.AUTO) {
+        val (client, _) = resolveClient(profile)
+        runCatching { client.warmup() }
     }
 
     fun streamResponse(
@@ -80,11 +216,10 @@ class GemmaAssistantEngine {
         }
 
         return callbackFlow {
-            val status = if (settings.backendMode == EngineBackendMode.AUTO) {
-                runCatching { generativeClient.checkStatus() }.getOrNull()
-            } else {
-                FeatureStatus.AVAILABLE
-            }
+            val (activeClient, status) = resolveClient(
+                profile = settings.aiCoreModelProfile,
+                thinkHarder = thinkHarder
+            )
 
             if (settings.backendMode == EngineBackendMode.AUTO && status != FeatureStatus.AVAILABLE) {
                 // Fallback to local HTTP endpoint if AICore isn't available on this device
@@ -126,10 +261,21 @@ class GemmaAssistantEngine {
             }
             val job = launch {
                 try {
-                    generativeClient.generateContent(promptRequest, callback)
+                    activeClient.generateContent(promptRequest, callback)
                     close()
                 } catch (t: Throwable) {
-                    close(t)
+                    val msg = t.message.orEmpty()
+                    if (msg.contains("606") || msg.contains("FEATURE_NOT_FOUND")) {
+                        close(
+                            IllegalStateException(
+                                "AICore model feature unavailable (${settings.aiCoreModelProfile.label}). " +
+                                    "Try switching the AICore Model in the top model menu (e.g. Preview • Fast / Preview • Full) or use Local HTTP.\n\nDetails: $msg",
+                                t
+                            )
+                        )
+                    } else {
+                        close(t)
+                    }
                 }
             }
             awaitClose { job.cancel() }
@@ -204,6 +350,7 @@ class GemmaAssistantEngine {
     }.flowOn(Dispatchers.IO)
 
     fun shutdown() {
-        runCatching { generativeClient.close() }
+        clients.values.forEach { runCatching { it.close() } }
+        clients.clear()
     }
 }

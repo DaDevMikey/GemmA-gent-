@@ -15,6 +15,7 @@ import com.kairo.agent.data.ChatHistoryStore
 import com.kairo.agent.data.ChatRecord
 import com.kairo.agent.data.MemoryItem
 import com.kairo.agent.data.MemoryStore
+import com.kairo.agent.engine.AiCoreModelOption
 import com.kairo.agent.engine.CompatibilityChecker
 import com.kairo.agent.engine.CompatibilityReport
 import com.kairo.agent.engine.GemmaAssistantEngine
@@ -42,6 +43,7 @@ data class ConversationTurn(
 
 data class GemmAHomeState(
     val availability: ModelAvailability = ModelAvailability.CHECKING,
+    val availableAiCoreModels: List<AiCoreModelOption> = emptyList(),
     val downloadProgressBytes: Long = 0L,
     val totalDownloadBytes: Long = 0L,
     val isWarmingUp: Boolean = false,
@@ -91,8 +93,12 @@ class MainScreenViewModel(
     }
 
     fun updateSettings(newSettings: AgentSettings) {
+        val profileChanged = newSettings.aiCoreModelProfile != _state.value.settings.aiCoreModelProfile
         settingsStore?.save(newSettings)
         _state.update { it.copy(settings = newSettings) }
+        if (profileChanged) {
+            refreshStatus()
+        }
     }
 
     fun runCompatibilityChecks() {
@@ -408,10 +414,12 @@ class MainScreenViewModel(
     fun refreshStatus() {
         viewModelScope.launch {
             _state.update { it.copy(availability = ModelAvailability.CHECKING, statusDetail = null) }
-            val status = engine.queryAvailability()
-            _state.update { it.copy(availability = status) }
+            val profile = _state.value.settings.aiCoreModelProfile
+            val models = engine.discoverAiCoreModels()
+            val status = engine.queryAvailability(profile)
+            _state.update { it.copy(availability = status, availableAiCoreModels = models) }
             if (status == ModelAvailability.AVAILABLE) {
-                engine.warmupModel()
+                engine.warmupModel(profile)
             }
             runCompatibilityChecks()
         }
@@ -419,8 +427,9 @@ class MainScreenViewModel(
 
     fun downloadModel() {
         viewModelScope.launch {
+            val profile = _state.value.settings.aiCoreModelProfile
             _state.update { it.copy(availability = ModelAvailability.DOWNLOADING, statusDetail = "Starting download...") }
-            engine.downloadModel()
+            engine.downloadModel(profile)
                 .catch { error ->
                     _state.update {
                         it.copy(
@@ -472,7 +481,7 @@ class MainScreenViewModel(
     fun warmupModel() {
         viewModelScope.launch {
             _state.update { it.copy(isWarmingUp = true, statusDetail = "Warming up Gemma 4 in AICore...") }
-            engine.warmupModel()
+            engine.warmupModel(_state.value.settings.aiCoreModelProfile)
             _state.update { it.copy(isWarmingUp = false, statusDetail = "Model warmed up and ready.") }
         }
     }

@@ -167,6 +167,7 @@ import com.kairo.agent.agent.AndroidAgentTools
 import com.kairo.agent.agent.ScreenContextHolder
 import com.kairo.agent.data.AgentSettings
 import com.kairo.agent.data.AgentSettingsStore
+import com.kairo.agent.data.AiCoreModelProfile
 import com.kairo.agent.data.ChatHistoryStore
 import com.kairo.agent.data.ChatRecord
 import com.kairo.agent.data.EngineBackendMode
@@ -302,6 +303,7 @@ fun MainScreen(
         if (!onboarded) {
             OnboardingScreen(
                 availability = state.availability,
+                availableAiCoreModels = state.availableAiCoreModels,
                 settings = state.settings,
                 compatibilityReport = state.compatibilityReport,
                 isCheckingCompatibility = state.isCheckingCompatibility,
@@ -1052,7 +1054,13 @@ internal fun MainScreenContent(
 
     if (showModelSheet) {
         ModalBottomSheet(onDismissRequest = { showModelSheet = false }, containerColor = GeminiDrawerBg, contentColor = GeminiTextPrimary) {
-            Column(modifier = Modifier.fillMaxWidth().padding(horizontal = 20.dp, vertical = 12.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .verticalScroll(rememberScrollState())
+                    .padding(horizontal = 20.dp, vertical = 12.dp),
+                verticalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
                 Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
                     Text("Kairo • Powered by Gemma 4", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
                     TextButton(onClick = onRefreshStatus) { Text("Refresh", color = GeminiAccentBlue) }
@@ -1064,7 +1072,7 @@ internal fun MainScreenContent(
                     state.availability == ModelAvailability.AVAILABLE -> "Gemma 4 is ready on-device"
                     state.availability == ModelAvailability.DOWNLOADABLE -> "Gemma 4 is ready to download"
                     state.availability == ModelAvailability.DOWNLOADING -> "Downloading Gemma 4..."
-                    else -> "AICore unavailable (tap Setup & Compatibility)"
+                    else -> "AICore unavailable (tap Settings & Engine)"
                 }
 
                 Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
@@ -1076,6 +1084,83 @@ internal fun MainScreenContent(
 
                 if (state.availability == ModelAvailability.DOWNLOADING && state.totalDownloadBytes > 0L) {
                     LinearProgressIndicator(progress = { (state.downloadProgressBytes.toFloat() / state.totalDownloadBytes.toFloat()).coerceIn(0f, 1f) }, modifier = Modifier.fillMaxWidth())
+                }
+
+                // AICore Model Selector (Auto + discovered Stable/Preview Fast/Full models)
+                Text("AICore Model", color = GeminiAccentBlue, style = MaterialTheme.typography.labelLarge)
+                Surface(
+                    color = Color(0xFF141619),
+                    shape = RoundedCornerShape(16.dp),
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Column(modifier = Modifier.padding(10.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                        val selectedProfile = state.settings.aiCoreModelProfile
+                        val autoSelected = selectedProfile == AiCoreModelProfile.AUTO
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clip(RoundedCornerShape(12.dp))
+                                .background(if (autoSelected) Color(0xFF1E2A45) else Color.Transparent)
+                                .clickable {
+                                    onUpdateSettings(state.settings.copy(aiCoreModelProfile = AiCoreModelProfile.AUTO))
+                                }
+                                .padding(horizontal = 10.dp, vertical = 8.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.SpaceBetween
+                        ) {
+                            Column(modifier = Modifier.weight(1f)) {
+                                Text("Auto (Best Available)", color = GeminiTextPrimary, style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.Medium)
+                                Text("Prefers Stable, falls back to Preview if needed", color = GeminiTextSecondary, style = MaterialTheme.typography.labelSmall)
+                            }
+                            if (autoSelected) {
+                                Icon(Icons.Default.CheckCircle, contentDescription = null, tint = GeminiAccentBlue, modifier = Modifier.size(18.dp))
+                            }
+                        }
+
+                        state.availableAiCoreModels.forEach { option ->
+                            val isSelected = selectedProfile == option.profile
+                            val isAvailable = option.availability == ModelAvailability.AVAILABLE
+                            val isDownloadable = option.availability == ModelAvailability.DOWNLOADABLE
+                            val statusLabel = when (option.availability) {
+                                ModelAvailability.AVAILABLE -> "Available"
+                                ModelAvailability.DOWNLOADABLE -> "Downloadable"
+                                ModelAvailability.DOWNLOADING -> "Downloading"
+                                ModelAvailability.CHECKING -> "Checking"
+                                ModelAvailability.UNAVAILABLE -> "Unavailable"
+                            }
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .clip(RoundedCornerShape(12.dp))
+                                    .background(if (isSelected) Color(0xFF1E2A45) else Color.Transparent)
+                                    .clickable(enabled = isAvailable || isDownloadable || isSelected) {
+                                        onUpdateSettings(state.settings.copy(aiCoreModelProfile = option.profile))
+                                    }
+                                    .padding(horizontal = 10.dp, vertical = 8.dp),
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.SpaceBetween
+                            ) {
+                                Column(modifier = Modifier.weight(1f)) {
+                                    Text(
+                                        option.baseModelName ?: option.label,
+                                        color = if (isAvailable || isDownloadable) GeminiTextPrimary else GeminiTextSecondary,
+                                        style = MaterialTheme.typography.bodyMedium,
+                                        fontWeight = if (isSelected) FontWeight.SemiBold else FontWeight.Normal,
+                                        maxLines = 1,
+                                        overflow = TextOverflow.Ellipsis
+                                    )
+                                    Text(
+                                        "${option.label} • $statusLabel",
+                                        color = if (isAvailable) Color(0xFF81C784) else GeminiTextSecondary,
+                                        style = MaterialTheme.typography.labelSmall
+                                    )
+                                }
+                                if (isSelected) {
+                                    Icon(Icons.Default.CheckCircle, contentDescription = null, tint = GeminiAccentBlue, modifier = Modifier.size(18.dp))
+                                }
+                            }
+                        }
+                    }
                 }
 
                 if (state.availability == ModelAvailability.DOWNLOADABLE) {

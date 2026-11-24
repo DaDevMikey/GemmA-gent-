@@ -1,5 +1,11 @@
 # Changelog
 
+## v1.0.8 (2026-11-24)
+### Fixed & Improved
+- **AICore Model Discovery & Selection**: Upgraded ML Kit GenAI Prompt API to `1.0.0-beta5` and added automatic discovery across **Stable** and **Preview** (**Fast** & **Full**) AICore models.
+- **Preview Model Support (`[Preview, CPU]` / Developer Preview)**: `Auto (Best Available)` now automatically falls back to `Preview • Full` / `Preview • Fast` when Stable Feature 636 isn't provisioned on a device, and lets you pick any available AICore model directly from the model sheet or onboarding setup.
+- **Clearer `ErrorCode 606` Diagnostics**: Shows an actionable prompt to switch AICore Model profiles or use Local HTTP if an AICore feature isn't provisioned.
+
 ## v1.0.7 (2026-11-24)
 ### Fixed & Improved
 - **User-Only Memory**: Tightened `<memory>` rules and filtering so Kairo only remembers facts about you—never its own responses or device status outputs.

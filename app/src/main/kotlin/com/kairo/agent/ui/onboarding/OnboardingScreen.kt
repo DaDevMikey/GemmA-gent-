@@ -62,7 +62,9 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.core.content.ContextCompat
 import com.kairo.agent.data.AgentSettings
+import com.kairo.agent.data.AiCoreModelProfile
 import com.kairo.agent.data.EngineBackendMode
+import com.kairo.agent.engine.AiCoreModelOption
 import com.kairo.agent.engine.CompatibilityReport
 import com.kairo.agent.engine.ModelAvailability
 import com.kairo.agent.service.NotificationCatchUpStore
@@ -80,6 +82,7 @@ private val SuccessGreen = Color(0xFF81C995)
 @Composable
 fun OnboardingScreen(
     availability: ModelAvailability,
+    availableAiCoreModels: List<AiCoreModelOption> = emptyList(),
     settings: AgentSettings,
     compatibilityReport: CompatibilityReport?,
     isCheckingCompatibility: Boolean,
@@ -268,6 +271,30 @@ fun OnboardingScreen(
                                             onClick = { onUpdateSettings(settings.copy(backendMode = mode)) },
                                             label = { Text(mode.name) }
                                         )
+                                    }
+                                }
+
+                                if (settings.backendMode != EngineBackendMode.LOCAL_HTTP) {
+                                    Text("AICore Model", color = AccentBlue, style = MaterialTheme.typography.labelLarge)
+                                    val availableOptions = availableAiCoreModels.filter {
+                                        it.availability == ModelAvailability.AVAILABLE || it.availability == ModelAvailability.DOWNLOADABLE
+                                    }
+                                    Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                                        FilterChip(
+                                            selected = settings.aiCoreModelProfile == AiCoreModelProfile.AUTO,
+                                            onClick = { onUpdateSettings(settings.copy(aiCoreModelProfile = AiCoreModelProfile.AUTO)) },
+                                            label = { Text("Auto (Best Available)") }
+                                        )
+                                        availableOptions.forEach { option ->
+                                            FilterChip(
+                                                selected = settings.aiCoreModelProfile == option.profile,
+                                                onClick = { onUpdateSettings(settings.copy(aiCoreModelProfile = option.profile)) },
+                                                label = {
+                                                    val display = option.baseModelName ?: option.label
+                                                    Text("$display (${option.label})")
+                                                }
+                                            )
+                                        }
                                     }
                                 }
 
