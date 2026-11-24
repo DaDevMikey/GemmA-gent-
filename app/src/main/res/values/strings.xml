@@ -1,0 +1,5 @@
+<resources>
+    <string name="app_name">GemmA</string>
+    <string name="assistant_title">GemmA</string>
+    <string name="assistant_subtitle">Gemma Agent</string>
+</resources>
