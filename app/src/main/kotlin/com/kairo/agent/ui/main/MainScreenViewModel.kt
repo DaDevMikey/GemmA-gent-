@@ -223,12 +223,15 @@ class MainScreenViewModel(
 
         // Fun local Easter eggs
         val lower = effectivePrompt.lowercase()
-        if (lower == "/about" || lower == "konami" || lower == "up up down down left right left right b a") {
-            val easterReply = if (lower == "/about") {
-                "✦ **Kairo** — 100% on-device AI agent powered by Gemma 4 via Android AICore.\nCreated by **DaManMikey** (`https://damanmikey.me/`)."
-            } else {
-                "🎮 **30 extra local neurons unlocked!** Still 100% private, still zero cloud servers. Shoutout to **DaManMikey**!"
-            }
+        val easterReply = when (lower) {
+            "/about" -> "✦ **Kairo** — 100% on-device AI agent powered by Gemma 4 via Android AICore.\nCreated by **DaManMikey** (`https://damanmikey.me/`)."
+            "konami", "up up down down left right left right b a" -> "🎮 **30 extra local neurons unlocked!** Still 100% private, still zero cloud servers. Shoutout to **DaManMikey**!"
+            "/ping" -> "⚡ **Pong! 0ms** — running locally on your device's silicon."
+            "/matrix" -> "🕶️ **There is no cloud.** Only local weights, right here on your phone."
+            "/coffee" -> "☕ **Local inference runs on battery, not caffeine.**"
+            else -> null
+        }
+        if (easterReply != null) {
             _state.update {
                 it.copy(
                     activeTurns = it.activeTurns + ConversationTurn(

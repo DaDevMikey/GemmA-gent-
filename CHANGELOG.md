@@ -1,5 +1,14 @@
 # Changelog
 
+## v1.0.7 (2026-11-24)
+### Fixed & Improved
+- **User-Only Memory**: Tightened `<memory>` rules and filtering so Kairo only remembers facts about you—never its own responses or device status outputs.
+- **Final Setup Welcome Screen**: Added a final animated `"Welcome, <Name> • Let's get started"` screen with the Kairo sparkle that transitions seamlessly into chat.
+- **Settings & Nerd Stats**: Added a dedicated **Settings & Nerd Stats** sheet in the drawer and a **Live Nerd Stats** toggle in the model sheet.
+- **Real-Time Swipe & Response Blur**: Background blur now tracks your drawer swipe progress (`currentOffset`) in real time with zero delay, and responses animate in with a blur-to-sharp reveal.
+- **More Easter Eggs & Greetings**: Added unique rotating start-page greetings, logo tap (5/10/15x) and long-press Easter eggs, a 45-second `"You still there? 👀"` idle Easter egg, plus `/ping`, `/matrix`, and `/coffee` chat commands.
+- **Public & Play Store Readiness**: Updated `PRIVACY_POLICY.md` and `TERMS_OF_SERVICE.md` for `com.kairo.agent`.
+
 ## v1.0.6 (2026-11-24)
 ### Added
 - **Shared-Element Logo Transition**: The centered Kairo sparkle now smoothly flies and morphs from the center of the screen directly to next to Kairo's response when you send your first message.

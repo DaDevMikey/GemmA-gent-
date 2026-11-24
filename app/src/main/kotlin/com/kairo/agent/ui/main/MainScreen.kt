@@ -33,9 +33,11 @@ import androidx.compose.animation.fadeOut
 import androidx.compose.animation.scaleIn
 import androidx.compose.animation.shrinkVertically
 import androidx.compose.animation.togetherWith
+import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
@@ -141,6 +143,7 @@ import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalClipboardManager
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
@@ -402,7 +405,16 @@ fun MainScreen(
     }
 }
 
-@OptIn(ExperimentalMaterial3Api::class, ExperimentalSharedTransitionApi::class, ExperimentalLayoutApi::class)
+private val UniqueGreetings = listOf(
+    "Let's get started",
+    "What's on your mind?",
+    "Ready when you are",
+    "Purely local. Completely yours.",
+    "Ask anything, command anything.",
+    "Your silicon, your rules."
+)
+
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalSharedTransitionApi::class, ExperimentalLayoutApi::class, ExperimentalFoundationApi::class)
 @Composable
 internal fun MainScreenContent(
     state: GemmAHomeState,
@@ -448,16 +460,25 @@ internal fun MainScreenContent(
     var showPrivacySheet by remember { mutableStateOf(false) }
     var showConnectionsSheet by remember { mutableStateOf(false) }
     var showReleaseNotesSheet by remember { mutableStateOf(false) }
+    var showSettingsSheet by remember { mutableStateOf(false) }
     var sparkleTaps by remember { mutableStateOf(0) }
+    var showIdleEasterEgg by remember { mutableStateOf(false) }
+    var greetingSeed by remember { mutableStateOf(0) }
     var showQuickActions by remember { mutableStateOf(false) }
     var showDrawerSearch by remember { mutableStateOf(false) }
     var drawerSearchQuery by remember { mutableStateOf("") }
     var draft by remember { mutableStateOf("") }
     val listState = rememberLazyListState()
+    val localContext = LocalContext.current
 
     LaunchedEffect(partialTranscript) { if (partialTranscript.isNotEmpty()) draft = partialTranscript }
     LaunchedEffect(state.activeTurns.size, state.activeTurns.lastOrNull()?.response?.length) {
         if (state.activeTurns.isNotEmpty()) listState.animateScrollToItem(state.activeTurns.lastIndex)
+    }
+    LaunchedEffect(state.activeTurns.size, draft, isListening) {
+        showIdleEasterEgg = false
+        kotlinx.coroutines.delay(45_000L)
+        showIdleEasterEgg = true
     }
 
     ModalNavigationDrawer(
@@ -543,6 +564,10 @@ internal fun MainScreenContent(
                     DrawerMenuRow(Icons.Default.Hub, "Connections & Permissions") {
                         scope.launch { drawerState.close() }
                         showConnectionsSheet = true
+                    }
+                    DrawerMenuRow(Icons.Default.Settings, "Settings & Nerd Stats") {
+                        scope.launch { drawerState.close() }
+                        showSettingsSheet = true
                     }
                     DrawerMenuRow(Icons.Default.NewReleases, "Release Notes") {
                         scope.launch { drawerState.close() }
@@ -664,17 +689,22 @@ internal fun MainScreenContent(
             }
         }
     ) {
-        val anySheetOpen = showModelSheet || showMemorySheet || showPrivacySheet || showConnectionsSheet || showReleaseNotesSheet || drawerState.isOpen
-        val contentBlur by animateDpAsState(
-            targetValue = if (anySheetOpen) 10.dp else 0.dp,
-            animationSpec = tween(250),
-            label = "content_blur"
-        )
+        val density = LocalDensity.current
+        val drawerWidthPx = with(density) { 360.dp.toPx() }
+        val drawerOffset = drawerState.currentOffset
+        val drawerProgress = if (drawerOffset.isNaN()) {
+            if (drawerState.isOpen) 1f else 0f
+        } else {
+            (1f + (drawerOffset / drawerWidthPx)).coerceIn(0f, 1f)
+        }
+        val anySheetOpen = showModelSheet || showMemorySheet || showPrivacySheet || showConnectionsSheet || showReleaseNotesSheet || showSettingsSheet
+        val sheetBlur = if (anySheetOpen) 12f else 0f
+        val liveBlur = maxOf(sheetBlur, drawerProgress * 14f).dp
 
         Box(
             modifier = modifier
                 .fillMaxSize()
-                .blur(contentBlur)
+                .blur(liveBlur)
         ) {
             ReactiveAuroraBackground(
                 isGenerating = state.isGenerating,
@@ -722,7 +752,11 @@ internal fun MainScreenContent(
                                 )
                             }
                         }
-                        IconButton(onClick = onNewChat) {
+                        IconButton(onClick = {
+                            greetingSeed++
+                            sparkleTaps = 0
+                            onNewChat()
+                        }) {
                             Icon(Icons.Default.Edit, contentDescription = "New chat", tint = GeminiTextPrimary, modifier = Modifier.size(21.dp))
                         }
                     }
@@ -755,22 +789,43 @@ internal fun MainScreenContent(
                                                 animatedVisibilityScope = this@AnimatedContent
                                             )
                                             .clip(CircleShape)
-                                            .clickable(
+                                            .combinedClickable(
                                                 interactionSource = remember { MutableInteractionSource() },
-                                                indication = ripple(bounded = false, color = GeminiAccentBlue)
-                                            ) {
-                                                sparkleTaps++
-                                            }
+                                                indication = ripple(bounded = false, color = GeminiAccentBlue),
+                                                onClick = { sparkleTaps++ },
+                                                onLongClick = {
+                                                    android.widget.Toast.makeText(
+                                                        localContext,
+                                                        "✦ Kairo Engine • On-Device • Built by DaManMikey",
+                                                        android.widget.Toast.LENGTH_SHORT
+                                                    ).show()
+                                                }
+                                            )
                                             .padding(8.dp)
                                     ) {
                                         GemmASparkleIcon(size = 44.dp, isAnimating = state.isGenerating || sparkleTaps >= 5)
                                     }
+                                    val baseGreeting = remember(greetingSeed) {
+                                        UniqueGreetings[greetingSeed % UniqueGreetings.size]
+                                    }
                                     val greeting = when {
+                                        sparkleTaps >= 15 -> "✦ Overclocked local vibes!"
                                         sparkleTaps >= 10 -> "Pure local silicon, zero cloud."
                                         sparkleTaps >= 5 -> "All thoughts stay on-device ✦"
-                                        else -> "Let's get started"
+                                        else -> baseGreeting
                                     }
                                     Text(greeting, color = GeminiTextPrimary, fontSize = 26.sp, fontWeight = FontWeight.Normal)
+
+                                    AnimatedVisibility(visible = showIdleEasterEgg) {
+                                        Surface(color = GeminiPillBg, shape = RoundedCornerShape(50)) {
+                                            Text(
+                                                text = "You still there? 👀",
+                                                color = GeminiAccentBlue,
+                                                style = MaterialTheme.typography.labelMedium,
+                                                modifier = Modifier.padding(horizontal = 14.dp, vertical = 6.dp)
+                                            )
+                                        }
+                                    }
 
                                     // Example prompts right after setup / on empty screen
                                     FlowRow(
@@ -1034,6 +1089,13 @@ internal fun MainScreenContent(
                         Text(if (state.isWarmingUp) "Warming up..." else "Warm up Gemma 4")
                     }
                 }
+
+                SetupSwitchRow(
+                    title = "Live Nerd Stats (tok/s, RAM)",
+                    subtitle = "Show inference speed & memory usage",
+                    checked = state.settings.showNerdStats,
+                    onCheckedChange = { onUpdateSettings(state.settings.copy(showNerdStats = it)) }
+                )
 
                 OutlinedButton(
                     onClick = {
@@ -1338,6 +1400,86 @@ internal fun MainScreenContent(
             }
         }
     }
+
+    if (showSettingsSheet) {
+        var endpointDraft by remember(state.settings.localEndpointUrl) { mutableStateOf(state.settings.localEndpointUrl) }
+        var modelDraft by remember(state.settings.localModelName) { mutableStateOf(state.settings.localModelName) }
+        ModalBottomSheet(onDismissRequest = { showSettingsSheet = false }, containerColor = GeminiDrawerBg, contentColor = GeminiTextPrimary) {
+            Column(
+                modifier = Modifier.fillMaxWidth().padding(horizontal = 20.dp, vertical = 12.dp).verticalScroll(rememberScrollState()),
+                verticalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
+                Text("Settings & Nerd Stats", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
+
+                SetupSwitchRow(
+                    title = "Live Nerd Stats (tok/s, RAM)",
+                    subtitle = "Show inference speed & memory usage",
+                    checked = state.settings.showNerdStats,
+                    onCheckedChange = { onUpdateSettings(state.settings.copy(showNerdStats = it)) }
+                )
+                SetupSwitchRow(
+                    title = "Cover-Screen Mini-Mode Overlay",
+                    subtitle = "Start overlay as a compact pill until a reply streams",
+                    checked = state.settings.miniModeOverlay,
+                    onCheckedChange = { onUpdateSettings(state.settings.copy(miniModeOverlay = it)) }
+                )
+                SetupSwitchRow(
+                    title = "Root / Shell Power Mode",
+                    subtitle = "Allow shell / root commands when requested",
+                    checked = state.settings.rootPowerMode,
+                    onCheckedChange = { onUpdateSettings(state.settings.copy(rootPowerMode = it)) }
+                )
+                SetupSwitchRow(
+                    title = "Bypass compatibility checks",
+                    subtitle = "Continue even if AICore is unavailable",
+                    checked = state.settings.bypassCompatibility,
+                    onCheckedChange = { onUpdateSettings(state.settings.copy(bypassCompatibility = it)) }
+                )
+
+                HorizontalDivider(color = Color(0xFF232528))
+                Text("Inference Backend", style = MaterialTheme.typography.labelLarge, color = GeminiAccentBlue)
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    EngineBackendMode.entries.forEach { mode ->
+                        FilterChip(
+                            selected = state.settings.backendMode == mode,
+                            onClick = { onUpdateSettings(state.settings.copy(backendMode = mode)) },
+                            label = { Text(mode.name) }
+                        )
+                    }
+                }
+                OutlinedTextField(
+                    value = endpointDraft,
+                    onValueChange = {
+                        endpointDraft = it
+                        onUpdateSettings(state.settings.copy(localEndpointUrl = it))
+                    },
+                    label = { Text("Local Model Endpoint") },
+                    singleLine = true,
+                    modifier = Modifier.fillMaxWidth()
+                )
+                OutlinedTextField(
+                    value = modelDraft,
+                    onValueChange = {
+                        modelDraft = it
+                        onUpdateSettings(state.settings.copy(localModelName = it))
+                    },
+                    label = { Text("Local Model Name") },
+                    singleLine = true,
+                    modifier = Modifier.fillMaxWidth()
+                )
+                OutlinedButton(
+                    onClick = {
+                        showSettingsSheet = false
+                        onUpdateSettings(state.settings.copy(hasCompletedOnboarding = false))
+                    },
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Text("Re-run First-Time Setup")
+                }
+                Spacer(Modifier.height(12.dp))
+            }
+        }
+    }
 }
 
 @Composable
@@ -1423,8 +1565,15 @@ private fun ConversationTurnItem(
 ) {
     val clipboardManager = LocalClipboardManager.current
     val context = LocalContext.current
+    var revealed by remember { mutableStateOf(false) }
+    LaunchedEffect(Unit) { revealed = true }
+    val responseBlur by animateDpAsState(
+        targetValue = if (revealed) 0.dp else 8.dp,
+        animationSpec = tween(320),
+        label = "turn_blur"
+    )
 
-    Column(modifier = Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+    Column(modifier = Modifier.fillMaxWidth().blur(responseBlur), verticalArrangement = Arrangement.spacedBy(12.dp)) {
         Column(modifier = Modifier.fillMaxWidth(), horizontalAlignment = Alignment.End, verticalArrangement = Arrangement.spacedBy(6.dp)) {
             if (turn.image != null) {
                 Image(

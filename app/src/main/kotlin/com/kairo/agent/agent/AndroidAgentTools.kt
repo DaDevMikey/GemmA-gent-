@@ -92,7 +92,7 @@ class AndroidAgentTools(
             append(memoryBlock)
         }
 
-        appendLine("Memory rule: Whenever the user shares an important personal fact, preference, name, goal, or routine worth remembering long-term, ALSO include <memory>concise fact</memory> in your reply.")
+        appendLine("Memory rule: ONLY emit <memory>fact about the user</memory> when the USER explicitly shares personal facts, preferences, their name, routines, or goals about THEMSELVES. NEVER save your own responses, device status, tool outputs, or general facts.")
 
         if (!screenText.isNullOrBlank()) {
             appendLine("Visible text from the user's current screen:")
@@ -183,7 +183,13 @@ class AndroidAgentTools(
         val saved = mutableListOf<String>()
         MEMORY_TAG_REGEX.findAll(rawText).forEach { match ->
             val fact = match.groupValues[1].trim()
-            if (fact.isNotEmpty() && memoryStore.addMemory(fact)) {
+            val lower = fact.lowercase()
+            val looksLikeModelOrDeviceOutput = lower.startsWith("i am ") ||
+                lower.startsWith("your battery") ||
+                lower.contains("android ") ||
+                lower.contains("sm-") ||
+                lower.contains("tok/s")
+            if (fact.isNotEmpty() && !looksLikeModelOrDeviceOutput && memoryStore.addMemory(fact)) {
                 saved.add(fact)
             }
         }

@@ -125,7 +125,6 @@ class AgentRunner(
             }
         }
 
-        tools.extractAndSaveMemories(secondTurnRaw.toString())
         val finalClean = tools.stripToolCallMarkup(secondTurnRaw.toString())
             .ifEmpty { tools.stripToolCallMarkup(rawOutput) }
             .ifEmpty { summary.orEmpty() }

@@ -116,7 +116,7 @@ fun OnboardingScreen(
                 .padding(22.dp)
         ) {
             LinearProgressIndicator(
-                progress = { (step + 1) / 4f },
+                progress = { ((step + 1) / 5f).coerceIn(0f, 1f) },
                 modifier = Modifier.fillMaxWidth().padding(bottom = 16.dp),
                 color = AccentBlue,
                 trackColor = Color(0x33FFFFFF)
@@ -299,7 +299,7 @@ fun OnboardingScreen(
                         }
                     }
 
-                    else -> {
+                    3 -> {
                         val micGranted = ContextCompat.checkSelfPermission(context, Manifest.permission.RECORD_AUDIO) == PackageManager.PERMISSION_GRANTED
                         val contactsGranted = ContextCompat.checkSelfPermission(context, Manifest.permission.READ_CONTACTS) == PackageManager.PERMISSION_GRANTED
                         val callGranted = ContextCompat.checkSelfPermission(context, Manifest.permission.CALL_PHONE) == PackageManager.PERMISSION_GRANTED
@@ -329,7 +329,37 @@ fun OnboardingScreen(
 
                             Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                                 OutlinedButton(onClick = { step = 2 }, modifier = Modifier.weight(1f).height(50.dp)) { Text("Back") }
-                                Button(onClick = { onComplete(userName) }, modifier = Modifier.weight(1f).height(50.dp)) { Text("Start Using Kairo") }
+                                Button(onClick = { step = 4 }, modifier = Modifier.weight(1f).height(50.dp)) { Text("Continue") }
+                            }
+                        }
+                    }
+
+                    else -> {
+                        val welcomeTitle = if (userName.isNotBlank()) "Welcome, ${userName.trim()}" else "Welcome"
+                        LaunchedEffect(Unit) {
+                            delay(1700L)
+                            onComplete(userName)
+                        }
+                        Box(
+                            modifier = Modifier.fillMaxSize(),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Column(
+                                horizontalAlignment = Alignment.CenterHorizontally,
+                                verticalArrangement = Arrangement.spacedBy(18.dp)
+                            ) {
+                                GemmASparkleIcon(size = 76.dp, isAnimating = true)
+                                AnimatedHeadline(welcomeTitle)
+                                Text(
+                                    text = "Let's get started",
+                                    color = TextSecondary,
+                                    fontSize = 20.sp,
+                                    fontWeight = FontWeight.Normal
+                                )
+                                Spacer(Modifier.height(12.dp))
+                                TextButton(onClick = { onComplete(userName) }) {
+                                    Text("Enter Kairo →", color = AccentBlue)
+                                }
                             }
                         }
                     }
