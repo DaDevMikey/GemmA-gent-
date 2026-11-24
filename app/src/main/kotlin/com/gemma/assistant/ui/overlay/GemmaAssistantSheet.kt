@@ -47,6 +47,7 @@ import androidx.compose.material.icons.filled.AddPhotoAlternate
 import androidx.compose.material.icons.filled.ArrowUpward
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.ContentCopy
 import androidx.compose.material.icons.filled.ErrorOutline
 import androidx.compose.material.icons.filled.Mic
 import androidx.compose.material.icons.filled.OpenInFull
@@ -78,6 +79,9 @@ import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalClipboardManager
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
@@ -135,6 +139,8 @@ fun GemmaAssistantSheet(
     var sheetVisible by remember { mutableStateOf(false) }
     var totalDrag by remember { mutableFloatStateOf(0f) }
     val scrollState = rememberScrollState()
+    val clipboardManager = LocalClipboardManager.current
+    val context = LocalContext.current
 
     LaunchedEffect(Unit) {
         sheetVisible = true
@@ -276,6 +282,26 @@ fun GemmaAssistantSheet(
                             verticalAlignment = Alignment.CenterVertically,
                             horizontalArrangement = Arrangement.spacedBy(4.dp)
                         ) {
+                            if (responseText.isNotEmpty() && !isGenerating) {
+                                IconButton(
+                                    onClick = {
+                                        clipboardManager.setText(AnnotatedString(responseText))
+                                        android.widget.Toast.makeText(
+                                            context,
+                                            "Response copied",
+                                            android.widget.Toast.LENGTH_SHORT
+                                        ).show()
+                                    },
+                                    modifier = Modifier.size(32.dp)
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.Default.ContentCopy,
+                                        contentDescription = "Copy response",
+                                        tint = AccentBlue,
+                                        modifier = Modifier.size(16.dp)
+                                    )
+                                }
+                            }
                             IconButton(
                                 onClick = onToggleTts,
                                 modifier = Modifier.size(32.dp)

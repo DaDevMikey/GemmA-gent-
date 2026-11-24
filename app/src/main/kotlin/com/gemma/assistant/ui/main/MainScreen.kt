@@ -49,11 +49,13 @@ import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.VolumeUp
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.AddPhotoAlternate
 import androidx.compose.material.icons.filled.ArrowUpward
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.ContentCopy
 import androidx.compose.material.icons.filled.DeleteOutline
 import androidx.compose.material.icons.filled.Download
 import androidx.compose.material.icons.filled.Edit
@@ -63,8 +65,10 @@ import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material.icons.filled.Mic
 import androidx.compose.material.icons.filled.Policy
 import androidx.compose.material.icons.filled.Psychology
+import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Settings
+import androidx.compose.material.icons.filled.Share
 import androidx.compose.material.icons.filled.Stop
 import androidx.compose.material3.AssistChip
 import androidx.compose.material3.AssistChipDefaults
@@ -106,7 +110,9 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalClipboardManager
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
@@ -282,6 +288,10 @@ fun MainScreen(
                 micPermissionLauncher.launch(Manifest.permission.RECORD_AUDIO)
             }
         },
+        onSpeakResponse = { text ->
+            voiceController.setTtsEnabled(true)
+            voiceController.speakIfEnabled(text)
+        },
         onOpenAssistantSettings = { openDefaultAssistantSettings(context) },
         modifier = modifier
     )
@@ -312,6 +322,7 @@ internal fun MainScreenContent(
     onCheckUpdates: () -> Unit = {},
     onOpenUrl: (String) -> Unit = {},
     onMicClick: () -> Unit,
+    onSpeakResponse: (String) -> Unit = {},
     onOpenAssistantSettings: () -> Unit,
     modifier: Modifier = Modifier
 ) {
@@ -740,7 +751,11 @@ internal fun MainScreenContent(
                         verticalArrangement = Arrangement.spacedBy(18.dp)
                     ) {
                         items(state.activeTurns) { turn ->
-                            ConversationTurnItem(turn = turn)
+                            ConversationTurnItem(
+                                turn = turn,
+                                onSpeak = { onSpeakResponse(turn.response) },
+                                onRegenerate = { onSendPrompt(turn.prompt) }
+                            )
                         }
                     }
                 }
@@ -1249,7 +1264,14 @@ private fun DrawerMenuRow(
 }
 
 @Composable
-private fun ConversationTurnItem(turn: ConversationTurn) {
+private fun ConversationTurnItem(
+    turn: ConversationTurn,
+    onSpeak: () -> Unit = {},
+    onRegenerate: () -> Unit = {}
+) {
+    val clipboardManager = LocalClipboardManager.current
+    val context = LocalContext.current
+
     Column(
         modifier = Modifier.fillMaxWidth(),
         verticalArrangement = Arrangement.spacedBy(12.dp)
@@ -1269,17 +1291,36 @@ private fun ConversationTurnItem(turn: ConversationTurn) {
                         .clip(RoundedCornerShape(16.dp))
                 )
             }
-            Surface(
-                color = GeminiChipBg,
-                shape = RoundedCornerShape(20.dp),
-                modifier = Modifier.widthIn(max = 300.dp)
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(4.dp)
             ) {
-                Text(
-                    text = turn.prompt,
-                    color = GeminiTextPrimary,
-                    style = MaterialTheme.typography.bodyLarge,
-                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 10.dp)
-                )
+                IconButton(
+                    onClick = {
+                        clipboardManager.setText(AnnotatedString(turn.prompt))
+                        android.widget.Toast.makeText(context, "Prompt copied", android.widget.Toast.LENGTH_SHORT).show()
+                    },
+                    modifier = Modifier.size(28.dp)
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.ContentCopy,
+                        contentDescription = "Copy prompt",
+                        tint = GeminiTextSecondary,
+                        modifier = Modifier.size(14.dp)
+                    )
+                }
+                Surface(
+                    color = GeminiChipBg,
+                    shape = RoundedCornerShape(20.dp),
+                    modifier = Modifier.widthIn(max = 280.dp)
+                ) {
+                    Text(
+                        text = turn.prompt,
+                        color = GeminiTextPrimary,
+                        style = MaterialTheme.typography.bodyLarge,
+                        modifier = Modifier.padding(horizontal = 16.dp, vertical = 10.dp)
+                    )
+                }
             }
         }
 
@@ -1342,6 +1383,67 @@ private fun ConversationTurnItem(turn: ConversationTurn) {
                         color = GeminiTextPrimary,
                         style = MaterialTheme.typography.bodyLarge
                     )
+                }
+
+                if (!turn.isStreaming && turn.response.isNotEmpty()) {
+                    Row(
+                        horizontalArrangement = Arrangement.spacedBy(4.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        IconButton(
+                            onClick = {
+                                clipboardManager.setText(AnnotatedString(turn.response))
+                                android.widget.Toast.makeText(context, "Response copied", android.widget.Toast.LENGTH_SHORT).show()
+                            },
+                            modifier = Modifier.size(32.dp)
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.ContentCopy,
+                                contentDescription = "Copy response",
+                                tint = GeminiTextSecondary,
+                                modifier = Modifier.size(16.dp)
+                            )
+                        }
+                        IconButton(
+                            onClick = onSpeak,
+                            modifier = Modifier.size(32.dp)
+                        ) {
+                            Icon(
+                                imageVector = Icons.AutoMirrored.Filled.VolumeUp,
+                                contentDescription = "Read aloud",
+                                tint = GeminiTextSecondary,
+                                modifier = Modifier.size(16.dp)
+                            )
+                        }
+                        IconButton(
+                            onClick = {
+                                val sendIntent = Intent(Intent.ACTION_SEND).apply {
+                                    type = "text/plain"
+                                    putExtra(Intent.EXTRA_TEXT, turn.response)
+                                }
+                                context.startActivity(Intent.createChooser(sendIntent, "Share via GemmA"))
+                            },
+                            modifier = Modifier.size(32.dp)
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Share,
+                                contentDescription = "Share response",
+                                tint = GeminiTextSecondary,
+                                modifier = Modifier.size(16.dp)
+                            )
+                        }
+                        IconButton(
+                            onClick = onRegenerate,
+                            modifier = Modifier.size(32.dp)
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Refresh,
+                                contentDescription = "Regenerate",
+                                tint = GeminiTextSecondary,
+                                modifier = Modifier.size(16.dp)
+                            )
+                        }
+                    }
                 }
             }
         }
