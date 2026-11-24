@@ -55,6 +55,7 @@ data class GemmAHomeState(
     val settings: AgentSettings = AgentSettings(),
     val compatibilityReport: CompatibilityReport? = null,
     val isCheckingCompatibility: Boolean = false,
+    val healthConnectGranted: Boolean = false,
     val updateStatus: UpdateCheckResult? = null,
     val isCheckingUpdates: Boolean = false,
     val releaseNotes: List<GitHubReleaseNote> = emptyList(),
@@ -103,7 +104,13 @@ class MainScreenViewModel(
                 aiCoreAvailability = currentAvailability,
                 localEndpointUrl = _state.value.settings.localEndpointUrl
             )
-            _state.update { it.copy(compatibilityReport = report, isCheckingCompatibility = false) }
+            _state.update {
+                it.copy(
+                    compatibilityReport = report,
+                    healthConnectGranted = report.healthConnectGranted,
+                    isCheckingCompatibility = false
+                )
+            }
         }
     }
 
@@ -135,7 +142,10 @@ class MainScreenViewModel(
         }
     }
 
-    fun completeOnboarding() {
+    fun completeOnboarding(userName: String = "") {
+        if (userName.isNotBlank()) {
+            addMemory("The user's name is ${userName.trim()}")
+        }
         updateSettings(_state.value.settings.copy(hasCompletedOnboarding = true))
     }
 

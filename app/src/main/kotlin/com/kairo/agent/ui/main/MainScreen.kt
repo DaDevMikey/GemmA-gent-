@@ -12,11 +12,15 @@ import android.text.format.DateUtils
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.PickVisualMediaRequest
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.ExperimentalSharedTransitionApi
+import androidx.compose.animation.SharedTransitionLayout
 import androidx.compose.animation.animateContentSize
 import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.RepeatMode
 import androidx.compose.animation.core.Spring
+import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.animation.core.animateFloat
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.infiniteRepeatable
@@ -26,7 +30,9 @@ import androidx.compose.animation.core.tween
 import androidx.compose.animation.expandVertically
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
+import androidx.compose.animation.scaleIn
 import androidx.compose.animation.shrinkVertically
+import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -35,6 +41,8 @@ import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -122,6 +130,7 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.blur
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.scale
 import androidx.compose.ui.geometry.Offset
@@ -164,6 +173,7 @@ import com.kairo.agent.engine.ModelAvailability
 import com.kairo.agent.service.WakeWordService
 import com.kairo.agent.ui.components.GemmASparkleIcon
 import com.kairo.agent.ui.components.ListeningWaveformIndicator
+import com.kairo.agent.ui.components.ReactiveAuroraBackground
 import com.kairo.agent.ui.components.RichResponseText
 import com.kairo.agent.ui.components.ThinkingDotsIndicator
 import com.kairo.agent.ui.onboarding.OnboardingScreen
@@ -278,115 +288,126 @@ fun MainScreen(
         onPauseOrDispose {}
     }
 
-    if (!state.settings.hasCompletedOnboarding) {
-        OnboardingScreen(
-            availability = state.availability,
-            settings = state.settings,
-            compatibilityReport = state.compatibilityReport,
-            isCheckingCompatibility = state.isCheckingCompatibility,
-            onRunChecks = viewModel::runCompatibilityChecks,
-            onDownloadModel = viewModel::downloadModel,
-            onUpdateSettings = viewModel::updateSettings,
-            onGrantMic = { micPermissionLauncher.launch(Manifest.permission.RECORD_AUDIO) },
-            onGrantContacts = { contactsPermissionLauncher.launch(Manifest.permission.READ_CONTACTS) },
-            onGrantCall = { callPermissionLauncher.launch(Manifest.permission.CALL_PHONE) },
-            onGrantHealthConnect = {
-                if (HealthConnectClient.getSdkStatus(context) == HealthConnectClient.SDK_AVAILABLE) {
-                    healthPermissionLauncher.launch(healthPermissions)
-                } else {
-                    context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse("https://play.google.com/store/apps/details?id=com.google.android.apps.healthdata")))
-                }
-            },
-            onOpenNotificationAccess = { context.startActivity(Intent(Settings.ACTION_NOTIFICATION_LISTENER_SETTINGS)) },
-            onOpenAssistantSettings = { openDefaultAssistantSettings(context) },
-            onComplete = viewModel::completeOnboarding
-        )
-        return
+    AnimatedContent(
+        targetState = state.settings.hasCompletedOnboarding,
+        transitionSpec = {
+            (fadeIn(tween(420)) + scaleIn(initialScale = 0.96f, animationSpec = tween(420))) togetherWith
+                fadeOut(tween(240))
+        },
+        label = "onboarding_to_main"
+    ) { onboarded ->
+        if (!onboarded) {
+            OnboardingScreen(
+                availability = state.availability,
+                settings = state.settings,
+                compatibilityReport = state.compatibilityReport,
+                isCheckingCompatibility = state.isCheckingCompatibility,
+                healthConnectGranted = state.healthConnectGranted,
+                onRunChecks = viewModel::runCompatibilityChecks,
+                onDownloadModel = viewModel::downloadModel,
+                onUpdateSettings = viewModel::updateSettings,
+                onGrantMic = { micPermissionLauncher.launch(Manifest.permission.RECORD_AUDIO) },
+                onGrantContacts = { contactsPermissionLauncher.launch(Manifest.permission.READ_CONTACTS) },
+                onGrantCall = { callPermissionLauncher.launch(Manifest.permission.CALL_PHONE) },
+                onGrantHealthConnect = {
+                    if (HealthConnectClient.getSdkStatus(context) == HealthConnectClient.SDK_AVAILABLE) {
+                        healthPermissionLauncher.launch(healthPermissions)
+                    } else {
+                        context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse("https://play.google.com/store/apps/details?id=com.google.android.apps.healthdata")))
+                    }
+                },
+                onOpenNotificationAccess = { context.startActivity(Intent(Settings.ACTION_NOTIFICATION_LISTENER_SETTINGS)) },
+                onOpenAssistantSettings = { openDefaultAssistantSettings(context) },
+                onComplete = viewModel::completeOnboarding
+            )
+        } else {
+            MainScreenContent(
+                state = state,
+                isListening = voiceState.isListening,
+                rmsDb = voiceState.rmsDb,
+                partialTranscript = voiceState.partialText,
+                wakeWordEnabled = wakeWordRunning,
+                attachedImage = attachedImage,
+                onPickImage = {
+                    imagePickerLauncher.launch(PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly))
+                },
+                onClearImage = { attachedImage = null },
+                onSendPrompt = { prompt ->
+                    val img = attachedImage
+                    attachedImage = null
+                    viewModel.sendPrompt(prompt, img)
+                },
+                onThinkHarder = { prompt ->
+                    viewModel.sendPrompt(prompt, thinkHarder = true)
+                },
+                onSelectPersona = viewModel::selectPersona,
+                onUpdateSettings = viewModel::updateSettings,
+                onRunCompatibilityChecks = viewModel::runCompatibilityChecks,
+                onNewChat = viewModel::startNewChat,
+                onSelectChat = viewModel::loadChatIntoView,
+                onDeleteChat = viewModel::deleteChat,
+                onClearChats = viewModel::clearChats,
+                onAddMemory = viewModel::addMemory,
+                onDeleteMemory = viewModel::deleteMemory,
+                onClearMemories = viewModel::clearMemories,
+                onToggleWakeWord = { enable ->
+                    if (!enable) {
+                        WakeWordService.stop(context)
+                    } else {
+                        val needed = buildList {
+                            if (ContextCompat.checkSelfPermission(context, Manifest.permission.RECORD_AUDIO) != PackageManager.PERMISSION_GRANTED) {
+                                add(Manifest.permission.RECORD_AUDIO)
+                            }
+                            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU &&
+                                ContextCompat.checkSelfPermission(context, Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED
+                            ) {
+                                add(Manifest.permission.POST_NOTIFICATIONS)
+                            }
+                        }
+                        if (needed.isEmpty()) WakeWordService.start(context)
+                        else wakePermissionLauncher.launch(needed.toTypedArray())
+                    }
+                },
+                onRefreshStatus = viewModel::refreshStatus,
+                onDownloadModel = viewModel::downloadModel,
+                onWarmupModel = viewModel::warmupModel,
+                onCheckUpdates = viewModel::checkForUpdates,
+                onFetchReleaseNotes = viewModel::fetchReleaseNotes,
+                onOpenUrl = { url -> context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(url))) },
+                onMicClick = {
+                    val granted = ContextCompat.checkSelfPermission(context, Manifest.permission.RECORD_AUDIO) == PackageManager.PERMISSION_GRANTED
+                    if (granted) voiceController.toggleListening()
+                    else micPermissionLauncher.launch(Manifest.permission.RECORD_AUDIO)
+                },
+                onSpeakResponse = { text ->
+                    voiceController.setTtsEnabled(true)
+                    voiceController.speakIfEnabled(text)
+                },
+                onGrantContacts = { contactsPermissionLauncher.launch(Manifest.permission.READ_CONTACTS) },
+                onGrantCall = { callPermissionLauncher.launch(Manifest.permission.CALL_PHONE) },
+                onGrantHealthConnect = {
+                    if (HealthConnectClient.getSdkStatus(context) == HealthConnectClient.SDK_AVAILABLE) {
+                        healthPermissionLauncher.launch(healthPermissions)
+                    } else {
+                        context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse("https://play.google.com/store/apps/details?id=com.google.android.apps.healthdata")))
+                    }
+                },
+                onOpenNotificationAccess = {
+                    context.startActivity(Intent(Settings.ACTION_NOTIFICATION_LISTENER_SETTINGS))
+                },
+                onOpenAssistantSettings = { openDefaultAssistantSettings(context) },
+                modifier = modifier
+            )
+        }
     }
-
-    MainScreenContent(
-        state = state,
-        isListening = voiceState.isListening,
-        partialTranscript = voiceState.partialText,
-        wakeWordEnabled = wakeWordRunning,
-        attachedImage = attachedImage,
-        onPickImage = {
-            imagePickerLauncher.launch(PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly))
-        },
-        onClearImage = { attachedImage = null },
-        onSendPrompt = { prompt ->
-            val img = attachedImage
-            attachedImage = null
-            viewModel.sendPrompt(prompt, img)
-        },
-        onThinkHarder = { prompt ->
-            viewModel.sendPrompt(prompt, thinkHarder = true)
-        },
-        onSelectPersona = viewModel::selectPersona,
-        onUpdateSettings = viewModel::updateSettings,
-        onRunCompatibilityChecks = viewModel::runCompatibilityChecks,
-        onNewChat = viewModel::startNewChat,
-        onSelectChat = viewModel::loadChatIntoView,
-        onDeleteChat = viewModel::deleteChat,
-        onClearChats = viewModel::clearChats,
-        onAddMemory = viewModel::addMemory,
-        onDeleteMemory = viewModel::deleteMemory,
-        onClearMemories = viewModel::clearMemories,
-        onToggleWakeWord = { enable ->
-            if (!enable) {
-                WakeWordService.stop(context)
-            } else {
-                val needed = buildList {
-                    if (ContextCompat.checkSelfPermission(context, Manifest.permission.RECORD_AUDIO) != PackageManager.PERMISSION_GRANTED) {
-                        add(Manifest.permission.RECORD_AUDIO)
-                    }
-                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU &&
-                        ContextCompat.checkSelfPermission(context, Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED
-                    ) {
-                        add(Manifest.permission.POST_NOTIFICATIONS)
-                    }
-                }
-                if (needed.isEmpty()) WakeWordService.start(context)
-                else wakePermissionLauncher.launch(needed.toTypedArray())
-            }
-        },
-        onRefreshStatus = viewModel::refreshStatus,
-        onDownloadModel = viewModel::downloadModel,
-        onWarmupModel = viewModel::warmupModel,
-        onCheckUpdates = viewModel::checkForUpdates,
-        onFetchReleaseNotes = viewModel::fetchReleaseNotes,
-        onOpenUrl = { url -> context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(url))) },
-        onMicClick = {
-            val granted = ContextCompat.checkSelfPermission(context, Manifest.permission.RECORD_AUDIO) == PackageManager.PERMISSION_GRANTED
-            if (granted) voiceController.toggleListening()
-            else micPermissionLauncher.launch(Manifest.permission.RECORD_AUDIO)
-        },
-        onSpeakResponse = { text ->
-            voiceController.setTtsEnabled(true)
-            voiceController.speakIfEnabled(text)
-        },
-        onGrantContacts = { contactsPermissionLauncher.launch(Manifest.permission.READ_CONTACTS) },
-        onGrantCall = { callPermissionLauncher.launch(Manifest.permission.CALL_PHONE) },
-        onGrantHealthConnect = {
-            if (HealthConnectClient.getSdkStatus(context) == HealthConnectClient.SDK_AVAILABLE) {
-                healthPermissionLauncher.launch(healthPermissions)
-            } else {
-                context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse("https://play.google.com/store/apps/details?id=com.google.android.apps.healthdata")))
-            }
-        },
-        onOpenNotificationAccess = {
-            context.startActivity(Intent(Settings.ACTION_NOTIFICATION_LISTENER_SETTINGS))
-        },
-        onOpenAssistantSettings = { openDefaultAssistantSettings(context) },
-        modifier = modifier
-    )
 }
 
-@OptIn(ExperimentalMaterial3Api::class)
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalSharedTransitionApi::class, ExperimentalLayoutApi::class)
 @Composable
 internal fun MainScreenContent(
     state: GemmAHomeState,
     isListening: Boolean,
+    rmsDb: Float = 0f,
     partialTranscript: String,
     wakeWordEnabled: Boolean,
     attachedImage: Bitmap? = null,
@@ -643,31 +664,29 @@ internal fun MainScreenContent(
             }
         }
     ) {
-        val auroraTransition = rememberInfiniteTransition(label = "aurora")
-        val glowShift by auroraTransition.animateFloat(
-            initialValue = 1350f,
-            targetValue = 1620f,
-            animationSpec = infiniteRepeatable(
-                animation = tween(durationMillis = 5000, easing = FastOutSlowInEasing),
-                repeatMode = RepeatMode.Reverse
-            ),
-            label = "aurora_radius"
+        val anySheetOpen = showModelSheet || showMemorySheet || showPrivacySheet || showConnectionsSheet || showReleaseNotesSheet || drawerState.isOpen
+        val contentBlur by animateDpAsState(
+            targetValue = if (anySheetOpen) 10.dp else 0.dp,
+            animationSpec = tween(250),
+            label = "content_blur"
         )
 
         Box(
             modifier = modifier
                 .fillMaxSize()
-                .background(
-                    Brush.radialGradient(
-                        colors = listOf(GeminiBgGlow, GeminiBgTop),
-                        center = Offset(540f, 2250f),
-                        radius = glowShift
-                    )
-                )
-                .systemBarsPadding()
-                .imePadding()
+                .blur(contentBlur)
         ) {
-            Column(modifier = Modifier.fillMaxSize()) {
+            ReactiveAuroraBackground(
+                isGenerating = state.isGenerating,
+                isListening = isListening,
+                rmsDb = rmsDb
+            )
+            Column(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .systemBarsPadding()
+                    .imePadding()
+            ) {
                 Row(
                     modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 10.dp),
                     verticalAlignment = Alignment.CenterVertically,
@@ -709,58 +728,106 @@ internal fun MainScreenContent(
                     }
                 }
 
-                if (state.activeTurns.isEmpty()) {
-                    Box(
-                        modifier = Modifier.weight(1f).fillMaxWidth(),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Column(
-                            horizontalAlignment = Alignment.CenterHorizontally,
-                            verticalArrangement = Arrangement.spacedBy(18.dp)
-                        ) {
+                SharedTransitionLayout(
+                    modifier = Modifier.weight(1f).fillMaxWidth()
+                ) {
+                    AnimatedContent(
+                        targetState = state.activeTurns.isEmpty(),
+                        transitionSpec = {
+                            fadeIn(tween(320)) togetherWith fadeOut(tween(220))
+                        },
+                        label = "sparkle_shared_transition"
+                    ) { isEmpty ->
+                        if (isEmpty) {
                             Box(
-                                modifier = Modifier
-                                    .clip(CircleShape)
-                                    .clickable(
-                                        interactionSource = remember { MutableInteractionSource() },
-                                        indication = ripple(bounded = false, color = GeminiAccentBlue)
-                                    ) {
-                                        sparkleTaps++
-                                    }
-                                    .padding(8.dp)
+                                modifier = Modifier.fillMaxSize(),
+                                contentAlignment = Alignment.Center
                             ) {
-                                GemmASparkleIcon(size = 44.dp, isAnimating = state.isGenerating || sparkleTaps >= 5)
-                            }
-                            val greeting = when {
-                                sparkleTaps >= 10 -> "Pure local silicon, zero cloud."
-                                sparkleTaps >= 5 -> "All thoughts stay on-device ✦"
-                                else -> "Let's get started"
-                            }
-                            Text(greeting, color = GeminiTextPrimary, fontSize = 26.sp, fontWeight = FontWeight.Normal)
-                            if (state.availability == ModelAvailability.DOWNLOADABLE && !state.settings.bypassCompatibility) {
-                                FilledTonalButton(onClick = onDownloadModel) {
-                                    Icon(Icons.Default.Download, contentDescription = null)
-                                    Spacer(Modifier.width(8.dp))
-                                    Text("Download Gemma 4")
+                                Column(
+                                    horizontalAlignment = Alignment.CenterHorizontally,
+                                    verticalArrangement = Arrangement.spacedBy(18.dp),
+                                    modifier = Modifier.padding(horizontal = 24.dp)
+                                ) {
+                                    Box(
+                                        modifier = Modifier
+                                            .sharedElement(
+                                                sharedContentState = rememberSharedContentState(key = "kairo_sparkle"),
+                                                animatedVisibilityScope = this@AnimatedContent
+                                            )
+                                            .clip(CircleShape)
+                                            .clickable(
+                                                interactionSource = remember { MutableInteractionSource() },
+                                                indication = ripple(bounded = false, color = GeminiAccentBlue)
+                                            ) {
+                                                sparkleTaps++
+                                            }
+                                            .padding(8.dp)
+                                    ) {
+                                        GemmASparkleIcon(size = 44.dp, isAnimating = state.isGenerating || sparkleTaps >= 5)
+                                    }
+                                    val greeting = when {
+                                        sparkleTaps >= 10 -> "Pure local silicon, zero cloud."
+                                        sparkleTaps >= 5 -> "All thoughts stay on-device ✦"
+                                        else -> "Let's get started"
+                                    }
+                                    Text(greeting, color = GeminiTextPrimary, fontSize = 26.sp, fontWeight = FontWeight.Normal)
+
+                                    // Example prompts right after setup / on empty screen
+                                    FlowRow(
+                                        horizontalArrangement = Arrangement.spacedBy(8.dp, Alignment.CenterHorizontally),
+                                        verticalArrangement = Arrangement.spacedBy(8.dp)
+                                    ) {
+                                        listOf(
+                                            "Check my battery & status",
+                                            "Catch me up on notifications",
+                                            "Set a 7:30 AM alarm",
+                                            "What can you do?"
+                                        ).forEach { example ->
+                                            AssistChip(
+                                                onClick = { onSendPrompt(example) },
+                                                label = { Text(example, color = GeminiTextPrimary, style = MaterialTheme.typography.labelMedium) },
+                                                colors = AssistChipDefaults.assistChipColors(containerColor = GeminiPillBg),
+                                                border = null
+                                            )
+                                        }
+                                    }
+
+                                    if (state.availability == ModelAvailability.DOWNLOADABLE && !state.settings.bypassCompatibility) {
+                                        FilledTonalButton(onClick = onDownloadModel) {
+                                            Icon(Icons.Default.Download, contentDescription = null)
+                                            Spacer(Modifier.width(8.dp))
+                                            Text("Download Gemma 4")
+                                        }
+                                    }
                                 }
                             }
-                        }
-                    }
-                } else {
-                    LazyColumn(
-                        state = listState,
-                        modifier = Modifier.weight(1f).fillMaxWidth(),
-                        contentPadding = PaddingValues(horizontal = 16.dp, vertical = 12.dp),
-                        verticalArrangement = Arrangement.spacedBy(18.dp)
-                    ) {
-                        items(state.activeTurns) { turn ->
-                            Box(modifier = Modifier.animateItem()) {
-                                ConversationTurnItem(
-                                    turn = turn,
-                                    onSpeak = { onSpeakResponse(turn.response) },
-                                    onRegenerate = { onSendPrompt(turn.prompt) },
-                                    onThinkHarder = { onThinkHarder(turn.prompt) }
-                                )
+                        } else {
+                            LazyColumn(
+                                state = listState,
+                                modifier = Modifier.fillMaxSize(),
+                                contentPadding = PaddingValues(horizontal = 16.dp, vertical = 12.dp),
+                                verticalArrangement = Arrangement.spacedBy(18.dp)
+                            ) {
+                                items(state.activeTurns.size) { idx ->
+                                    val turn = state.activeTurns[idx]
+                                    val sparkleModifier = if (idx == 0) {
+                                        Modifier.sharedElement(
+                                            sharedContentState = rememberSharedContentState(key = "kairo_sparkle"),
+                                            animatedVisibilityScope = this@AnimatedContent
+                                        )
+                                    } else {
+                                        Modifier
+                                    }
+                                    Box(modifier = Modifier.animateItem()) {
+                                        ConversationTurnItem(
+                                            turn = turn,
+                                            sparkleModifier = sparkleModifier,
+                                            onSpeak = { onSpeakResponse(turn.response) },
+                                            onRegenerate = { onSendPrompt(turn.prompt) },
+                                            onThinkHarder = { onThinkHarder(turn.prompt) }
+                                        )
+                                    }
+                                }
                             }
                         }
                     }
@@ -1104,9 +1171,12 @@ internal fun MainScreenContent(
                 ConnectionPermRow("Contacts", "Call & text people by name", contactsGranted, onGrantContacts)
                 ConnectionPermRow("Direct Calling", "Place calls directly", callGranted, onGrantCall)
                 ConnectionPermRow("Notification Catch-Up", "Summarize unread messages", notifGranted, onOpenNotificationAccess)
-                ConnectionPermRow("Health Connect", "Read steps & heart rate", false, onGrantHealthConnect)
+                ConnectionPermRow("Health Connect", "Read steps & heart rate", state.healthConnectGranted, onGrantHealthConnect)
                 ConnectionPermRow("System Brightness", "Adjust screen brightness", writeSettingsGranted) {
-                    ctx.startActivity(Intent(Settings.ACTION_MANAGE_WRITE_SETTINGS, Uri.parse("package:${ctx.packageName}")))
+                    val pkgIntent = Intent(Settings.ACTION_MANAGE_WRITE_SETTINGS, Uri.parse("package:${ctx.packageName}"))
+                    val fallbackIntent = Intent(Settings.ACTION_MANAGE_WRITE_SETTINGS)
+                    val target = if (pkgIntent.resolveActivity(ctx.packageManager) != null) pkgIntent else fallbackIntent
+                    ctx.startActivity(target)
                 }
 
                 HorizontalDivider(color = Color(0xFF232528), modifier = Modifier.padding(vertical = 4.dp))
@@ -1346,6 +1416,7 @@ private fun DrawerMenuRow(
 @Composable
 private fun ConversationTurnItem(
     turn: ConversationTurn,
+    sparkleModifier: Modifier = Modifier,
     onSpeak: () -> Unit = {},
     onRegenerate: () -> Unit = {},
     onThinkHarder: () -> Unit = {}
@@ -1382,7 +1453,7 @@ private fun ConversationTurnItem(
         }
 
         Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp), verticalAlignment = Alignment.Top) {
-            GemmASparkleIcon(size = 22.dp, isAnimating = turn.isStreaming, modifier = Modifier.padding(top = 2.dp))
+            GemmASparkleIcon(size = 22.dp, isAnimating = turn.isStreaming, modifier = sparkleModifier.padding(top = 2.dp))
             Column(modifier = Modifier.weight(1f).animateContentSize(), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 AnimatedVisibility(
                     visible = turn.actionSummary != null,

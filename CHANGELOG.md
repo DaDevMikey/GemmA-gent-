@@ -1,5 +1,12 @@
 # Changelog
 
+## v1.0.6 (2026-11-24)
+### Added
+- **Shared-Element Logo Transition**: The centered Kairo sparkle now smoothly flies and morphs from the center of the screen directly to next to Kairo's response when you send your first message.
+- **Reactive Multi-Orb Aurora Background & Frosted Blur**: Added `ReactiveAuroraBackground` with blurred glowing orbs that react live to voice amplitude and generation, plus animated background blur when drawers or sheets open.
+- **Upgraded Setup Flow**: Frosted glass setup cards, animated step headlines, a **Personalize** step (saves your name to Memory), and example prompt chips right after completing setup.
+- **Permission Fixes**: Fixed Health Connect `Granted` status detection via `HealthConnectClient.permissionController.getGrantedPermissions()`, and declared `WRITE_SETTINGS` in `AndroidManifest.xml` so System Brightness can be toggled.
+
 ## v1.0.5 (2026-11-24)
 ### Added
 - **First-Run Onboarding Flow**: Setup & compatibility checks, backend configuration, and permissions now run cleanly before entering the app for the first time, rather than cluttering the main menus.
