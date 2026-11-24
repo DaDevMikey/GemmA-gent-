@@ -96,12 +96,17 @@ class AssistantOverlayActivity : ComponentActivity() {
             submitPrompt(spokenPrompt)
         }
 
+        if (intent?.getBooleanExtra("start_voice", false) == true) {
+            miniMode = false
+            handleMicClick()
+        }
+
         lifecycleScope.launch {
             if (!settings.bypassCompatibility) {
-                when (engine.queryAvailability()) {
+                when (engine.queryAvailability(settings.aiCoreModelProfile)) {
                     ModelAvailability.AVAILABLE -> {
                         statusMessage = null
-                        engine.warmupModel()
+                        engine.warmupModel(settings.aiCoreModelProfile)
                     }
                     ModelAvailability.DOWNLOADABLE -> {
                         statusMessage = "Gemma 4 is ready to download. Open Kairo to download it first."

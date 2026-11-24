@@ -126,6 +126,30 @@
             </intent-filter>
         </service>
 
+        <receiver
+            android:name=".widget.KairoWidgetProvider"
+            android:exported="true"
+            android:label="Kairo Quick Ask">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/kairo_widget_info" />
+        </receiver>
+
+        <receiver
+            android:name=".widget.KairoCoverWidgetProvider"
+            android:exported="true"
+            android:label="Kairo Cover Screen">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/kairo_cover_widget_info" />
+        </receiver>
+
     </application>
 
 </manifest>

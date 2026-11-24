@@ -20,6 +20,7 @@ import android.provider.CalendarContract
 import android.provider.ContactsContract
 import android.provider.MediaStore
 import android.provider.Settings
+import android.view.KeyEvent
 import androidx.core.content.ContextCompat
 import androidx.core.content.FileProvider
 import androidx.health.connect.client.HealthConnectClient
@@ -122,6 +123,12 @@ class AndroidAgentTools(
         appendLine("""- find_installed_apps: {"query": "string"}""")
         appendLine("""- read_memories: {}""")
         appendLine("""- open_app: {"app_name": "string"}""")
+        appendLine("""- open_split_screen: {"app_name": "string", "second_app_name": "optional string"} (launches app(s) side-by-side in split screen)""")
+        appendLine("""- media_control: {"action": "play_pause|next|previous|stop"}""")
+        appendLine("""- open_spotify: {"query": "optional song/artist/playlist"}""")
+        appendLine("""- send_whatsapp: {"target": "contact name or phone", "message": "string"}""")
+        appendLine("""- open_maps_search: {"query": "string"}""")
+        appendLine("""- search_play_store: {"query": "string"}""")
         appendLine("""- set_alarm: {"hour": 0-23, "minute": 0-59, "label": "optional string"}""")
         appendLine("""- set_timer: {"seconds": int, "label": "optional string"}""")
         appendLine("""- open_settings: {"setting": "wifi|bluetooth|display|sound|battery|location|health|notifications|general"}""")
@@ -296,6 +303,12 @@ class AndroidAgentTools(
             "find_installed_apps" -> findInstalledApps(args.optString("query"))
             "read_memories" -> readMemories()
             "open_app" -> openApp(args.optString("app_name"))
+            "open_split_screen" -> openSplitScreen(args.optString("app_name"), args.optString("second_app_name", ""))
+            "media_control" -> mediaControl(args.optString("action", "play_pause"))
+            "open_spotify" -> openSpotify(args.optString("query", ""))
+            "send_whatsapp" -> sendWhatsApp(args.optString("target"), args.optString("message", ""))
+            "open_maps_search" -> openMapsSearch(args.optString("query"))
+            "search_play_store" -> searchPlayStore(args.optString("query"))
             "set_alarm" -> setAlarm(args.optInt("hour", -1), args.optInt("minute", 0), args.optString("label", ""))
             "set_timer" -> setTimer(args.optInt("seconds", 0), args.optString("label", ""))
             "open_settings" -> openSettings(args.optString("setting", "general"))
@@ -606,19 +619,126 @@ class AndroidAgentTools(
         return AgentActionResult(executed = true, summary = "Read ${items.size} memory item(s)", resultData = result, success = true)
     }
 
-    private fun openApp(appName: String): AgentActionResult {
+    private fun resolveAppLaunchIntent(appName: String): Pair<String, Intent>? {
         val query = appName.trim()
-        if (query.isEmpty()) return AgentActionResult(executed = true, summary = "No app name provided", resultData = "No app name provided", success = false)
+        if (query.isEmpty()) return null
         val pm = context.packageManager
         val activities = pm.queryIntentActivities(Intent(Intent.ACTION_MAIN).addCategory(Intent.CATEGORY_LAUNCHER), 0)
         val matched = activities.firstOrNull { it.loadLabel(pm).toString().equals(query, ignoreCase = true) }
             ?: activities.firstOrNull { it.loadLabel(pm).toString().contains(query, ignoreCase = true) }
+            ?: return null
+        val launchIntent = pm.getLaunchIntentForPackage(matched.activityInfo.packageName) ?: return null
+        return matched.loadLabel(pm).toString() to launchIntent
+    }
+
+    private fun openApp(appName: String): AgentActionResult {
+        val query = appName.trim()
+        if (query.isEmpty()) return AgentActionResult(executed = true, summary = "No app name provided", resultData = "No app name provided", success = false)
+        val (label, launchIntent) = resolveAppLaunchIntent(query)
             ?: return AgentActionResult(executed = true, summary = "App \"$query\" not found", resultData = "App \"$query\" was not found.", success = false)
-        val launchIntent = pm.getLaunchIntentForPackage(matched.activityInfo.packageName)?.apply { addFlags(Intent.FLAG_ACTIVITY_NEW_TASK) }
-            ?: return AgentActionResult(executed = true, summary = "Cannot launch \"$query\"", resultData = "Cannot launch \"$query\"", success = false)
+        launchIntent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
         context.startActivity(launchIntent)
-        val label = matched.loadLabel(pm).toString()
         return AgentActionResult(executed = true, summary = "Opened $label", resultData = "Successfully launched $label.", success = true)
+    }
+
+    private fun openSplitScreen(appName: String, secondAppName: String): AgentActionResult {
+        val first = resolveAppLaunchIntent(appName)
+            ?: return AgentActionResult(executed = true, summary = "App \"$appName\" not found", resultData = "Could not find app \"$appName\".", success = false)
+        val second = if (secondAppName.isNotBlank()) resolveAppLaunchIntent(secondAppName) else null
+
+        return runCatching {
+            if (second != null) {
+                first.second.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                context.startActivity(first.second)
+                second.second.addFlags(
+                    Intent.FLAG_ACTIVITY_NEW_TASK or
+                        Intent.FLAG_ACTIVITY_LAUNCH_ADJACENT or
+                        Intent.FLAG_ACTIVITY_MULTIPLE_TASK
+                )
+                context.startActivity(second.second)
+                AgentActionResult(
+                    executed = true,
+                    summary = "Opened ${first.first} + ${second.first} in split screen",
+                    resultData = "Launched ${first.first} alongside ${second.first} using Android multi-window split flags.",
+                    success = true
+                )
+            } else {
+                first.second.addFlags(
+                    Intent.FLAG_ACTIVITY_NEW_TASK or
+                        Intent.FLAG_ACTIVITY_LAUNCH_ADJACENT or
+                        Intent.FLAG_ACTIVITY_MULTIPLE_TASK
+                )
+                context.startActivity(first.second)
+                AgentActionResult(
+                    executed = true,
+                    summary = "Opened ${first.first} in split screen",
+                    resultData = "Launched ${first.first} in an adjacent split-screen window.",
+                    success = true
+                )
+            }
+        }.getOrElse { err ->
+            AgentActionResult(executed = true, summary = "Split screen failed", resultData = err.localizedMessage ?: "Unable to launch split screen.", success = false)
+        }
+    }
+
+    private fun mediaControl(action: String): AgentActionResult {
+        val keyCode = when (action.lowercase(Locale.ROOT).trim()) {
+            "next", "skip" -> KeyEvent.KEYCODE_MEDIA_NEXT
+            "previous", "prev", "back" -> KeyEvent.KEYCODE_MEDIA_PREVIOUS
+            "stop" -> KeyEvent.KEYCODE_MEDIA_STOP
+            else -> KeyEvent.KEYCODE_MEDIA_PLAY_PAUSE
+        }
+        val audioManager = context.getSystemService(Context.AUDIO_SERVICE) as? AudioManager
+            ?: return AgentActionResult(executed = true, summary = "Audio service unavailable", resultData = "AudioManager unavailable", success = false)
+        audioManager.dispatchMediaKeyEvent(KeyEvent(KeyEvent.ACTION_DOWN, keyCode))
+        audioManager.dispatchMediaKeyEvent(KeyEvent(KeyEvent.ACTION_UP, keyCode))
+        return AgentActionResult(executed = true, summary = "Media action: $action", resultData = "Dispatched media key ($action).", success = true)
+    }
+
+    private fun openSpotify(query: String): AgentActionResult {
+        val clean = query.trim()
+        val intent = if (clean.isNotEmpty()) {
+            Intent(Intent.ACTION_VIEW, Uri.parse("spotify:search:${Uri.encode(clean)}")).apply {
+                addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+            }
+        } else {
+            context.packageManager.getLaunchIntentForPackage("com.spotify.music")?.apply {
+                addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+            } ?: Intent(Intent.ACTION_VIEW, Uri.parse("https://open.spotify.com")).apply {
+                addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+            }
+        }
+        return launchIntentOrFail(intent, if (clean.isNotEmpty()) "Opened Spotify for \"$clean\"" else "Opened Spotify")
+    }
+
+    private fun sendWhatsApp(target: String, message: String): AgentActionResult {
+        val resolved = resolveContactNumber(target)
+        val digits = (resolved?.second ?: target).filter { it.isDigit() }
+        val encodedMsg = Uri.encode(message)
+        val url = if (digits.isNotEmpty()) "https://wa.me/$digits?text=$encodedMsg" else "https://wa.me/?text=$encodedMsg"
+        val intent = Intent(Intent.ACTION_VIEW, Uri.parse(url)).apply {
+            addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+        }
+        val label = resolved?.first ?: target.ifBlank { "WhatsApp" }
+        return launchIntentOrFail(intent, "Prepared WhatsApp message to $label")
+    }
+
+    private fun openMapsSearch(query: String): AgentActionResult {
+        val clean = query.trim()
+        if (clean.isEmpty()) return AgentActionResult(executed = true, summary = "No query provided", resultData = "No query provided", success = false)
+        val intent = Intent(Intent.ACTION_VIEW, Uri.parse("geo:0,0?q=${Uri.encode(clean)}")).apply {
+            addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+        }
+        return launchIntentOrFail(intent, "Searched Maps for \"$clean\"")
+    }
+
+    private fun searchPlayStore(query: String): AgentActionResult {
+        val clean = query.trim()
+        if (clean.isEmpty()) return AgentActionResult(executed = true, summary = "No query provided", resultData = "No query provided", success = false)
+        val intent = Intent(Intent.ACTION_VIEW, Uri.parse("market://search?q=${Uri.encode(clean)}")).apply {
+            addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+        }
+        return launchIntentOrFail(intent, "Searched Play Store for \"$clean\"")
     }
 
     private fun setAlarm(hour: Int, minute: Int, label: String): AgentActionResult {

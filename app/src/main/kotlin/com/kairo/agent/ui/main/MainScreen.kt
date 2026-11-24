@@ -700,7 +700,11 @@ internal fun MainScreenContent(
             (1f + (drawerOffset / drawerWidthPx)).coerceIn(0f, 1f)
         }
         val anySheetOpen = showModelSheet || showMemorySheet || showPrivacySheet || showConnectionsSheet || showReleaseNotesSheet || showSettingsSheet
-        val sheetBlur = if (anySheetOpen) 12f else 0f
+        val sheetBlur by animateFloatAsState(
+            targetValue = if (anySheetOpen) 12f else 0f,
+            animationSpec = tween(durationMillis = 180, easing = FastOutSlowInEasing),
+            label = "sheet_blur"
+        )
         val liveBlur = maxOf(sheetBlur, drawerProgress * 14f).dp
 
         Box(
@@ -1345,6 +1349,19 @@ internal fun MainScreenContent(
                     subtitle = "Start overlay as a compact pill until a reply streams",
                     checked = state.settings.miniModeOverlay,
                     onCheckedChange = { onUpdateSettings(state.settings.copy(miniModeOverlay = it)) }
+                )
+
+                HorizontalDivider(color = Color(0xFF232528), modifier = Modifier.padding(vertical = 4.dp))
+                Text("Connected Apps & Actions", style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.SemiBold, color = GeminiAccentBlue)
+                Text(
+                    "• Split-Screen Multitasking (open two apps side-by-side)\n" +
+                        "• Spotify & System Media Controls (play, pause, next, prev)\n" +
+                        "• WhatsApp, SMS, Phone & Email\n" +
+                        "• Maps Navigation, Nearby Search & YouTube\n" +
+                        "• Clock Alarms/Timers, Calendar Events & Play Store\n" +
+                        "• Home Screen & Cover-Screen Widgets",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = GeminiTextSecondary
                 )
                 Spacer(Modifier.height(12.dp))
             }

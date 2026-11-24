@@ -341,17 +341,45 @@ fun OnboardingScreen(
                                 verticalArrangement = Arrangement.spacedBy(10.dp)
                             ) {
                                 AnimatedHeadline("Permissions & Connections")
-                                Text("Grant the capabilities you want Kairo to use.", color = TextSecondary, style = MaterialTheme.typography.bodyMedium)
+                                Text("Every permission is optional and processed 100% on-device. Here is what each one enables:", color = TextSecondary, style = MaterialTheme.typography.bodyMedium)
 
-                                PermissionCard("Microphone", "Voice prompts & wake word", micGranted, onGrantMic)
-                                PermissionCard("Contacts", "Look up people to call or text", contactsGranted, onGrantContacts)
-                                PermissionCard("Direct Calling", "Place calls directly", callGranted, onGrantCall)
-                                PermissionCard("Notification Catch-Up", "Summarize unread messages locally", notifGranted, onOpenNotificationAccess)
-                                PermissionCard("Health Connect", "Read today's steps & heart rate", healthConnectGranted, onGrantHealthConnect)
-
-                                OutlinedButton(onClick = onOpenAssistantSettings, modifier = Modifier.fillMaxWidth()) {
-                                    Text("Set Kairo as Default Digital Assistant")
-                                }
+                                PermissionCard(
+                                    title = "Microphone",
+                                    subtitle = "Enables voice prompts, hands-free dictation, and wake word detection. Audio is transcribed locally and never sent off-device.",
+                                    granted = micGranted,
+                                    onAction = onGrantMic
+                                )
+                                PermissionCard(
+                                    title = "Contacts",
+                                    subtitle = "Lets Kairo look up people by name when you say \"Call Mom\" or \"Text Alex on WhatsApp\" without needing phone numbers.",
+                                    granted = contactsGranted,
+                                    onAction = onGrantContacts
+                                )
+                                PermissionCard(
+                                    title = "Direct Calling",
+                                    subtitle = "Allows Kairo to start phone calls immediately when asked, instead of only opening the dialer.",
+                                    granted = callGranted,
+                                    onAction = onGrantCall
+                                )
+                                PermissionCard(
+                                    title = "Notification Catch-Up",
+                                    subtitle = "Reads unread notifications locally (WhatsApp, Telegram, Discord, SMS) so Kairo can summarize what you missed.",
+                                    granted = notifGranted,
+                                    onAction = onOpenNotificationAccess
+                                )
+                                PermissionCard(
+                                    title = "Health Connect",
+                                    subtitle = "Reads today's step count and heart rate from Health Connect for private on-device wellness summaries.",
+                                    granted = healthConnectGranted,
+                                    onAction = onGrantHealthConnect
+                                )
+                                PermissionCard(
+                                    title = "Default Digital Assistant",
+                                    subtitle = "Bind Kairo to your power button or corner swipe to open the floating overlay over any app and ask about your screen.",
+                                    granted = false,
+                                    onAction = onOpenAssistantSettings,
+                                    actionLabel = "Set Up"
+                                )
                             }
 
                             Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
@@ -442,7 +470,8 @@ private fun PermissionCard(
     title: String,
     subtitle: String,
     granted: Boolean,
-    onAction: () -> Unit
+    onAction: () -> Unit,
+    actionLabel: String = "Allow"
 ) {
     Surface(
         color = FrostedCardBg,
@@ -464,7 +493,7 @@ private fun PermissionCard(
                     Text("Granted", color = SuccessGreen, style = MaterialTheme.typography.labelMedium)
                 }
             } else {
-                FilledTonalButton(onClick = onAction) { Text("Allow") }
+                FilledTonalButton(onClick = onAction) { Text(actionLabel) }
             }
         }
     }

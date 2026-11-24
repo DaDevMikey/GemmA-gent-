@@ -1,5 +1,12 @@
 # Changelog
 
+## v1.0.9 (2026-11-24)
+### Added & Improved
+- **Home Screen & Cover-Screen Widgets**: Added `Kairo Quick Ask` (4×1 resizable home widget with Ask, Voice, and Chat actions) and `Kairo Cover Screen` (compact 2×1 foldable cover-screen & lock-screen widget with direct Voice/Ask overlay launch).
+- **Split-Screen Multitasking & More App Connections**: Added `open_split_screen` (launch one or two apps side-by-side), `media_control` (play/pause/next/previous/stop), `open_spotify`, `send_whatsapp`, `open_maps_search`, and `search_play_store`.
+- **Smooth Synced Menu Blur**: Background blur now animates out smoothly in sync when bottom sheets or menus close instead of snapping off afterward.
+- **Detailed Setup Permission Info**: Added clear explanations to every permission and connection card in Onboarding Setup so users know exactly what each capability enables.
+
 ## v1.0.8 (2026-11-24)
 ### Fixed & Improved
 - **AICore Model Discovery & Selection**: Upgraded ML Kit GenAI Prompt API to `1.0.0-beta5` and added automatic discovery across **Stable** and **Preview** (**Fast** & **Full**) AICore models.
