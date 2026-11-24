@@ -88,6 +88,7 @@ import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.gemma.assistant.ui.components.GemmASparkleIcon
+import com.gemma.assistant.ui.components.ListeningWaveformIndicator
 import com.gemma.assistant.ui.components.ThinkingDotsIndicator
 
 private val SheetSurface = Color(0xFF131314)
@@ -271,7 +272,7 @@ fun GemmaAssistantSheet(
                         ) {
                             GemmASparkleIcon(size = 20.dp, isAnimating = isActive)
                             Text(
-                                text = "GemmA",
+                                text = "Kairo",
                                 color = PrimaryText,
                                 style = MaterialTheme.typography.titleMedium,
                                 fontWeight = FontWeight.SemiBold
@@ -499,10 +500,17 @@ fun GemmaAssistantSheet(
                             modifier = Modifier.weight(1f),
                             decorationBox = { innerTextField ->
                                 if (draft.isEmpty()) {
-                                    Text(
-                                        text = if (isListening) "Listening..." else "Ask GemmA anything...",
-                                        color = if (isListening) AccentBlue else SecondaryText
-                                    )
+                                    if (isListening) {
+                                        Row(
+                                            verticalAlignment = Alignment.CenterVertically,
+                                            horizontalArrangement = Arrangement.spacedBy(8.dp)
+                                        ) {
+                                            ListeningWaveformIndicator()
+                                            Text("Listening...", color = AccentBlue)
+                                        }
+                                    } else {
+                                        Text("Ask Kairo anything...", color = SecondaryText)
+                                    }
                                 }
                                 innerTextField()
                             }

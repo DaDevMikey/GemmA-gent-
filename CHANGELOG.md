@@ -1,18 +1,15 @@
 # Changelog
 
-## v1.0.1 (2026-11-24)
+## v1.0.2 (2026-11-24)
 ### Added
-- **Copy & Share**: Copy prompts (tap/long-press or copy icon), copy responses in both the main chat and floating overlay, and share responses via the Android share sheet.
-- **Speak & Regenerate**: Read any response aloud with Text-to-Speech or regenerate the latest reply.
-- **GitHub Actions Release Workflow**: Automatically tests, builds, and attaches the APK whenever a new GitHub Release is published.
-- **Privacy Policy & Terms of Service**: Added `PRIVACY_POLICY.md`, `TERMS_OF_SERVICE.md`, and an in-app **Privacy & Terms** viewer.
-- **Per-Chat Delete**: Delete individual conversations from Recent Chats in the side drawer.
-- **Animations**: Added bouncing gradient thinking dots, live typing cursor, and smooth layout transitions.
+- **Play-Safe Rebrand (`Kairo`)**: Renamed user-facing branding to **Kairo** (powered by on-device Gemma 4) to avoid trademark conflicts on Google Play.
+- **Credits & Links**: Added credits to **DaManMikey** ([damanmikey.me](https://damanmikey.me/)) and source code links in the app and README.
+- **Health Connect & Expanded Connections**: Added `get_health_summary` (steps & heart rate via Health Connect), `find_contact` (`READ_CONTACTS`), `send_email`, `search_youtube`, `open_url`, and a **Connections & Permissions** sheet in the drawer.
+- **More Animations**: Added animated radial aurora background glow, animated 5-bar voice `ListeningWaveformIndicator`, `LazyColumn` `animateItem()` message transitions, and ripple/scale feedback.
+- **Release Builds**: Switched GitHub Actions & releases to build and attach signed `assembleRelease` APKs (`Kairo-v1.0.2-release.apk`).
 
-### Changed
-- **100% Local by Default**: Removed automatic startup update checks so no network requests are made unless you tap Check.
-- **Cleaner UI**: Removed the temporary debug overlay buttons from the drawer and model sheet.
+## v1.0.1 (2026-11-24)
+- Copy prompts & responses, Share, Read aloud (TTS), Regenerate, GitHub Actions release workflow, Privacy Policy & Terms of Service, per-chat delete, and thinking/typing animations.
 
 ## v1.0.0 (2026-11-24)
-- Initial release of **GemmA (Gemma Agent)** powered by on-device Gemma 4 via Android AICore.
-- Gemini-style dark UI, floating `ACTION_ASSIST` overlay with swipe-to-fullscreen, multi-step tool calling, multimodal image upload & screen context, persistent Memory, Recent Chats, and `"Hey GemmA"` wake word service.
+- Initial release powered by on-device Gemma 4 via Android AICore.

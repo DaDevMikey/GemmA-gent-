@@ -1,9 +1,11 @@
 package com.gemma.assistant.agent
 
+import android.Manifest
 import android.content.ClipData
 import android.content.ClipboardManager
 import android.content.Context
 import android.content.Intent
+import android.content.pm.PackageManager
 import android.hardware.camera2.CameraCharacteristics
 import android.hardware.camera2.CameraManager
 import android.media.AudioManager
@@ -14,11 +16,23 @@ import android.os.BatteryManager
 import android.os.Build
 import android.provider.AlarmClock
 import android.provider.CalendarContract
+import android.provider.ContactsContract
 import android.provider.MediaStore
 import android.provider.Settings
+import androidx.core.content.ContextCompat
+import androidx.health.connect.client.HealthConnectClient
+import androidx.health.connect.client.permission.HealthPermission
+import androidx.health.connect.client.records.HeartRateRecord
+import androidx.health.connect.client.records.StepsRecord
+import androidx.health.connect.client.request.AggregateRequest
+import androidx.health.connect.client.request.ReadRecordsRequest
+import androidx.health.connect.client.time.TimeRangeFilter
 import com.gemma.assistant.data.MemoryStore
 import org.json.JSONObject
 import java.text.SimpleDateFormat
+import java.time.Instant
+import java.time.LocalDate
+import java.time.ZoneId
 import java.util.Date
 import java.util.Locale
 
@@ -40,8 +54,8 @@ class AndroidAgentTools(
 ) {
 
     fun buildAgentPrompt(userMessage: String, screenText: String? = null): String = buildString {
-        appendLine("You are GemmA (which stands for Gemma Agent), a helpful on-device Android AI agent.")
-        appendLine("Always know that your name is GemmA (Gemma Agent).")
+        appendLine("You are Kairo (Kairo Agent), a helpful on-device Android AI agent powered by Gemma 4.")
+        appendLine("Always know that your name is Kairo.")
         appendLine("Live device context: ${currentTimeString()}, ${batteryContextString()}.")
 
         val memoryBlock = memoryStore.formatForPrompt()
@@ -58,21 +72,26 @@ class AndroidAgentTools(
         appendLine("""<tool_call>{"tool":"TOOL_NAME","args":{...}}</tool_call>""")
         appendLine("Available tools:")
         appendLine("""- get_device_status: {} (returns battery, Wi-Fi/network, volume levels, device model, time)""")
+        appendLine("""- get_health_summary: {} (reads today's steps and latest heart rate from Health Connect)""")
+        appendLine("""- find_contact: {"name": "string"} (looks up a contact's phone number)""")
         appendLine("""- find_installed_apps: {"query": "string"} (searches installed apps on this phone)""")
         appendLine("""- read_memories: {} (returns all remembered facts about the user)""")
         appendLine("""- open_app: {"app_name": "string"}""")
         appendLine("""- set_alarm: {"hour": 0-23, "minute": 0-59, "label": "optional string"}""")
         appendLine("""- set_timer: {"seconds": int, "label": "optional string"}""")
-        appendLine("""- open_settings: {"setting": "wifi|bluetooth|display|sound|battery|location|general"}""")
+        appendLine("""- open_settings: {"setting": "wifi|bluetooth|display|sound|battery|location|health|general"}""")
         appendLine("""- toggle_flashlight: {"enabled": true|false}""")
         appendLine("""- set_volume: {"stream": "media|ring|alarm", "percent": 0-100}""")
         appendLine("""- navigate_to: {"destination": "string"}""")
         appendLine("""- play_media: {"query": "string"}""")
+        appendLine("""- search_youtube: {"query": "string"}""")
         appendLine("""- open_camera: {}""")
+        appendLine("""- open_url: {"url": "string"}""")
         appendLine("""- share_text: {"text": "string"}""")
         appendLine("""- web_search: {"query": "string"}""")
         appendLine("""- dial_phone: {"phone_number": "string"}""")
         appendLine("""- send_sms: {"phone_number": "string", "message": "string"}""")
+        appendLine("""- send_email: {"to": "string", "subject": "string", "body": "string"}""")
         appendLine("""- create_calendar_event: {"title": "string", "description": "optional string"}""")
         appendLine("""- copy_to_clipboard: {"text": "string"}""")
         appendLine("""- save_memory: {"fact": "string"}""")
@@ -89,7 +108,7 @@ class AndroidAgentTools(
         toolResult: String,
         success: Boolean
     ): String = buildString {
-        appendLine("You are GemmA (Gemma Agent), an on-device Android AI agent.")
+        appendLine("You are Kairo (Kairo Agent), an on-device Android AI agent.")
         appendLine("The user asked: \"$userMessage\"")
         appendLine("You executed the tool `$toolName` (success=$success) and got this real result:")
         appendLine(toolResult)
@@ -127,7 +146,7 @@ class AndroidAgentTools(
         return cleaned.trim()
     }
 
-    fun executeFromModelOutput(rawOutput: String): AgentActionResult {
+    suspend fun executeFromModelOutput(rawOutput: String): AgentActionResult {
         TOOL_CALL_REGEX.find(rawOutput)?.let { match ->
             val jsonText = match.groupValues[1].trim()
             return runCatching {
@@ -185,9 +204,11 @@ class AndroidAgentTools(
         return obj
     }
 
-    private fun dispatchTool(tool: String, args: JSONObject): AgentActionResult {
+    private suspend fun dispatchTool(tool: String, args: JSONObject): AgentActionResult {
         val result = when (tool) {
             "get_device_status" -> getDeviceStatus()
+            "get_health_summary" -> getHealthSummary()
+            "find_contact" -> findContact(args.optString("name"))
             "find_installed_apps" -> findInstalledApps(args.optString("query"))
             "read_memories" -> readMemories()
             "open_app" -> openApp(args.optString("app_name"))
@@ -205,11 +226,18 @@ class AndroidAgentTools(
             "set_volume" -> setVolume(args.optString("stream", "media"), args.optInt("percent", 50))
             "navigate_to" -> navigateTo(args.optString("destination"))
             "play_media" -> playMedia(args.optString("query"))
+            "search_youtube" -> searchYouTube(args.optString("query"))
             "open_camera" -> openCamera()
+            "open_url" -> openUrl(args.optString("url"))
             "share_text" -> shareText(args.optString("text"))
             "web_search" -> webSearch(args.optString("query"))
             "dial_phone" -> dialPhone(args.optString("phone_number"))
             "send_sms" -> sendSms(args.optString("phone_number"), args.optString("message"))
+            "send_email" -> sendEmail(
+                to = args.optString("to"),
+                subject = args.optString("subject", ""),
+                body = args.optString("body", "")
+            )
             "create_calendar_event" -> createCalendarEvent(
                 title = args.optString("title"),
                 description = args.optString("description", "")
@@ -225,6 +253,124 @@ class AndroidAgentTools(
             )
         }
         return result.copy(toolName = tool)
+    }
+
+    private suspend fun getHealthSummary(): AgentActionResult {
+        val sdkStatus = HealthConnectClient.getSdkStatus(context)
+        if (sdkStatus != HealthConnectClient.SDK_AVAILABLE) {
+            val msg = "Health Connect is not installed or unavailable on this device."
+            return AgentActionResult(executed = true, summary = msg, resultData = msg, success = false)
+        }
+
+        val client = HealthConnectClient.getOrCreate(context)
+        val granted = runCatching { client.permissionController.getGrantedPermissions() }.getOrElse { emptySet() }
+        val stepsPerm = HealthPermission.getReadPermission(StepsRecord::class)
+        val hrPerm = HealthPermission.getReadPermission(HeartRateRecord::class)
+
+        if (stepsPerm !in granted && hrPerm !in granted) {
+            val msg = "Health Connect permissions are not granted yet. Open Kairo's drawer → Connections to grant Health Connect access."
+            return AgentActionResult(executed = true, summary = "Health Connect permission needed", resultData = msg, success = false)
+        }
+
+        val startOfDay = LocalDate.now().atStartOfDay(ZoneId.systemDefault()).toInstant()
+        val now = Instant.now()
+        val parts = mutableListOf<String>()
+
+        if (stepsPerm in granted) {
+            runCatching {
+                val agg = client.aggregate(
+                    AggregateRequest(
+                        metrics = setOf(StepsRecord.COUNT_TOTAL),
+                        timeRangeFilter = TimeRangeFilter.between(startOfDay, now)
+                    )
+                )
+                val steps = agg[StepsRecord.COUNT_TOTAL] ?: 0L
+                parts.add("Steps today: $steps")
+            }
+        }
+
+        if (hrPerm in granted) {
+            runCatching {
+                val hrResp = client.readRecords(
+                    ReadRecordsRequest(
+                        recordType = HeartRateRecord::class,
+                        timeRangeFilter = TimeRangeFilter.between(startOfDay, now)
+                    )
+                )
+                val latestBpm = hrResp.records.lastOrNull()?.samples?.lastOrNull()?.beatsPerMinute
+                if (latestBpm != null) {
+                    parts.add("Latest heart rate: $latestBpm bpm")
+                }
+            }
+        }
+
+        val result = if (parts.isEmpty()) "No Health Connect records found for today yet." else parts.joinToString("; ")
+        return AgentActionResult(executed = true, summary = "Read Health Connect data", resultData = result, success = true)
+    }
+
+    private fun findContact(name: String): AgentActionResult {
+        val clean = name.trim()
+        if (clean.isEmpty()) {
+            return AgentActionResult(executed = true, summary = "No contact name provided", resultData = "No contact name provided", success = false)
+        }
+        val granted = ContextCompat.checkSelfPermission(context, Manifest.permission.READ_CONTACTS) == PackageManager.PERMISSION_GRANTED
+        if (!granted) {
+            val msg = "Contacts permission is not granted. Open Kairo's drawer → Connections to grant Contacts access."
+            return AgentActionResult(executed = true, summary = "Contacts permission needed", resultData = msg, success = false)
+        }
+
+        val matches = mutableListOf<String>()
+        context.contentResolver.query(
+            ContactsContract.CommonDataKinds.Phone.CONTENT_URI,
+            arrayOf(
+                ContactsContract.CommonDataKinds.Phone.DISPLAY_NAME,
+                ContactsContract.CommonDataKinds.Phone.NUMBER
+            ),
+            "${ContactsContract.CommonDataKinds.Phone.DISPLAY_NAME} LIKE ?",
+            arrayOf("%$clean%"),
+            null
+        )?.use { cursor ->
+            val nameIdx = cursor.getColumnIndex(ContactsContract.CommonDataKinds.Phone.DISPLAY_NAME)
+            val numIdx = cursor.getColumnIndex(ContactsContract.CommonDataKinds.Phone.NUMBER)
+            while (cursor.moveToNext() && matches.size < 5) {
+                val displayName = if (nameIdx >= 0) cursor.getString(nameIdx) else ""
+                val number = if (numIdx >= 0) cursor.getString(numIdx) else ""
+                if (displayName.isNotBlank() && number.isNotBlank()) {
+                    matches.add("$displayName: $number")
+                }
+            }
+        }
+
+        val result = if (matches.isEmpty()) "No contacts found matching \"$clean\"." else "Matching contacts: ${matches.joinToString("; ")}"
+        return AgentActionResult(executed = true, summary = "Looked up contact \"$clean\"", resultData = result, success = matches.isNotEmpty())
+    }
+
+    private fun searchYouTube(query: String): AgentActionResult {
+        val clean = query.trim()
+        val intent = Intent(
+            Intent.ACTION_VIEW,
+            Uri.parse("https://www.youtube.com/results?search_query=${Uri.encode(clean)}")
+        ).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+        return launchIntentOrFail(intent, "Searched YouTube for \"$clean\"")
+    }
+
+    private fun openUrl(rawUrl: String): AgentActionResult {
+        val normalized = if (rawUrl.startsWith("http://") || rawUrl.startsWith("https://")) {
+            rawUrl.trim()
+        } else {
+            "https://${rawUrl.trim()}"
+        }
+        val intent = Intent(Intent.ACTION_VIEW, Uri.parse(normalized)).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+        return launchIntentOrFail(intent, "Opened $normalized")
+    }
+
+    private fun sendEmail(to: String, subject: String, body: String): AgentActionResult {
+        val intent = Intent(Intent.ACTION_SENDTO, Uri.parse("mailto:${Uri.encode(to.trim())}")).apply {
+            if (subject.isNotBlank()) putExtra(Intent.EXTRA_SUBJECT, subject)
+            if (body.isNotBlank()) putExtra(Intent.EXTRA_TEXT, body)
+            addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+        }
+        return launchIntentOrFail(intent, "Opened email draft to $to")
     }
 
     private fun currentTimeString(): String =
@@ -373,6 +519,7 @@ class AndroidAgentTools(
             "sound", "audio", "volume" -> Settings.ACTION_SOUND_SETTINGS
             "battery" -> Settings.ACTION_BATTERY_SAVER_SETTINGS
             "location" -> Settings.ACTION_LOCATION_SOURCE_SETTINGS
+            "health" -> HealthConnectClient.ACTION_HEALTH_CONNECT_SETTINGS
             else -> Settings.ACTION_SETTINGS
         }
         val intent = Intent(action).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)

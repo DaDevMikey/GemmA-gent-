@@ -11,8 +11,10 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -166,5 +168,48 @@ fun ThinkingDotsIndicator(
             color = Color(0xFF8E918F),
             style = MaterialTheme.typography.bodyMedium
         )
+    }
+}
+
+/**
+ * Animated five-bar voice waveform shown when the microphone is actively listening.
+ */
+@Composable
+fun ListeningWaveformIndicator(modifier: Modifier = Modifier) {
+    val transition = rememberInfiniteTransition(label = "voice_wave")
+    val barColors = listOf(
+        Color(0xFF4285F4),
+        Color(0xFF9B72CB),
+        Color(0xFFD96570),
+        Color(0xFF9B72CB),
+        Color(0xFF4285F4)
+    )
+    Row(
+        modifier = modifier,
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(4.dp)
+    ) {
+        barColors.forEachIndexed { index, color ->
+            val barHeight by transition.animateFloat(
+                initialValue = 6f,
+                targetValue = 20f,
+                animationSpec = infiniteRepeatable(
+                    animation = tween(
+                        durationMillis = 360,
+                        delayMillis = index * 90,
+                        easing = FastOutSlowInEasing
+                    ),
+                    repeatMode = RepeatMode.Reverse
+                ),
+                label = "wave_$index"
+            )
+            Box(
+                modifier = Modifier
+                    .width(3.dp)
+                    .height(barHeight.dp)
+                    .clip(CircleShape)
+                    .background(color)
+            )
+        }
     }
 }

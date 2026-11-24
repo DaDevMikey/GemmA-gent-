@@ -40,7 +40,7 @@ class MainScreenTest {
 
     @Test
     fun brandAndGreeting_areDisplayed() {
-        composeTestRule.onNodeWithText("GemmA").assertExists()
+        composeTestRule.onNodeWithText("Kairo").assertExists()
         composeTestRule.onNodeWithText("Let's get started").assertExists()
     }
 }

@@ -156,8 +156,8 @@ class WakeWordService : Service() {
             PendingIntent.FLAG_IMMUTABLE
         )
         return NotificationCompat.Builder(this, CHANNEL_ID)
-            .setContentTitle("GemmA Wake Word Active")
-            .setContentText("Say \"Hey GemmA\" to open the agent overlay")
+            .setContentTitle("Kairo Wake Word Active")
+            .setContentText("Say \"Hey Kairo\" to open the agent overlay")
             .setSmallIcon(android.R.drawable.ic_btn_speak_now)
             .setContentIntent(openIntent)
             .addAction(android.R.drawable.ic_menu_close_clear_cancel, "Stop", stopIntent)
@@ -170,7 +170,7 @@ class WakeWordService : Service() {
         private const val NOTIFICATION_ID = 4201
         private const val ACTION_STOP = "com.gemma.assistant.action.STOP_WAKE_WORD"
         private const val COOLDOWN_MS = 3500L
-        private val WAKE_PHRASES = listOf("hey gemma", "ok gemma", "hey gem a", "gemma")
+        private val WAKE_PHRASES = listOf("hey kairo", "ok kairo", "kairo", "hey gemma", "ok gemma")
 
         private val _isRunning = MutableStateFlow(false)
         val isRunning: StateFlow<Boolean> = _isRunning.asStateFlow()

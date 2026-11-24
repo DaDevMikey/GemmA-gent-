@@ -14,7 +14,13 @@ import androidx.activity.result.PickVisualMediaRequest
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.animateContentSize
+import androidx.compose.animation.core.FastOutSlowInEasing
+import androidx.compose.animation.core.RepeatMode
+import androidx.compose.animation.core.animateFloat
 import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.infiniteRepeatable
+import androidx.compose.animation.core.rememberInfiniteTransition
+import androidx.compose.animation.core.tween
 import androidx.compose.animation.expandVertically
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
@@ -60,7 +66,9 @@ import androidx.compose.material.icons.filled.DeleteOutline
 import androidx.compose.material.icons.filled.Download
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.ErrorOutline
+import androidx.compose.material.icons.filled.FavoriteBorder
 import androidx.compose.material.icons.filled.Hearing
+import androidx.compose.material.icons.filled.Hub
 import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material.icons.filled.Mic
 import androidx.compose.material.icons.filled.Policy
@@ -121,6 +129,11 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.core.content.ContextCompat
+import androidx.health.connect.client.HealthConnectClient
+import androidx.health.connect.client.PermissionController
+import androidx.health.connect.client.permission.HealthPermission
+import androidx.health.connect.client.records.HeartRateRecord
+import androidx.health.connect.client.records.StepsRecord
 import androidx.lifecycle.compose.LifecycleResumeEffect
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
@@ -133,6 +146,7 @@ import com.gemma.assistant.data.MemoryStore
 import com.gemma.assistant.engine.ModelAvailability
 import com.gemma.assistant.service.WakeWordService
 import com.gemma.assistant.ui.components.GemmASparkleIcon
+import com.gemma.assistant.ui.components.ListeningWaveformIndicator
 import com.gemma.assistant.ui.components.ThinkingDotsIndicator
 import com.gemma.assistant.ui.theme.GemmATheme
 import com.gemma.assistant.update.UpdateCheckResult
@@ -208,6 +222,21 @@ fun MainScreen(
             WakeWordService.start(context)
         }
     }
+
+    val healthPermissions = remember {
+        setOf(
+            HealthPermission.getReadPermission(StepsRecord::class),
+            HealthPermission.getReadPermission(HeartRateRecord::class)
+        )
+    }
+
+    val contactsPermissionLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.RequestPermission()
+    ) {}
+
+    val healthPermissionLauncher = rememberLauncherForActivityResult(
+        PermissionController.createRequestPermissionResultContract()
+    ) {}
 
     var attachedImage by remember { mutableStateOf<Bitmap?>(null) }
 
@@ -292,6 +321,16 @@ fun MainScreen(
             voiceController.setTtsEnabled(true)
             voiceController.speakIfEnabled(text)
         },
+        onGrantContacts = {
+            contactsPermissionLauncher.launch(Manifest.permission.READ_CONTACTS)
+        },
+        onGrantHealthConnect = {
+            if (HealthConnectClient.getSdkStatus(context) == HealthConnectClient.SDK_AVAILABLE) {
+                healthPermissionLauncher.launch(healthPermissions)
+            } else {
+                context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse("https://play.google.com/store/apps/details?id=com.google.android.apps.healthdata")))
+            }
+        },
         onOpenAssistantSettings = { openDefaultAssistantSettings(context) },
         modifier = modifier
     )
@@ -323,6 +362,8 @@ internal fun MainScreenContent(
     onOpenUrl: (String) -> Unit = {},
     onMicClick: () -> Unit,
     onSpeakResponse: (String) -> Unit = {},
+    onGrantContacts: () -> Unit = {},
+    onGrantHealthConnect: () -> Unit = {},
     onOpenAssistantSettings: () -> Unit,
     modifier: Modifier = Modifier
 ) {
@@ -331,6 +372,7 @@ internal fun MainScreenContent(
     var showModelSheet by remember { mutableStateOf(false) }
     var showMemorySheet by remember { mutableStateOf(false) }
     var showPrivacySheet by remember { mutableStateOf(false) }
+    var showConnectionsSheet by remember { mutableStateOf(false) }
     var showQuickActions by remember { mutableStateOf(false) }
     var showDrawerSearch by remember { mutableStateOf(false) }
     var drawerSearchQuery by remember { mutableStateOf("") }
@@ -368,7 +410,7 @@ internal fun MainScreenContent(
                         horizontalArrangement = Arrangement.SpaceBetween
                     ) {
                         Text(
-                            text = "GemmA",
+                            text = "Kairo",
                             style = MaterialTheme.typography.titleLarge,
                             fontWeight = FontWeight.Medium,
                             color = GeminiTextPrimary,
@@ -453,8 +495,17 @@ internal fun MainScreenContent(
                     )
 
                     DrawerMenuRow(
+                        icon = Icons.Default.Hub,
+                        label = "Connections & Permissions",
+                        onClick = {
+                            scope.launch { drawerState.close() }
+                            showConnectionsSheet = true
+                        }
+                    )
+
+                    DrawerMenuRow(
                         icon = Icons.Default.Policy,
-                        label = "Privacy & Terms",
+                        label = "Privacy, Terms & Credits",
                         onClick = {
                             scope.launch { drawerState.close() }
                             showPrivacySheet = true
@@ -482,7 +533,7 @@ internal fun MainScreenContent(
                                 modifier = Modifier.size(20.dp)
                             )
                             Text(
-                                text = "Hey GemmA wake word",
+                                text = "Hey Kairo wake word",
                                 color = GeminiTextPrimary,
                                 style = MaterialTheme.typography.bodyMedium
                             )
@@ -613,13 +664,13 @@ internal fun MainScreenContent(
                     ) {
                         Column {
                             Text(
-                                text = "GemmA • Gemma Agent",
+                                text = "Kairo • by DaManMikey",
                                 color = GeminiTextPrimary,
                                 style = MaterialTheme.typography.bodyMedium,
                                 fontWeight = FontWeight.Medium
                             )
                             Text(
-                                text = "ON-DEVICE",
+                                text = "ON-DEVICE • GEMMA 4",
                                 color = GeminiAccentBlue,
                                 style = MaterialTheme.typography.labelSmall
                             )
@@ -639,6 +690,17 @@ internal fun MainScreenContent(
             }
         }
     ) {
+        val auroraTransition = rememberInfiniteTransition(label = "aurora")
+        val glowShift by auroraTransition.animateFloat(
+            initialValue = 1350f,
+            targetValue = 1620f,
+            animationSpec = infiniteRepeatable(
+                animation = tween(durationMillis = 5000, easing = FastOutSlowInEasing),
+                repeatMode = RepeatMode.Reverse
+            ),
+            label = "aurora_radius"
+        )
+
         Box(
             modifier = modifier
                 .fillMaxSize()
@@ -646,7 +708,7 @@ internal fun MainScreenContent(
                     Brush.radialGradient(
                         colors = listOf(GeminiBgGlow, GeminiBgTop),
                         center = Offset(540f, 2250f),
-                        radius = 1450f
+                        radius = glowShift
                     )
                 )
                 .systemBarsPadding()
@@ -678,7 +740,7 @@ internal fun MainScreenContent(
                             horizontalArrangement = Arrangement.spacedBy(6.dp)
                         ) {
                             Text(
-                                text = "GemmA",
+                                text = "Kairo",
                                 color = GeminiTextPrimary,
                                 style = MaterialTheme.typography.titleMedium,
                                 fontWeight = FontWeight.Medium
@@ -751,11 +813,13 @@ internal fun MainScreenContent(
                         verticalArrangement = Arrangement.spacedBy(18.dp)
                     ) {
                         items(state.activeTurns) { turn ->
-                            ConversationTurnItem(
-                                turn = turn,
-                                onSpeak = { onSpeakResponse(turn.response) },
-                                onRegenerate = { onSendPrompt(turn.prompt) }
-                            )
+                            Box(modifier = Modifier.animateItem()) {
+                                ConversationTurnItem(
+                                    turn = turn,
+                                    onSpeak = { onSpeakResponse(turn.response) },
+                                    onRegenerate = { onSendPrompt(turn.prompt) }
+                                )
+                            }
                         }
                     }
                 }
@@ -880,11 +944,25 @@ internal fun MainScreenContent(
                             modifier = Modifier.weight(1f),
                             decorationBox = { innerTextField ->
                                 if (draft.isEmpty()) {
-                                    Text(
-                                        text = if (isListening) "Listening..." else "Ask GemmA",
-                                        color = if (isListening) GeminiAccentBlue else GeminiTextSecondary,
-                                        fontSize = 16.sp
-                                    )
+                                    if (isListening) {
+                                        Row(
+                                            verticalAlignment = Alignment.CenterVertically,
+                                            horizontalArrangement = Arrangement.spacedBy(8.dp)
+                                        ) {
+                                            ListeningWaveformIndicator()
+                                            Text(
+                                                text = "Listening...",
+                                                color = GeminiAccentBlue,
+                                                fontSize = 16.sp
+                                            )
+                                        }
+                                    } else {
+                                        Text(
+                                            text = "Ask Kairo",
+                                            color = GeminiTextSecondary,
+                                            fontSize = 16.sp
+                                        )
+                                    }
                                 }
                                 innerTextField()
                             }
@@ -943,7 +1021,7 @@ internal fun MainScreenContent(
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     Text(
-                        text = "GemmA • Gemma Agent",
+                        text = "Kairo • Powered by Gemma 4",
                         style = MaterialTheme.typography.titleMedium,
                         fontWeight = FontWeight.SemiBold
                     )
@@ -1224,10 +1302,87 @@ internal fun MainScreenContent(
                     color = GeminiAccentBlue
                 )
                 Text(
-                    text = "GemmA is open-source software provided under the MIT License without warranty. Always verify AI-generated responses and device actions.",
+                    text = "Kairo is open-source software provided under the MIT License without warranty. Always verify AI-generated responses and device actions.",
                     style = MaterialTheme.typography.bodySmall,
                     color = GeminiTextSecondary
                 )
+                HorizontalDivider(color = Color(0xFF232528))
+                Text(
+                    text = "Credits & Source Code",
+                    style = MaterialTheme.typography.labelLarge,
+                    color = GeminiAccentBlue
+                )
+                Text(
+                    text = "Created by DaManMikey • Powered by on-device Gemma 4 via Android AICore.",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = GeminiTextSecondary
+                )
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    OutlinedButton(
+                        onClick = { onOpenUrl("https://damanmikey.me/") },
+                        modifier = Modifier.weight(1f)
+                    ) {
+                        Text("damanmikey.me")
+                    }
+                    OutlinedButton(
+                        onClick = { onOpenUrl("https://github.com/DaDevMikey/GemmA-gent-") },
+                        modifier = Modifier.weight(1f)
+                    ) {
+                        Text("Source Code")
+                    }
+                }
+                Spacer(Modifier.height(12.dp))
+            }
+        }
+    }
+
+    if (showConnectionsSheet) {
+        ModalBottomSheet(
+            onDismissRequest = { showConnectionsSheet = false },
+            containerColor = GeminiDrawerBg,
+            contentColor = GeminiTextPrimary
+        ) {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 20.dp, vertical = 12.dp),
+                verticalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
+                Text(
+                    text = "Connections & Permissions",
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.SemiBold
+                )
+                Text(
+                    text = "Grant optional Android permissions so Kairo can look up contacts, read Health Connect steps & heart rate, and connect to your apps.",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = GeminiTextSecondary
+                )
+                FilledTonalButton(
+                    onClick = onGrantHealthConnect,
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Icon(Icons.Default.FavoriteBorder, contentDescription = null)
+                    Spacer(Modifier.width(8.dp))
+                    Text("Connect Health Connect (Steps & Heart Rate)")
+                }
+                FilledTonalButton(
+                    onClick = onGrantContacts,
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Text("Allow Contacts Access")
+                }
+                OutlinedButton(
+                    onClick = onMicClick,
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Icon(Icons.Default.Mic, contentDescription = null)
+                    Spacer(Modifier.width(8.dp))
+                    Text("Allow Microphone Access")
+                }
                 Spacer(Modifier.height(12.dp))
             }
         }

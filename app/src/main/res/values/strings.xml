@@ -1,5 +1,5 @@
 <resources>
-    <string name="app_name">GemmA</string>
-    <string name="assistant_title">GemmA</string>
-    <string name="assistant_subtitle">Gemma Agent</string>
+    <string name="app_name">Kairo</string>
+    <string name="assistant_title">Kairo</string>
+    <string name="assistant_subtitle">Kairo Agent • Powered by Gemma 4</string>
 </resources>
