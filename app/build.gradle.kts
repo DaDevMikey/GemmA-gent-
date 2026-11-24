@@ -5,14 +5,14 @@ plugins {
 }
 
 android {
-  namespace = "com.gemma.assistant"
+  namespace = "com.kairo.agent"
   compileSdk = 36
   defaultConfig {
-    applicationId = "com.gemma.assistant"
+    applicationId = "com.kairo.agent"
     minSdk = 26
     targetSdk = 36
-    versionCode = 3
-    versionName = "1.0.2"
+    versionCode = 4
+    versionName = "1.0.3"
   }
 
   buildTypes {
