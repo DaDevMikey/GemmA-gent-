@@ -101,6 +101,7 @@ import com.kairo.agent.agent.AgentPersona
 import com.kairo.agent.agent.NerdStats
 import com.kairo.agent.ui.components.GemmASparkleIcon
 import com.kairo.agent.ui.components.ListeningWaveformIndicator
+import com.kairo.agent.ui.components.RichResponseText
 import com.kairo.agent.ui.components.ThinkingDotsIndicator
 
 private val SheetSurface = Color(0xEC131314)
@@ -364,10 +365,9 @@ fun GemmaAssistantSheet(
                             ThinkingDotsIndicator(modifier = Modifier.padding(vertical = 4.dp))
                         } else if (responseText.isNotEmpty() || isGenerating) {
                             val displayResponse = if (isGenerating) "$responseText ▌" else responseText
-                            Text(
+                            RichResponseText(
                                 text = displayResponse,
-                                color = PrimaryText,
-                                style = MaterialTheme.typography.bodyLarge,
+                                textColor = PrimaryText,
                                 modifier = Modifier
                                     .fillMaxWidth()
                                     .weight(1f, fill = false)

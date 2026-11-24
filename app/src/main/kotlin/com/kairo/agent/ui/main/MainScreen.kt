@@ -57,6 +57,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.foundation.text.selection.SelectionContainer
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.VolumeUp
@@ -163,6 +164,7 @@ import com.kairo.agent.engine.ModelAvailability
 import com.kairo.agent.service.WakeWordService
 import com.kairo.agent.ui.components.GemmASparkleIcon
 import com.kairo.agent.ui.components.ListeningWaveformIndicator
+import com.kairo.agent.ui.components.RichResponseText
 import com.kairo.agent.ui.components.ThinkingDotsIndicator
 import com.kairo.agent.ui.theme.GemmATheme
 import com.kairo.agent.update.UpdateCheckResult
@@ -1315,7 +1317,9 @@ private fun ConversationTurnItem(
                     Icon(Icons.Default.ContentCopy, contentDescription = "Copy prompt", tint = GeminiTextSecondary, modifier = Modifier.size(14.dp))
                 }
                 Surface(color = GeminiChipBg, shape = RoundedCornerShape(20.dp), modifier = Modifier.widthIn(max = 280.dp)) {
-                    Text(turn.prompt, color = GeminiTextPrimary, style = MaterialTheme.typography.bodyLarge, modifier = Modifier.padding(horizontal = 16.dp, vertical = 10.dp))
+                    SelectionContainer {
+                        Text(turn.prompt, color = GeminiTextPrimary, style = MaterialTheme.typography.bodyLarge, modifier = Modifier.padding(horizontal = 16.dp, vertical = 10.dp))
+                    }
                 }
             }
         }
@@ -1350,10 +1354,9 @@ private fun ConversationTurnItem(
                 if (turn.isStreaming && turn.response.isEmpty()) {
                     ThinkingDotsIndicator()
                 } else {
-                    Text(
+                    RichResponseText(
                         text = if (turn.isStreaming) "${turn.response} ▌" else turn.response,
-                        color = GeminiTextPrimary,
-                        style = MaterialTheme.typography.bodyLarge
+                        textColor = GeminiTextPrimary
                     )
                 }
 

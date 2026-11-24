@@ -1,5 +1,10 @@
 # Changelog
 
+## v1.0.4 (2026-11-24)
+### Added
+- **Selectable Text**: Prompts and responses in both the main chat and floating overlay are wrapped in `SelectionContainer` so you can long-press and copy any selected text.
+- **Formatted Code Blocks**: Fenced ```` ```code blocks``` ```` now render in dark monospace code cards with a language header, horizontal scrolling, and a one-tap **Copy code** button, plus inline `` `code` `` and `**bold**` formatting.
+
 ## v1.0.3 (2026-11-24)
 ### Added
 - **Package Rename**: Migrated Android package & application ID to `com.kairo.agent`.
