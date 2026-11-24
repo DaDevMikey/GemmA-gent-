@@ -33,7 +33,6 @@ class MainScreenTest {
                 onDownloadModel = {},
                 onWarmupModel = {},
                 onMicClick = {},
-                onLaunchOverlay = {},
                 onOpenAssistantSettings = {}
             )
         }

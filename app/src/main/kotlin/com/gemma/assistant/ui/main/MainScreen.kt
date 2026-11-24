@@ -13,6 +13,12 @@ import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.PickVisualMediaRequest
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.animateContentSize
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.expandVertically
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.shrinkVertically
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -43,11 +49,9 @@ import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.OpenInNew
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.AddPhotoAlternate
 import androidx.compose.material.icons.filled.ArrowUpward
-import androidx.compose.material.icons.filled.AutoAwesome
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.DeleteOutline
@@ -57,6 +61,7 @@ import androidx.compose.material.icons.filled.ErrorOutline
 import androidx.compose.material.icons.filled.Hearing
 import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material.icons.filled.Mic
+import androidx.compose.material.icons.filled.Policy
 import androidx.compose.material.icons.filled.Psychology
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Settings
@@ -94,6 +99,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.scale
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
@@ -113,7 +119,6 @@ import androidx.lifecycle.compose.LifecycleResumeEffect
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation3.runtime.NavKey
-import com.gemma.assistant.AssistantOverlayActivity
 import com.gemma.assistant.agent.AndroidAgentTools
 import com.gemma.assistant.agent.ScreenContextHolder
 import com.gemma.assistant.data.ChatHistoryStore
@@ -122,6 +127,7 @@ import com.gemma.assistant.data.MemoryStore
 import com.gemma.assistant.engine.ModelAvailability
 import com.gemma.assistant.service.WakeWordService
 import com.gemma.assistant.ui.components.GemmASparkleIcon
+import com.gemma.assistant.ui.components.ThinkingDotsIndicator
 import com.gemma.assistant.ui.theme.GemmATheme
 import com.gemma.assistant.update.UpdateCheckResult
 import com.gemma.assistant.update.UpdateChecker
@@ -232,6 +238,7 @@ fun MainScreen(
         },
         onNewChat = viewModel::startNewChat,
         onSelectChat = viewModel::loadChatIntoView,
+        onDeleteChat = viewModel::deleteChat,
         onClearChats = viewModel::clearChats,
         onAddMemory = viewModel::addMemory,
         onDeleteMemory = viewModel::deleteMemory,
@@ -275,9 +282,6 @@ fun MainScreen(
                 micPermissionLauncher.launch(Manifest.permission.RECORD_AUDIO)
             }
         },
-        onLaunchOverlay = {
-            context.startActivity(Intent(context, AssistantOverlayActivity::class.java))
-        },
         onOpenAssistantSettings = { openDefaultAssistantSettings(context) },
         modifier = modifier
     )
@@ -296,6 +300,7 @@ internal fun MainScreenContent(
     onSendPrompt: (String) -> Unit,
     onNewChat: () -> Unit,
     onSelectChat: (ChatRecord) -> Unit,
+    onDeleteChat: (String) -> Unit = {},
     onClearChats: () -> Unit,
     onAddMemory: (String) -> Unit,
     onDeleteMemory: (String) -> Unit,
@@ -307,7 +312,6 @@ internal fun MainScreenContent(
     onCheckUpdates: () -> Unit = {},
     onOpenUrl: (String) -> Unit = {},
     onMicClick: () -> Unit,
-    onLaunchOverlay: () -> Unit,
     onOpenAssistantSettings: () -> Unit,
     modifier: Modifier = Modifier
 ) {
@@ -315,6 +319,7 @@ internal fun MainScreenContent(
     val scope = rememberCoroutineScope()
     var showModelSheet by remember { mutableStateOf(false) }
     var showMemorySheet by remember { mutableStateOf(false) }
+    var showPrivacySheet by remember { mutableStateOf(false) }
     var showQuickActions by remember { mutableStateOf(false) }
     var showDrawerSearch by remember { mutableStateOf(false) }
     var drawerSearchQuery by remember { mutableStateOf("") }
@@ -437,11 +442,11 @@ internal fun MainScreenContent(
                     )
 
                     DrawerMenuRow(
-                        icon = Icons.AutoMirrored.Filled.OpenInNew,
-                        label = "Floating Overlay",
+                        icon = Icons.Default.Policy,
+                        label = "Privacy & Terms",
                         onClick = {
                             scope.launch { drawerState.close() }
-                            onLaunchOverlay()
+                            showPrivacySheet = true
                         }
                     )
 
@@ -532,7 +537,7 @@ internal fun MainScreenContent(
                             verticalArrangement = Arrangement.spacedBy(2.dp)
                         ) {
                             items(filteredChats, key = { it.id }) { chat ->
-                                Column(
+                                Row(
                                     modifier = Modifier
                                         .fillMaxWidth()
                                         .clip(RoundedCornerShape(12.dp))
@@ -540,24 +545,38 @@ internal fun MainScreenContent(
                                             onSelectChat(chat)
                                             scope.launch { drawerState.close() }
                                         }
-                                        .padding(horizontal = 12.dp, vertical = 10.dp)
+                                        .padding(start = 12.dp, end = 4.dp, top = 8.dp, bottom = 8.dp),
+                                    verticalAlignment = Alignment.CenterVertically
                                 ) {
-                                    Text(
-                                        text = chat.prompt,
-                                        color = GeminiTextPrimary,
-                                        style = MaterialTheme.typography.bodyMedium,
-                                        maxLines = 1,
-                                        overflow = TextOverflow.Ellipsis
-                                    )
-                                    if (chat.timestampMs > 0L) {
+                                    Column(modifier = Modifier.weight(1f)) {
                                         Text(
-                                            text = DateUtils.getRelativeTimeSpanString(
-                                                chat.timestampMs,
-                                                System.currentTimeMillis(),
-                                                DateUtils.MINUTE_IN_MILLIS
-                                            ).toString(),
-                                            color = GeminiTextSecondary,
-                                            style = MaterialTheme.typography.labelSmall
+                                            text = chat.prompt,
+                                            color = GeminiTextPrimary,
+                                            style = MaterialTheme.typography.bodyMedium,
+                                            maxLines = 1,
+                                            overflow = TextOverflow.Ellipsis
+                                        )
+                                        if (chat.timestampMs > 0L) {
+                                            Text(
+                                                text = DateUtils.getRelativeTimeSpanString(
+                                                    chat.timestampMs,
+                                                    System.currentTimeMillis(),
+                                                    DateUtils.MINUTE_IN_MILLIS
+                                                ).toString(),
+                                                color = GeminiTextSecondary,
+                                                style = MaterialTheme.typography.labelSmall
+                                            )
+                                        }
+                                    }
+                                    IconButton(
+                                        onClick = { onDeleteChat(chat.id) },
+                                        modifier = Modifier.size(32.dp)
+                                    ) {
+                                        Icon(
+                                            imageVector = Icons.Default.DeleteOutline,
+                                            contentDescription = "Delete chat",
+                                            tint = GeminiTextSecondary,
+                                            modifier = Modifier.size(16.dp)
                                         )
                                     }
                                 }
@@ -727,7 +746,11 @@ internal fun MainScreenContent(
                 }
 
                 // Expandable quick agent actions row
-                AnimatedVisibility(visible = showQuickActions) {
+                AnimatedVisibility(
+                    visible = showQuickActions,
+                    enter = expandVertically() + fadeIn(),
+                    exit = shrinkVertically() + fadeOut()
+                ) {
                     Row(
                         modifier = Modifier
                             .fillMaxWidth()
@@ -861,9 +884,14 @@ internal fun MainScreenContent(
                         }
 
                         val canSend = draft.isNotBlank() || attachedImage != null
+                        val sendScale by animateFloatAsState(
+                            targetValue = if (canSend) 1.06f else 0.96f,
+                            label = "send_scale"
+                        )
                         Box(
                             modifier = Modifier
                                 .size(38.dp)
+                                .scale(sendScale)
                                 .clip(CircleShape)
                                 .background(if (canSend) GeminiAccentBlue else GeminiChipBg)
                                 .clickable(enabled = canSend, onClick = submitDraft),
@@ -955,18 +983,6 @@ internal fun MainScreenContent(
                         }
                     }
                     else -> Unit
-                }
-
-                OutlinedButton(
-                    onClick = {
-                        showModelSheet = false
-                        onLaunchOverlay()
-                    },
-                    modifier = Modifier.fillMaxWidth()
-                ) {
-                    Icon(Icons.Default.AutoAwesome, contentDescription = null)
-                    Spacer(Modifier.width(8.dp))
-                    Text("Launch Floating Overlay")
                 }
 
                 OutlinedButton(
@@ -1157,6 +1173,50 @@ internal fun MainScreenContent(
             }
         }
     }
+
+    if (showPrivacySheet) {
+        ModalBottomSheet(
+            onDismissRequest = { showPrivacySheet = false },
+            containerColor = GeminiDrawerBg,
+            contentColor = GeminiTextPrimary
+        ) {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 20.dp, vertical = 12.dp),
+                verticalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
+                Text(
+                    text = "Privacy Policy & Terms of Service",
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.SemiBold
+                )
+                Text(
+                    text = "100% Local On-Device Agent",
+                    style = MaterialTheme.typography.labelLarge,
+                    color = GeminiAccentBlue
+                )
+                Text(
+                    text = "• All prompts, images, screen context, and voice transcriptions are processed locally via Android AICore (Gemma 4). Nothing is sent to external AI servers.\n" +
+                        "• Recent chats and saved memories are stored only in your device's private app storage and can be deleted individually or cleared anytime.\n" +
+                        "• Zero analytics, zero ads, and zero tracking SDKs. Update checks only run when you tap Check.",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = GeminiTextSecondary
+                )
+                Text(
+                    text = "Terms of Service (MIT)",
+                    style = MaterialTheme.typography.labelLarge,
+                    color = GeminiAccentBlue
+                )
+                Text(
+                    text = "GemmA is open-source software provided under the MIT License without warranty. Always verify AI-generated responses and device actions.",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = GeminiTextSecondary
+                )
+                Spacer(Modifier.height(12.dp))
+            }
+        }
+    }
 }
 
 @Composable
@@ -1234,43 +1294,55 @@ private fun ConversationTurnItem(turn: ConversationTurn) {
                 modifier = Modifier.padding(top = 2.dp)
             )
             Column(
-                modifier = Modifier.weight(1f),
+                modifier = Modifier
+                    .weight(1f)
+                    .animateContentSize(),
                 verticalArrangement = Arrangement.spacedBy(8.dp)
             ) {
-                if (turn.actionSummary != null) {
-                    Surface(
-                        color = GeminiChipBg,
-                        shape = RoundedCornerShape(12.dp)
-                    ) {
-                        Row(
-                            modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp),
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.spacedBy(6.dp)
+                AnimatedVisibility(
+                    visible = turn.actionSummary != null,
+                    enter = expandVertically() + fadeIn(),
+                    exit = shrinkVertically() + fadeOut()
+                ) {
+                    turn.actionSummary?.let { summary ->
+                        Surface(
+                            color = GeminiChipBg,
+                            shape = RoundedCornerShape(12.dp)
                         ) {
-                            Icon(
-                                imageVector = if (turn.actionSuccess) {
-                                    Icons.Default.CheckCircle
-                                } else {
-                                    Icons.Default.ErrorOutline
-                                },
-                                contentDescription = null,
-                                tint = if (turn.actionSuccess) ActionSuccessGreen else ActionErrorRed,
-                                modifier = Modifier.size(16.dp)
-                            )
-                            Text(
-                                text = turn.actionSummary,
-                                color = GeminiTextPrimary,
-                                style = MaterialTheme.typography.labelMedium
-                            )
+                            Row(
+                                modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp),
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(6.dp)
+                            ) {
+                                Icon(
+                                    imageVector = if (turn.actionSuccess) {
+                                        Icons.Default.CheckCircle
+                                    } else {
+                                        Icons.Default.ErrorOutline
+                                    },
+                                    contentDescription = null,
+                                    tint = if (turn.actionSuccess) ActionSuccessGreen else ActionErrorRed,
+                                    modifier = Modifier.size(16.dp)
+                                )
+                                Text(
+                                    text = summary,
+                                    color = GeminiTextPrimary,
+                                    style = MaterialTheme.typography.labelMedium
+                                )
+                            }
                         }
                     }
                 }
 
-                Text(
-                    text = turn.response.ifEmpty { if (turn.isStreaming) "Thinking locally..." else "" },
-                    color = GeminiTextPrimary,
-                    style = MaterialTheme.typography.bodyLarge
-                )
+                if (turn.isStreaming && turn.response.isEmpty()) {
+                    ThinkingDotsIndicator()
+                } else {
+                    Text(
+                        text = if (turn.isStreaming) "${turn.response} ▌" else turn.response,
+                        color = GeminiTextPrimary,
+                        style = MaterialTheme.typography.bodyLarge
+                    )
+                }
             }
         }
     }
@@ -1329,7 +1401,6 @@ fun MainScreenPreview() {
             onDownloadModel = {},
             onWarmupModel = {},
             onMicClick = {},
-            onLaunchOverlay = {},
             onOpenAssistantSettings = {}
         )
     }

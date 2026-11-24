@@ -63,6 +63,11 @@ class ChatHistoryStore(context: Context) {
         writeChats(updated)
     }
 
+    fun deleteChat(id: String) {
+        val updated = loadChats().filterNot { it.id == id }
+        writeChats(updated)
+    }
+
     fun clearChats() {
         runCatching {
             if (historyFile.exists()) historyFile.delete()

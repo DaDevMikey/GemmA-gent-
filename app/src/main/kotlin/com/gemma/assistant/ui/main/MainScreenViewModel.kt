@@ -64,7 +64,6 @@ class MainScreenViewModel(
         refreshStatus()
         refreshChats()
         refreshMemories()
-        checkForUpdates()
     }
 
     fun checkForUpdates() {
@@ -79,6 +78,11 @@ class MainScreenViewModel(
     fun refreshChats() {
         val chats = chatHistoryStore?.loadChats().orEmpty()
         _state.update { it.copy(recentChats = chats) }
+    }
+
+    fun deleteChat(id: String) {
+        chatHistoryStore?.deleteChat(id)
+        refreshChats()
     }
 
     fun clearChats() {

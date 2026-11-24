@@ -84,6 +84,7 @@ import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.gemma.assistant.ui.components.GemmASparkleIcon
+import com.gemma.assistant.ui.components.ThinkingDotsIndicator
 
 private val SheetSurface = Color(0xFF131314)
 private val InputPillSurface = Color(0xFF1E1F20)
@@ -352,9 +353,14 @@ fun GemmaAssistantSheet(
                         }
                     }
 
-                    if (responseText.isNotEmpty() || isGenerating) {
+                    if (isGenerating && responseText.isEmpty()) {
+                        ThinkingDotsIndicator(
+                            modifier = Modifier.padding(vertical = 4.dp)
+                        )
+                    } else if (responseText.isNotEmpty() || isGenerating) {
+                        val displayResponse = if (isGenerating) "$responseText ▌" else responseText
                         Text(
-                            text = responseText.ifEmpty { "Thinking locally..." },
+                            text = displayResponse,
                             color = PrimaryText,
                             style = MaterialTheme.typography.bodyLarge,
                             modifier = Modifier

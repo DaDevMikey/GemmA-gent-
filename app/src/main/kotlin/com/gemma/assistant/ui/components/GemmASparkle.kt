@@ -7,10 +7,21 @@ import androidx.compose.animation.core.infiniteRepeatable
 import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
@@ -86,5 +97,74 @@ fun GemmASparkleIcon(
         )
 
         drawPath(path = path, brush = brush)
+    }
+}
+
+/**
+ * Animated three-dot thinking indicator shown while Gemma 4 processes locally.
+ */
+@Composable
+fun ThinkingDotsIndicator(
+    label: String = "Thinking locally",
+    modifier: Modifier = Modifier
+) {
+    val transition = rememberInfiniteTransition(label = "thinking_dots")
+    val dotColors = listOf(
+        Color(0xFF4285F4),
+        Color(0xFF9B72CB),
+        Color(0xFFD96570)
+    )
+
+    Row(
+        modifier = modifier,
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(8.dp)
+    ) {
+        Row(
+            horizontalArrangement = Arrangement.spacedBy(5.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            dotColors.forEachIndexed { index, color ->
+                val offsetY by transition.animateFloat(
+                    initialValue = 0f,
+                    targetValue = -6f,
+                    animationSpec = infiniteRepeatable(
+                        animation = tween(
+                            durationMillis = 420,
+                            delayMillis = index * 130,
+                            easing = FastOutSlowInEasing
+                        ),
+                        repeatMode = RepeatMode.Reverse
+                    ),
+                    label = "dot_y_$index"
+                )
+                val alpha by transition.animateFloat(
+                    initialValue = 0.45f,
+                    targetValue = 1f,
+                    animationSpec = infiniteRepeatable(
+                        animation = tween(
+                            durationMillis = 420,
+                            delayMillis = index * 130,
+                            easing = FastOutSlowInEasing
+                        ),
+                        repeatMode = RepeatMode.Reverse
+                    ),
+                    label = "dot_a_$index"
+                )
+                Box(
+                    modifier = Modifier
+                        .offset(y = offsetY.dp)
+                        .size(7.dp)
+                        .alpha(alpha)
+                        .clip(CircleShape)
+                        .background(color)
+                )
+            }
+        }
+        Text(
+            text = label,
+            color = Color(0xFF8E918F),
+            style = MaterialTheme.typography.bodyMedium
+        )
     }
 }
