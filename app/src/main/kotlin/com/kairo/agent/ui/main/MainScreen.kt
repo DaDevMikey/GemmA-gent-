@@ -166,6 +166,7 @@ import com.kairo.agent.ui.components.GemmASparkleIcon
 import com.kairo.agent.ui.components.ListeningWaveformIndicator
 import com.kairo.agent.ui.components.RichResponseText
 import com.kairo.agent.ui.components.ThinkingDotsIndicator
+import com.kairo.agent.ui.onboarding.OnboardingScreen
 import com.kairo.agent.ui.theme.GemmATheme
 import com.kairo.agent.update.UpdateCheckResult
 import com.kairo.agent.update.UpdateChecker
@@ -195,27 +196,6 @@ private val AgentQuickActions = listOf(
     "Send image" to "Send this image",
     "Remember" to "Remember that "
 )
-
-private const val RELEASE_NOTES_TEXT = """
-v1.0.3 (Current)
-• Rebranded package to com.kairo.agent
-• Multi-turn conversation memory + automatic <memory> extraction
-• Call, text, and send images directly to contacts/apps
-• Compatibility & Setup sheet with Bypass mode + Non-AICore Local HTTP endpoint (e.g. Z Fold 8 / llama.cpp)
-• Shizuku / Root Power Mode shell tool
-• Audio-reactive edge glow, frosted overlay, spring physics, and Cover-Screen Mini-Mode
-• Instant Persona chips (Roast, TL;DR, Dev Mode, Grammar/Reply)
-• Live tok/s, TTFT, and RAM nerd stats + Think Harder (E4B) re-run
-• Notification Catch-Up (NotificationListenerService) + in-app Release Notes
-
-v1.0.2
-• Play-safe rebrand to Kairo + DaManMikey credits
-• Health Connect & Contacts integration
-• Release APK builds via GitHub Actions
-
-v1.0.1
-• Copy prompts/responses, Share, Speak, Regenerate, Privacy Policy & Terms
-"""
 
 @Composable
 fun MainScreen(
@@ -298,6 +278,32 @@ fun MainScreen(
         onPauseOrDispose {}
     }
 
+    if (!state.settings.hasCompletedOnboarding) {
+        OnboardingScreen(
+            availability = state.availability,
+            settings = state.settings,
+            compatibilityReport = state.compatibilityReport,
+            isCheckingCompatibility = state.isCheckingCompatibility,
+            onRunChecks = viewModel::runCompatibilityChecks,
+            onDownloadModel = viewModel::downloadModel,
+            onUpdateSettings = viewModel::updateSettings,
+            onGrantMic = { micPermissionLauncher.launch(Manifest.permission.RECORD_AUDIO) },
+            onGrantContacts = { contactsPermissionLauncher.launch(Manifest.permission.READ_CONTACTS) },
+            onGrantCall = { callPermissionLauncher.launch(Manifest.permission.CALL_PHONE) },
+            onGrantHealthConnect = {
+                if (HealthConnectClient.getSdkStatus(context) == HealthConnectClient.SDK_AVAILABLE) {
+                    healthPermissionLauncher.launch(healthPermissions)
+                } else {
+                    context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse("https://play.google.com/store/apps/details?id=com.google.android.apps.healthdata")))
+                }
+            },
+            onOpenNotificationAccess = { context.startActivity(Intent(Settings.ACTION_NOTIFICATION_LISTENER_SETTINGS)) },
+            onOpenAssistantSettings = { openDefaultAssistantSettings(context) },
+            onComplete = viewModel::completeOnboarding
+        )
+        return
+    }
+
     MainScreenContent(
         state = state,
         isListening = voiceState.isListening,
@@ -348,6 +354,7 @@ fun MainScreen(
         onDownloadModel = viewModel::downloadModel,
         onWarmupModel = viewModel::warmupModel,
         onCheckUpdates = viewModel::checkForUpdates,
+        onFetchReleaseNotes = viewModel::fetchReleaseNotes,
         onOpenUrl = { url -> context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(url))) },
         onMicClick = {
             val granted = ContextCompat.checkSelfPermission(context, Manifest.permission.RECORD_AUDIO) == PackageManager.PERMISSION_GRANTED
@@ -402,6 +409,7 @@ internal fun MainScreenContent(
     onDownloadModel: () -> Unit,
     onWarmupModel: () -> Unit,
     onCheckUpdates: () -> Unit = {},
+    onFetchReleaseNotes: () -> Unit = {},
     onOpenUrl: (String) -> Unit = {},
     onMicClick: () -> Unit,
     onSpeakResponse: (String) -> Unit = {},
@@ -418,8 +426,8 @@ internal fun MainScreenContent(
     var showMemorySheet by remember { mutableStateOf(false) }
     var showPrivacySheet by remember { mutableStateOf(false) }
     var showConnectionsSheet by remember { mutableStateOf(false) }
-    var showSetupSheet by remember { mutableStateOf(false) }
     var showReleaseNotesSheet by remember { mutableStateOf(false) }
+    var sparkleTaps by remember { mutableStateOf(0) }
     var showQuickActions by remember { mutableStateOf(false) }
     var showDrawerSearch by remember { mutableStateOf(false) }
     var drawerSearchQuery by remember { mutableStateOf("") }
@@ -511,17 +519,13 @@ internal fun MainScreenContent(
                         scope.launch { drawerState.close() }
                         showMemorySheet = true
                     }
-                    DrawerMenuRow(Icons.Default.Build, "Setup & Compatibility") {
-                        scope.launch { drawerState.close() }
-                        onRunCompatibilityChecks()
-                        showSetupSheet = true
-                    }
                     DrawerMenuRow(Icons.Default.Hub, "Connections & Permissions") {
                         scope.launch { drawerState.close() }
                         showConnectionsSheet = true
                     }
                     DrawerMenuRow(Icons.Default.NewReleases, "Release Notes") {
                         scope.launch { drawerState.close() }
+                        onFetchReleaseNotes()
                         showReleaseNotesSheet = true
                     }
                     DrawerMenuRow(Icons.Default.Policy, "Privacy, Terms & Credits") {
@@ -714,22 +718,30 @@ internal fun MainScreenContent(
                             horizontalAlignment = Alignment.CenterHorizontally,
                             verticalArrangement = Arrangement.spacedBy(18.dp)
                         ) {
-                            GemmASparkleIcon(size = 44.dp, isAnimating = state.isGenerating)
-                            Text("Let's get started", color = GeminiTextPrimary, fontSize = 26.sp, fontWeight = FontWeight.Normal)
+                            Box(
+                                modifier = Modifier
+                                    .clip(CircleShape)
+                                    .clickable(
+                                        interactionSource = remember { MutableInteractionSource() },
+                                        indication = ripple(bounded = false, color = GeminiAccentBlue)
+                                    ) {
+                                        sparkleTaps++
+                                    }
+                                    .padding(8.dp)
+                            ) {
+                                GemmASparkleIcon(size = 44.dp, isAnimating = state.isGenerating || sparkleTaps >= 5)
+                            }
+                            val greeting = when {
+                                sparkleTaps >= 10 -> "Pure local silicon, zero cloud."
+                                sparkleTaps >= 5 -> "All thoughts stay on-device ✦"
+                                else -> "Let's get started"
+                            }
+                            Text(greeting, color = GeminiTextPrimary, fontSize = 26.sp, fontWeight = FontWeight.Normal)
                             if (state.availability == ModelAvailability.DOWNLOADABLE && !state.settings.bypassCompatibility) {
                                 FilledTonalButton(onClick = onDownloadModel) {
                                     Icon(Icons.Default.Download, contentDescription = null)
                                     Spacer(Modifier.width(8.dp))
                                     Text("Download Gemma 4")
-                                }
-                            } else if (state.availability == ModelAvailability.UNAVAILABLE && !state.settings.bypassCompatibility) {
-                                OutlinedButton(onClick = {
-                                    onRunCompatibilityChecks()
-                                    showSetupSheet = true
-                                }) {
-                                    Icon(Icons.Default.Build, contentDescription = null)
-                                    Spacer(Modifier.width(8.dp))
-                                    Text("Setup & Compatibility")
                                 }
                             }
                         }
@@ -956,22 +968,17 @@ internal fun MainScreenContent(
                     }
                 }
 
-                Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    OutlinedButton(
-                        onClick = {
-                            showModelSheet = false
-                            onRunCompatibilityChecks()
-                            showSetupSheet = true
-                        },
-                        modifier = Modifier.weight(1f)
-                    ) { Text("Setup & Bypass") }
-                    OutlinedButton(
-                        onClick = {
-                            showModelSheet = false
-                            showReleaseNotesSheet = true
-                        },
-                        modifier = Modifier.weight(1f)
-                    ) { Text("Release Notes") }
+                OutlinedButton(
+                    onClick = {
+                        showModelSheet = false
+                        onFetchReleaseNotes()
+                        showReleaseNotesSheet = true
+                    },
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Icon(Icons.Default.NewReleases, contentDescription = null)
+                    Spacer(Modifier.width(8.dp))
+                    Text("Release Notes (GitHub)")
                 }
 
                 OutlinedButton(
@@ -990,17 +997,69 @@ internal fun MainScreenContent(
 
                 when (val update = state.updateStatus) {
                     is UpdateCheckResult.UpdateAvailable -> {
-                        Button(onClick = { onOpenUrl(update.apkUrl ?: update.releaseUrl) }, modifier = Modifier.fillMaxWidth()) {
-                            Icon(Icons.Default.Download, contentDescription = null)
-                            Spacer(Modifier.width(8.dp))
-                            Text("Update available: ${update.latestVersion}")
+                        Surface(
+                            color = Color(0xFF151E34),
+                            shape = RoundedCornerShape(18.dp)
+                        ) {
+                            Column(
+                                modifier = Modifier.fillMaxWidth().padding(14.dp),
+                                verticalArrangement = Arrangement.spacedBy(10.dp)
+                            ) {
+                                Row(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    horizontalArrangement = Arrangement.SpaceBetween,
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    Surface(color = GeminiAccentBlue.copy(alpha = 0.2f), shape = RoundedCornerShape(50)) {
+                                        Text(
+                                            text = "NEW RELEASE",
+                                            color = GeminiAccentBlue,
+                                            style = MaterialTheme.typography.labelSmall,
+                                            fontWeight = FontWeight.Bold,
+                                            modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp)
+                                        )
+                                    }
+                                    Text(
+                                        text = "v${update.currentVersion} → ${update.latestVersion}",
+                                        color = ActionSuccessGreen,
+                                        style = MaterialTheme.typography.labelMedium,
+                                        fontWeight = FontWeight.SemiBold
+                                    )
+                                }
+                                if (update.releaseNotes.isNotBlank()) {
+                                    Text(
+                                        text = update.releaseNotes,
+                                        color = GeminiTextSecondary,
+                                        style = MaterialTheme.typography.bodySmall,
+                                        maxLines = 4,
+                                        overflow = TextOverflow.Ellipsis
+                                    )
+                                }
+                                Button(
+                                    onClick = { onOpenUrl(update.apkUrl ?: update.releaseUrl) },
+                                    modifier = Modifier.fillMaxWidth()
+                                ) {
+                                    Icon(Icons.Default.Download, contentDescription = null)
+                                    Spacer(Modifier.width(8.dp))
+                                    Text("Download & Install ${update.latestVersion}")
+                                }
+                            }
                         }
                     }
                     is UpdateCheckResult.UpToDate -> {
-                        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
-                            Text("App is up to date (v${update.currentVersion})", style = MaterialTheme.typography.bodySmall, color = GeminiTextSecondary)
-                            TextButton(onClick = onCheckUpdates, enabled = !state.isCheckingUpdates) {
-                                Text(if (state.isCheckingUpdates) "Checking..." else "Check", color = GeminiAccentBlue)
+                        Surface(color = GeminiPillBg, shape = RoundedCornerShape(14.dp)) {
+                            Row(
+                                modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 8.dp),
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                                    Icon(Icons.Default.CheckCircle, contentDescription = null, tint = ActionSuccessGreen, modifier = Modifier.size(18.dp))
+                                    Text("Up to date (v${update.currentVersion})", style = MaterialTheme.typography.bodySmall, color = GeminiTextPrimary)
+                                }
+                                TextButton(onClick = onCheckUpdates, enabled = !state.isCheckingUpdates) {
+                                    Text(if (state.isCheckingUpdates) "Checking..." else "Check", color = GeminiAccentBlue)
+                                }
                             }
                         }
                     }
@@ -1013,8 +1072,10 @@ internal fun MainScreenContent(
                         }
                     }
                     null -> {
-                        TextButton(onClick = onCheckUpdates, enabled = !state.isCheckingUpdates, modifier = Modifier.fillMaxWidth()) {
-                            Text(if (state.isCheckingUpdates) "Checking for updates..." else "Check for app updates", color = GeminiAccentBlue)
+                        FilledTonalButton(onClick = onCheckUpdates, enabled = !state.isCheckingUpdates, modifier = Modifier.fillMaxWidth()) {
+                            Icon(Icons.Default.NewReleases, contentDescription = null)
+                            Spacer(Modifier.width(8.dp))
+                            Text(if (state.isCheckingUpdates) "Checking GitHub..." else "Check for Updates")
                         }
                     }
                 }
@@ -1023,80 +1084,36 @@ internal fun MainScreenContent(
         }
     }
 
-    if (showSetupSheet) {
-        var endpointDraft by remember(state.settings.localEndpointUrl) { mutableStateOf(state.settings.localEndpointUrl) }
-        var modelDraft by remember(state.settings.localModelName) { mutableStateOf(state.settings.localModelName) }
-        ModalBottomSheet(onDismissRequest = { showSetupSheet = false }, containerColor = GeminiDrawerBg, contentColor = GeminiTextPrimary) {
+    if (showConnectionsSheet) {
+        val ctx = LocalContext.current
+        val micGranted = ContextCompat.checkSelfPermission(ctx, Manifest.permission.RECORD_AUDIO) == PackageManager.PERMISSION_GRANTED
+        val contactsGranted = ContextCompat.checkSelfPermission(ctx, Manifest.permission.READ_CONTACTS) == PackageManager.PERMISSION_GRANTED
+        val callGranted = ContextCompat.checkSelfPermission(ctx, Manifest.permission.CALL_PHONE) == PackageManager.PERMISSION_GRANTED
+        val notifGranted = com.kairo.agent.service.NotificationCatchUpStore.isAccessGranted(ctx)
+        val writeSettingsGranted = Settings.System.canWrite(ctx)
+
+        ModalBottomSheet(onDismissRequest = { showConnectionsSheet = false }, containerColor = GeminiDrawerBg, contentColor = GeminiTextPrimary) {
             Column(
                 modifier = Modifier.fillMaxWidth().padding(horizontal = 20.dp, vertical = 12.dp).verticalScroll(rememberScrollState()),
-                verticalArrangement = Arrangement.spacedBy(12.dp)
+                verticalArrangement = Arrangement.spacedBy(10.dp)
             ) {
-                Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
-                    Text("Setup & Compatibility", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
-                    TextButton(onClick = onRunCompatibilityChecks) {
-                        Text(if (state.isCheckingCompatibility) "Checking..." else "Re-check", color = GeminiAccentBlue)
-                    }
+                Text("Connections & Permissions", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
+                Text("Manage optional Android permissions and power features.", style = MaterialTheme.typography.bodySmall, color = GeminiTextSecondary)
+
+                ConnectionPermRow("Microphone", "Voice prompts & wake word", micGranted, onMicClick)
+                ConnectionPermRow("Contacts", "Call & text people by name", contactsGranted, onGrantContacts)
+                ConnectionPermRow("Direct Calling", "Place calls directly", callGranted, onGrantCall)
+                ConnectionPermRow("Notification Catch-Up", "Summarize unread messages", notifGranted, onOpenNotificationAccess)
+                ConnectionPermRow("Health Connect", "Read steps & heart rate", false, onGrantHealthConnect)
+                ConnectionPermRow("System Brightness", "Adjust screen brightness", writeSettingsGranted) {
+                    ctx.startActivity(Intent(Settings.ACTION_MANAGE_WRITE_SETTINGS, Uri.parse("package:${ctx.packageName}")))
                 }
 
-                state.compatibilityReport?.items?.forEach { item ->
-                    Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                        Icon(
-                            imageVector = if (item.passed) Icons.Default.CheckCircle else Icons.Default.ErrorOutline,
-                            contentDescription = null,
-                            tint = if (item.passed) ActionSuccessGreen else GeminiTextSecondary,
-                            modifier = Modifier.size(18.dp)
-                        )
-                        Column(modifier = Modifier.weight(1f)) {
-                            Text(item.label, style = MaterialTheme.typography.bodyMedium, color = GeminiTextPrimary)
-                            Text(item.detail, style = MaterialTheme.typography.labelSmall, color = GeminiTextSecondary)
-                        }
-                    }
-                }
-
-                HorizontalDivider(color = Color(0xFF232528))
-
-                SetupSwitchRow(
-                    title = "Bypass compatibility checks",
-                    subtitle = "Use on non-AICore devices (e.g. Z Fold 8) or custom setups",
-                    checked = state.settings.bypassCompatibility,
-                    onCheckedChange = { onUpdateSettings(state.settings.copy(bypassCompatibility = it)) }
-                )
-
-                Text("Inference Backend", style = MaterialTheme.typography.labelLarge, color = GeminiAccentBlue)
-                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    EngineBackendMode.entries.forEach { mode ->
-                        FilterChip(
-                            selected = state.settings.backendMode == mode,
-                            onClick = { onUpdateSettings(state.settings.copy(backendMode = mode)) },
-                            label = { Text(mode.name) }
-                        )
-                    }
-                }
-
-                OutlinedTextField(
-                    value = endpointDraft,
-                    onValueChange = {
-                        endpointDraft = it
-                        onUpdateSettings(state.settings.copy(localEndpointUrl = it))
-                    },
-                    label = { Text("Local Model Endpoint (OpenAI-compatible)") },
-                    singleLine = true,
-                    modifier = Modifier.fillMaxWidth()
-                )
-                OutlinedTextField(
-                    value = modelDraft,
-                    onValueChange = {
-                        modelDraft = it
-                        onUpdateSettings(state.settings.copy(localModelName = it))
-                    },
-                    label = { Text("Local Model Name") },
-                    singleLine = true,
-                    modifier = Modifier.fillMaxWidth()
-                )
+                HorizontalDivider(color = Color(0xFF232528), modifier = Modifier.padding(vertical = 4.dp))
 
                 SetupSwitchRow(
                     title = "Root / Shell Power Mode",
-                    subtitle = "Allow Kairo to execute su / sh commands when requested",
+                    subtitle = "Allow shell / root commands when requested",
                     checked = state.settings.rootPowerMode,
                     onCheckedChange = { onUpdateSettings(state.settings.copy(rootPowerMode = it)) }
                 )
@@ -1117,47 +1134,58 @@ internal fun MainScreenContent(
         }
     }
 
-    if (showConnectionsSheet) {
-        ModalBottomSheet(onDismissRequest = { showConnectionsSheet = false }, containerColor = GeminiDrawerBg, contentColor = GeminiTextPrimary) {
-            Column(modifier = Modifier.fillMaxWidth().padding(horizontal = 20.dp, vertical = 12.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                Text("Connections & Permissions", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
-                Text("Grant optional Android permissions so Kairo can call/text contacts, read Health Connect, and summarize unread notifications.", style = MaterialTheme.typography.bodySmall, color = GeminiTextSecondary)
-                FilledTonalButton(onClick = onGrantHealthConnect, modifier = Modifier.fillMaxWidth()) {
-                    Icon(Icons.Default.FavoriteBorder, contentDescription = null)
-                    Spacer(Modifier.width(8.dp))
-                    Text("Connect Health Connect (Steps & Heart Rate)")
-                }
-                FilledTonalButton(onClick = onOpenNotificationAccess, modifier = Modifier.fillMaxWidth()) {
-                    Icon(Icons.Default.NotificationsActive, contentDescription = null)
-                    Spacer(Modifier.width(8.dp))
-                    Text("Enable Notification Catch-Up")
-                }
-                FilledTonalButton(onClick = onGrantContacts, modifier = Modifier.fillMaxWidth()) {
-                    Text("Allow Contacts Access")
-                }
-                FilledTonalButton(onClick = onGrantCall, modifier = Modifier.fillMaxWidth()) {
-                    Icon(Icons.Default.Phone, contentDescription = null)
-                    Spacer(Modifier.width(8.dp))
-                    Text("Allow Direct Calling")
-                }
-                OutlinedButton(onClick = onMicClick, modifier = Modifier.fillMaxWidth()) {
-                    Icon(Icons.Default.Mic, contentDescription = null)
-                    Spacer(Modifier.width(8.dp))
-                    Text("Allow Microphone Access")
-                }
-                Spacer(Modifier.height(12.dp))
-            }
-        }
-    }
-
     if (showReleaseNotesSheet) {
         ModalBottomSheet(onDismissRequest = { showReleaseNotesSheet = false }, containerColor = GeminiDrawerBg, contentColor = GeminiTextPrimary) {
             Column(
-                modifier = Modifier.fillMaxWidth().padding(horizontal = 20.dp, vertical = 12.dp).verticalScroll(rememberScrollState()),
-                verticalArrangement = Arrangement.spacedBy(10.dp)
+                modifier = Modifier.fillMaxWidth().padding(horizontal = 20.dp, vertical = 12.dp),
+                verticalArrangement = Arrangement.spacedBy(12.dp)
             ) {
-                Text("Release Notes", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
-                Text(RELEASE_NOTES_TEXT.trim(), style = MaterialTheme.typography.bodySmall, color = GeminiTextSecondary)
+                Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
+                    Text("Release Notes", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
+                    TextButton(onClick = onFetchReleaseNotes, enabled = !state.isLoadingReleaseNotes) {
+                        Text(if (state.isLoadingReleaseNotes) "Loading..." else "Refresh", color = GeminiAccentBlue)
+                    }
+                }
+
+                if (state.isLoadingReleaseNotes) {
+                    Box(modifier = Modifier.fillMaxWidth().padding(vertical = 24.dp), contentAlignment = Alignment.Center) {
+                        CircularProgressIndicator()
+                    }
+                } else if (state.releaseNotesError != null) {
+                    Text(state.releaseNotesError, style = MaterialTheme.typography.bodySmall, color = GeminiTextSecondary)
+                    OutlinedButton(
+                        onClick = { onOpenUrl(UpdateChecker.RELEASES_PAGE_URL) },
+                        modifier = Modifier.fillMaxWidth()
+                    ) { Text("Open GitHub Releases") }
+                } else if (state.releaseNotes.isEmpty()) {
+                    Text("No releases loaded yet.", style = MaterialTheme.typography.bodySmall, color = GeminiTextSecondary)
+                } else {
+                    LazyColumn(
+                        modifier = Modifier.fillMaxWidth().heightIn(max = 380.dp),
+                        verticalArrangement = Arrangement.spacedBy(10.dp)
+                    ) {
+                        items(state.releaseNotes, key = { it.tagName }) { rel ->
+                            Surface(color = GeminiPillBg, shape = RoundedCornerShape(14.dp)) {
+                                Column(modifier = Modifier.fillMaxWidth().padding(14.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                                    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
+                                        Text(rel.title, color = GeminiAccentBlue, style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.SemiBold)
+                                        Text(rel.publishedDate, color = GeminiTextSecondary, style = MaterialTheme.typography.labelSmall)
+                                    }
+                                    if (rel.body.isNotBlank()) {
+                                        RichResponseText(text = rel.body, textColor = GeminiTextPrimary)
+                                    }
+                                    if (rel.apkUrl != null) {
+                                        TextButton(onClick = { onOpenUrl(rel.apkUrl) }) {
+                                            Icon(Icons.Default.Download, contentDescription = null, modifier = Modifier.size(16.dp))
+                                            Spacer(Modifier.width(6.dp))
+                                            Text("Download APK", color = GeminiAccentBlue)
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
                 Spacer(Modifier.height(12.dp))
             }
         }
@@ -1237,6 +1265,35 @@ internal fun MainScreenContent(
                     OutlinedButton(onClick = { onOpenUrl("https://github.com/DaDevMikey/GemmA-gent-") }, modifier = Modifier.weight(1f)) { Text("Source Code") }
                 }
                 Spacer(Modifier.height(12.dp))
+            }
+        }
+    }
+}
+
+@Composable
+private fun ConnectionPermRow(
+    title: String,
+    subtitle: String,
+    granted: Boolean,
+    onAction: () -> Unit
+) {
+    Surface(color = GeminiPillBg, shape = RoundedCornerShape(14.dp)) {
+        Row(
+            modifier = Modifier.fillMaxWidth().padding(horizontal = 14.dp, vertical = 10.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.SpaceBetween
+        ) {
+            Column(modifier = Modifier.weight(1f).padding(end = 10.dp)) {
+                Text(title, style = MaterialTheme.typography.bodyMedium, color = GeminiTextPrimary)
+                Text(subtitle, style = MaterialTheme.typography.labelSmall, color = GeminiTextSecondary)
+            }
+            if (granted) {
+                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                    Icon(Icons.Default.CheckCircle, contentDescription = null, tint = ActionSuccessGreen, modifier = Modifier.size(16.dp))
+                    Text("Granted", color = ActionSuccessGreen, style = MaterialTheme.typography.labelMedium)
+                }
+            } else {
+                FilledTonalButton(onClick = onAction) { Text("Allow") }
             }
         }
     }

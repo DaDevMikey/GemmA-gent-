@@ -5,24 +5,39 @@ import android.content.pm.PackageManager
 import android.os.Build
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
+import org.json.JSONArray
 import org.json.JSONObject
 import java.net.HttpURLConnection
 import java.net.URL
 
+data class GitHubReleaseNote(
+    val tagName: String,
+    val title: String,
+    val body: String,
+    val publishedDate: String,
+    val htmlUrl: String,
+    val apkUrl: String?
+)
+
 sealed interface UpdateCheckResult {
     data class UpdateAvailable(
+        val currentVersion: String,
         val latestVersion: String,
         val releaseUrl: String,
         val apkUrl: String?,
         val releaseNotes: String
     ) : UpdateCheckResult
 
-    data class UpToDate(val currentVersion: String) : UpdateCheckResult
+    data class UpToDate(
+        val currentVersion: String,
+        val latestNotes: String = ""
+    ) : UpdateCheckResult
+
     data class Unavailable(val reason: String) : UpdateCheckResult
 }
 
 /**
- * Watches GitHub Releases for newer versions of GemmA.
+ * Fetches releases and release notes directly from GitHub Releases.
  */
 class UpdateChecker(private val context: Context) {
 
@@ -44,56 +59,87 @@ class UpdateChecker(private val context: Context) {
     suspend fun checkForUpdates(): UpdateCheckResult = withContext(Dispatchers.IO) {
         val current = currentVersionName()
         runCatching {
-            val conn = (URL(LATEST_RELEASE_API).openConnection() as HttpURLConnection).apply {
-                requestMethod = "GET"
-                connectTimeout = 8000
-                readTimeout = 8000
-                setRequestProperty("Accept", "application/vnd.github+json")
-                setRequestProperty("User-Agent", "GemmA-Android/$current")
-            }
-
+            val conn = openGet(LATEST_RELEASE_API, current)
             val code = conn.responseCode
             if (code == 404) {
-                return@withContext UpdateCheckResult.Unavailable(
-                    "No public release found yet (repo may be private)."
-                )
+                return@withContext UpdateCheckResult.Unavailable("No public release found yet (repo may be private).")
             }
             if (code !in 200..299) {
                 return@withContext UpdateCheckResult.Unavailable("GitHub returned HTTP $code")
             }
 
-            val body = conn.inputStream.bufferedReader().use { it.readText() }
-            val json = JSONObject(body)
-            val tagName = json.optString("tag_name").trim()
-            val htmlUrl = json.optString("html_url").ifBlank { RELEASES_PAGE_URL }
-            val notes = json.optString("body").trim()
+            val json = JSONObject(conn.inputStream.bufferedReader().use { it.readText() })
+            val parsed = parseReleaseJson(json)
 
-            var apkUrl: String? = null
-            val assets = json.optJSONArray("assets")
-            if (assets != null) {
-                for (i in 0 until assets.length()) {
-                    val asset = assets.getJSONObject(i)
-                    val name = asset.optString("name")
-                    if (name.endsWith(".apk", ignoreCase = true)) {
-                        apkUrl = asset.optString("browser_download_url")
-                        break
-                    }
-                }
-            }
-
-            if (isNewerVersion(latest = tagName, current = current)) {
+            if (isNewerVersion(latest = parsed.tagName, current = current)) {
                 UpdateCheckResult.UpdateAvailable(
-                    latestVersion = tagName,
-                    releaseUrl = htmlUrl,
-                    apkUrl = apkUrl,
-                    releaseNotes = notes
+                    currentVersion = current,
+                    latestVersion = parsed.tagName,
+                    releaseUrl = parsed.htmlUrl,
+                    apkUrl = parsed.apkUrl,
+                    releaseNotes = parsed.body
                 )
             } else {
-                UpdateCheckResult.UpToDate(current)
+                UpdateCheckResult.UpToDate(currentVersion = current, latestNotes = parsed.body)
             }
         }.getOrElse { error ->
             UpdateCheckResult.Unavailable(error.localizedMessage ?: "Update check failed")
         }
+    }
+
+    suspend fun fetchReleaseNotes(): Result<List<GitHubReleaseNote>> = withContext(Dispatchers.IO) {
+        val current = currentVersionName()
+        runCatching {
+            val conn = openGet(RELEASES_LIST_API, current)
+            val code = conn.responseCode
+            if (code !in 200..299) {
+                error(if (code == 404) "No public releases visible yet (repo may be private)." else "GitHub returned HTTP $code")
+            }
+            val array = JSONArray(conn.inputStream.bufferedReader().use { it.readText() })
+            buildList {
+                for (i in 0 until array.length()) {
+                    add(parseReleaseJson(array.getJSONObject(i)))
+                }
+            }
+        }
+    }
+
+    private fun openGet(url: String, currentVersion: String): HttpURLConnection =
+        (URL(url).openConnection() as HttpURLConnection).apply {
+            requestMethod = "GET"
+            connectTimeout = 8000
+            readTimeout = 8000
+            setRequestProperty("Accept", "application/vnd.github+json")
+            setRequestProperty("User-Agent", "Kairo-Android/$currentVersion")
+        }
+
+    private fun parseReleaseJson(json: JSONObject): GitHubReleaseNote {
+        val tagName = json.optString("tag_name").trim()
+        val title = json.optString("name").ifBlank { tagName }
+        val htmlUrl = json.optString("html_url").ifBlank { RELEASES_PAGE_URL }
+        val body = json.optString("body").trim()
+        val published = json.optString("published_at").take(10)
+
+        var apkUrl: String? = null
+        val assets = json.optJSONArray("assets")
+        if (assets != null) {
+            for (i in 0 until assets.length()) {
+                val asset = assets.getJSONObject(i)
+                if (asset.optString("name").endsWith(".apk", ignoreCase = true)) {
+                    apkUrl = asset.optString("browser_download_url")
+                    break
+                }
+            }
+        }
+
+        return GitHubReleaseNote(
+            tagName = tagName,
+            title = title,
+            body = body,
+            publishedDate = published,
+            htmlUrl = htmlUrl,
+            apkUrl = apkUrl
+        )
     }
 
     internal fun isNewerVersion(latest: String, current: String): Boolean {
@@ -116,6 +162,7 @@ class UpdateChecker(private val context: Context) {
 
     companion object {
         const val LATEST_RELEASE_API = "https://api.github.com/repos/DaDevMikey/GemmA-gent-/releases/latest"
+        const val RELEASES_LIST_API = "https://api.github.com/repos/DaDevMikey/GemmA-gent-/releases?per_page=8"
         const val RELEASES_PAGE_URL = "https://github.com/DaDevMikey/GemmA-gent-/releases"
     }
 }

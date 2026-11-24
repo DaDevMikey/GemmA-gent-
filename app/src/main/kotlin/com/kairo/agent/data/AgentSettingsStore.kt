@@ -9,6 +9,7 @@ enum class EngineBackendMode {
 }
 
 data class AgentSettings(
+    val hasCompletedOnboarding: Boolean = false,
     val bypassCompatibility: Boolean = false,
     val rootPowerMode: Boolean = false,
     val showNerdStats: Boolean = true,
@@ -19,12 +20,13 @@ data class AgentSettings(
 )
 
 /**
- * Persists power-user, compatibility bypass, and local model backend settings.
+ * Persists onboarding completion, power-user, compatibility bypass, and local model backend settings.
  */
 class AgentSettingsStore(context: Context) {
     private val prefs = context.applicationContext.getSharedPreferences("kairo_settings", Context.MODE_PRIVATE)
 
     fun load(): AgentSettings = AgentSettings(
+        hasCompletedOnboarding = prefs.getBoolean(KEY_ONBOARDING, false),
         bypassCompatibility = prefs.getBoolean(KEY_BYPASS, false),
         rootPowerMode = prefs.getBoolean(KEY_ROOT_POWER, false),
         showNerdStats = prefs.getBoolean(KEY_NERD_STATS, true),
@@ -39,6 +41,7 @@ class AgentSettingsStore(context: Context) {
 
     fun save(settings: AgentSettings) {
         prefs.edit()
+            .putBoolean(KEY_ONBOARDING, settings.hasCompletedOnboarding)
             .putBoolean(KEY_BYPASS, settings.bypassCompatibility)
             .putBoolean(KEY_ROOT_POWER, settings.rootPowerMode)
             .putBoolean(KEY_NERD_STATS, settings.showNerdStats)
@@ -50,6 +53,7 @@ class AgentSettingsStore(context: Context) {
     }
 
     private companion object {
+        const val KEY_ONBOARDING = "has_completed_onboarding"
         const val KEY_BYPASS = "bypass_compatibility"
         const val KEY_ROOT_POWER = "root_power_mode"
         const val KEY_NERD_STATS = "show_nerd_stats"

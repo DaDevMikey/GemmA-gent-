@@ -19,6 +19,7 @@ import com.kairo.agent.engine.CompatibilityChecker
 import com.kairo.agent.engine.CompatibilityReport
 import com.kairo.agent.engine.GemmaAssistantEngine
 import com.kairo.agent.engine.ModelAvailability
+import com.kairo.agent.update.GitHubReleaseNote
 import com.kairo.agent.update.UpdateCheckResult
 import com.kairo.agent.update.UpdateChecker
 import kotlinx.coroutines.Job
@@ -55,7 +56,10 @@ data class GemmAHomeState(
     val compatibilityReport: CompatibilityReport? = null,
     val isCheckingCompatibility: Boolean = false,
     val updateStatus: UpdateCheckResult? = null,
-    val isCheckingUpdates: Boolean = false
+    val isCheckingUpdates: Boolean = false,
+    val releaseNotes: List<GitHubReleaseNote> = emptyList(),
+    val isLoadingReleaseNotes: Boolean = false,
+    val releaseNotesError: String? = null
 )
 
 class MainScreenViewModel(
@@ -110,6 +114,29 @@ class MainScreenViewModel(
             val result = checker.checkForUpdates()
             _state.update { it.copy(isCheckingUpdates = false, updateStatus = result) }
         }
+    }
+
+    fun fetchReleaseNotes() {
+        val checker = updateChecker ?: return
+        viewModelScope.launch {
+            _state.update { it.copy(isLoadingReleaseNotes = true, releaseNotesError = null) }
+            checker.fetchReleaseNotes()
+                .onSuccess { notes ->
+                    _state.update { it.copy(isLoadingReleaseNotes = false, releaseNotes = notes) }
+                }
+                .onFailure { err ->
+                    _state.update {
+                        it.copy(
+                            isLoadingReleaseNotes = false,
+                            releaseNotesError = err.localizedMessage ?: "Failed to load release notes."
+                        )
+                    }
+                }
+        }
+    }
+
+    fun completeOnboarding() {
+        updateSettings(_state.value.settings.copy(hasCompletedOnboarding = true))
     }
 
     fun refreshChats() {
@@ -183,6 +210,28 @@ class MainScreenViewModel(
         val trimmed = userPrompt.trim()
         if (trimmed.isEmpty() && image == null) return
         val effectivePrompt = trimmed.ifEmpty { "Describe this image." }
+
+        // Fun local Easter eggs
+        val lower = effectivePrompt.lowercase()
+        if (lower == "/about" || lower == "konami" || lower == "up up down down left right left right b a") {
+            val easterReply = if (lower == "/about") {
+                "✦ **Kairo** — 100% on-device AI agent powered by Gemma 4 via Android AICore.\nCreated by **DaManMikey** (`https://damanmikey.me/`)."
+            } else {
+                "🎮 **30 extra local neurons unlocked!** Still 100% private, still zero cloud servers. Shoutout to **DaManMikey**!"
+            }
+            _state.update {
+                it.copy(
+                    activeTurns = it.activeTurns + ConversationTurn(
+                        prompt = effectivePrompt,
+                        response = easterReply,
+                        actionSummary = "Easter egg unlocked",
+                        actionSuccess = true,
+                        isStreaming = false
+                    )
+                )
+            }
+            return
+        }
 
         activeJob?.cancel()
         val historySnapshot = _state.value.activeTurns

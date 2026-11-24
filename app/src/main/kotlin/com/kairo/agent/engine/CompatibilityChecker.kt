@@ -65,7 +65,7 @@ class CompatibilityChecker(private val context: Context) {
                 passed = aiCoreOk
             ),
             CompatibilityCheckItem(
-                label = "Local Model Server (Non-AICore)",
+                label = "Local Model Endpoint",
                 detail = if (localReachable) "Reachable at $localEndpointUrl" else "Not running at $localEndpointUrl",
                 passed = localReachable
             ),
