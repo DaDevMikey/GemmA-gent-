@@ -1,5 +1,9 @@
 # Changelog
 
+## v1.1.2 (2026-11-25)
+### Added
+- **Local Python Script Runner (`run_python_script`) & Exact Time (`get_current_time`)**: Kairo can now run local Python scripts (`math`, `datetime.now()`, variables, lists, `print(...)`) using `python3` when available on-device or its built-in sandboxed Python-subset evaluator, and confirm exact local time, date, weekday, and timezone.
+
 ## v1.1.1 (2026-11-25)
 ### Added & Improved
 - **Star/Dust Typing Particles & Response Shine Sweep**: Added `StarDustParticles` drifting while Kairo streams and a diagonal `ResponseShineSweep` light effect when a response finishes.
