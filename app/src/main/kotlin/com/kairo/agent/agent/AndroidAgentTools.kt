@@ -18,6 +18,8 @@ import android.net.NetworkCapabilities
 import android.net.Uri
 import android.os.BatteryManager
 import android.os.Build
+import android.os.Environment
+import android.os.StatFs
 import android.provider.AlarmClock
 import android.provider.CalendarContract
 import android.provider.ContactsContract
@@ -28,8 +30,12 @@ import androidx.core.content.ContextCompat
 import androidx.core.content.FileProvider
 import androidx.health.connect.client.HealthConnectClient
 import androidx.health.connect.client.permission.HealthPermission
+import androidx.health.connect.client.records.DistanceRecord
+import androidx.health.connect.client.records.ExerciseSessionRecord
 import androidx.health.connect.client.records.HeartRateRecord
+import androidx.health.connect.client.records.SleepSessionRecord
 import androidx.health.connect.client.records.StepsRecord
+import androidx.health.connect.client.records.TotalCaloriesBurnedRecord
 import androidx.health.connect.client.request.AggregateRequest
 import androidx.health.connect.client.request.ReadRecordsRequest
 import androidx.health.connect.client.time.TimeRangeFilter
@@ -40,7 +46,10 @@ import kotlinx.coroutines.withContext
 import org.json.JSONObject
 import java.io.File
 import java.io.FileOutputStream
+import java.net.HttpURLConnection
+import java.net.URL
 import java.text.SimpleDateFormat
+import java.time.Duration
 import java.time.Instant
 import java.time.LocalDate
 import java.time.ZoneId
@@ -148,7 +157,11 @@ class AndroidAgentTools(
         appendLine("""- web_search: {"query": "string"}""")
         appendLine("""- send_email: {"to": "string", "subject": "string", "body": "string"}""")
         appendLine("""- create_calendar_event: {"title": "string", "description": "optional string"}""")
-        appendLine("""- get_weather: {"location": "string"}""")
+        appendLine("""- get_weather: {"location": "city or 'current'"} (fetches live weather in-app)""")
+        appendLine("""- calculate_or_convert: {"expression": "math or conversion like '25 c to f' or '10 km to mi'"}""")
+        appendLine("""- get_storage_and_memory: {} (checks free/total storage & RAM)""")
+        appendLine("""- translate_text: {"text": "string", "target_lang": "e.g. es, fr, de, nl, ja"}""")
+        appendLine("""- set_ringer_mode: {"mode": "normal|vibrate|silent"}""")
         appendLine("""- open_clock: {} (opens alarms, timers, and stopwatch)""")
         appendLine("""- create_note: {"title": "string", "content": "string"} (saves or shares a quick note)""")
         appendLine("""- copy_to_clipboard: {"text": "string"}""")
@@ -331,7 +344,11 @@ class AndroidAgentTools(
             "send_sms" -> textPerson(args.optString("phone_number"), args.optString("message"))
             "send_email" -> sendEmail(args.optString("to"), args.optString("subject", ""), args.optString("body", ""))
             "create_calendar_event" -> createCalendarEvent(args.optString("title"), args.optString("description", ""))
-            "get_weather" -> webSearch("weather ${args.optString("location")}".trim())
+            "get_weather" -> getWeather(args.optString("location"))
+            "calculate_or_convert" -> calculateOrConvert(args.optString("expression"))
+            "get_storage_and_memory" -> getStorageAndMemory()
+            "translate_text" -> translateText(args.optString("text"), args.optString("target_lang", "en"))
+            "set_ringer_mode" -> setRingerMode(args.optString("mode", "normal"))
             "open_clock" -> launchIntentOrFail(Intent(AlarmClock.ACTION_SHOW_ALARMS).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK), "Opened Clock & Alarms")
             "create_note" -> shareText("${args.optString("title")}\n\n${args.optString("content")}".trim())
             "copy_to_clipboard" -> copyToClipboard(args.optString("text"))
@@ -559,11 +576,17 @@ class AndroidAgentTools(
         val granted = runCatching { client.permissionController.getGrantedPermissions() }.getOrElse { emptySet() }
         val stepsPerm = HealthPermission.getReadPermission(StepsRecord::class)
         val hrPerm = HealthPermission.getReadPermission(HeartRateRecord::class)
-        if (stepsPerm !in granted && hrPerm !in granted) {
+        val sleepPerm = HealthPermission.getReadPermission(SleepSessionRecord::class)
+        val distPerm = HealthPermission.getReadPermission(DistanceRecord::class)
+        val calPerm = HealthPermission.getReadPermission(TotalCaloriesBurnedRecord::class)
+        val exPerm = HealthPermission.getReadPermission(ExerciseSessionRecord::class)
+        val anyGranted = listOf(stepsPerm, hrPerm, sleepPerm, distPerm, calPerm, exPerm).any { it in granted }
+        if (!anyGranted) {
             val msg = "Health Connect permissions are not granted yet. Open Kairo's drawer → Connections to grant Health Connect access."
             return AgentActionResult(executed = true, summary = "Health Connect permission needed", resultData = msg, success = false)
         }
         val startOfDay = LocalDate.now().atStartOfDay(ZoneId.systemDefault()).toInstant()
+        val last24h = Instant.now().minus(Duration.ofHours(24))
         val now = Instant.now()
         val parts = mutableListOf<String>()
         if (stepsPerm in granted) {
@@ -572,14 +595,188 @@ class AndroidAgentTools(
                 parts.add("Steps today: ${agg[StepsRecord.COUNT_TOTAL] ?: 0L}")
             }
         }
+        if (distPerm in granted) {
+            runCatching {
+                val agg = client.aggregate(AggregateRequest(metrics = setOf(DistanceRecord.DISTANCE_TOTAL), timeRangeFilter = TimeRangeFilter.between(startOfDay, now)))
+                val meters = agg[DistanceRecord.DISTANCE_TOTAL]?.inMeters ?: 0.0
+                if (meters > 0) parts.add("Distance today: ${"%.2f".format(Locale.US, meters / 1000.0)} km")
+            }
+        }
+        if (calPerm in granted) {
+            runCatching {
+                val agg = client.aggregate(AggregateRequest(metrics = setOf(TotalCaloriesBurnedRecord.ENERGY_TOTAL), timeRangeFilter = TimeRangeFilter.between(startOfDay, now)))
+                val kcal = agg[TotalCaloriesBurnedRecord.ENERGY_TOTAL]?.inKilocalories ?: 0.0
+                if (kcal > 0) parts.add("Calories burned: ${kcal.toInt()} kcal")
+            }
+        }
         if (hrPerm in granted) {
             runCatching {
                 val hrResp = client.readRecords(ReadRecordsRequest(recordType = HeartRateRecord::class, timeRangeFilter = TimeRangeFilter.between(startOfDay, now)))
-                hrResp.records.lastOrNull()?.samples?.lastOrNull()?.beatsPerMinute?.let { parts.add("Latest heart rate: $it bpm") }
+                val allBpm = hrResp.records.flatMap { it.samples }.map { it.beatsPerMinute }
+                if (allBpm.isNotEmpty()) {
+                    parts.add("Heart rate: latest ${allBpm.last()} bpm (avg ${allBpm.average().toInt()} bpm)")
+                }
+            }
+        }
+        if (sleepPerm in granted) {
+            runCatching {
+                val sleepResp = client.readRecords(ReadRecordsRequest(recordType = SleepSessionRecord::class, timeRangeFilter = TimeRangeFilter.between(last24h, now)))
+                val totalMins = sleepResp.records.sumOf { Duration.between(it.startTime, it.endTime).toMinutes() }
+                if (totalMins > 0) parts.add("Sleep (24h): ${totalMins / 60}h ${totalMins % 60}m")
+            }
+        }
+        if (exPerm in granted) {
+            runCatching {
+                val exResp = client.readRecords(ReadRecordsRequest(recordType = ExerciseSessionRecord::class, timeRangeFilter = TimeRangeFilter.between(startOfDay, now)))
+                exResp.records.lastOrNull()?.let { session ->
+                    val mins = Duration.between(session.startTime, session.endTime).toMinutes()
+                    val title = session.title?.takeIf { it.isNotBlank() } ?: "Workout"
+                    parts.add("Latest workout: $title ($mins min)")
+                }
             }
         }
         val result = if (parts.isEmpty()) "No Health Connect records found for today yet." else parts.joinToString("; ")
-        return AgentActionResult(executed = true, summary = "Read Health Connect data", resultData = result, success = true)
+        return AgentActionResult(executed = true, summary = "Read Health Connect insights", resultData = result, success = true)
+    }
+
+    private suspend fun getWeather(locationQuery: String): AgentActionResult = withContext(Dispatchers.IO) {
+        val clean = locationQuery.trim()
+        val coords: Pair<Double, Double>? = if (clean.isEmpty() || clean.equals("current", true) || clean.equals("here", true)) {
+            val fine = ContextCompat.checkSelfPermission(context, Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED
+            val coarse = ContextCompat.checkSelfPermission(context, Manifest.permission.ACCESS_COARSE_LOCATION) == PackageManager.PERMISSION_GRANTED
+            if (fine || coarse) {
+                val lm = context.getSystemService(Context.LOCATION_SERVICE) as? LocationManager
+                val best = listOf(LocationManager.GPS_PROVIDER, LocationManager.NETWORK_PROVIDER, LocationManager.PASSIVE_PROVIDER)
+                    .mapNotNull { runCatching { lm?.getLastKnownLocation(it) }.getOrNull() }
+                    .maxByOrNull { it.time }
+                best?.let { it.latitude to it.longitude }
+            } else null
+        } else {
+            runCatching {
+                val geoUrl = "https://geocoding-api.open-meteo.com/v1/search?name=${Uri.encode(clean)}&count=1&language=en&format=json"
+                val json = JSONObject(URL(geoUrl).readText())
+                val first = json.optJSONArray("results")?.optJSONObject(0)
+                if (first != null) first.getDouble("latitude") to first.getDouble("longitude") else null
+            }.getOrNull()
+        }
+
+        if (coords == null) {
+            return@withContext webSearch("weather $clean".trim())
+        }
+
+        return@withContext runCatching {
+            val url = "https://api.open-meteo.com/v1/forecast?latitude=${coords.first}&longitude=${coords.second}&current=temperature_2m,relative_humidity_2m,apparent_temperature,weather_code,wind_speed_10m"
+            val conn = (URL(url).openConnection() as HttpURLConnection).apply {
+                connectTimeout = 5000
+                readTimeout = 5000
+            }
+            val data = JSONObject(conn.inputStream.bufferedReader().use { it.readText() })
+            val current = data.getJSONObject("current")
+            val temp = current.getDouble("temperature_2m")
+            val feels = current.getDouble("apparent_temperature")
+            val humidity = current.getInt("relative_humidity_2m")
+            val wind = current.getDouble("wind_speed_10m")
+            val code = current.getInt("weather_code")
+            val condition = when (code) {
+                0 -> "Clear sky"
+                1, 2, 3 -> "Partly cloudy"
+                45, 48 -> "Foggy"
+                51, 53, 55, 61, 63, 65 -> "Rain"
+                71, 73, 75 -> "Snow"
+                95, 96, 99 -> "Thunderstorm"
+                else -> "Variable"
+            }
+            val label = if (clean.isNotBlank() && !clean.equals("current", true) && !clean.equals("here", true)) clean else "Current location"
+            val summary = "$label: ${temp}°C ($condition)"
+            val detail = "Live weather for $label: $condition, ${temp}°C (feels like ${feels}°C), humidity $humidity%, wind $wind km/h."
+            AgentActionResult(executed = true, summary = summary, resultData = detail, success = true)
+        }.getOrElse {
+            webSearch("weather $clean".trim())
+        }
+    }
+
+    private fun calculateOrConvert(expression: String): AgentActionResult {
+        val clean = expression.trim().lowercase(Locale.ROOT)
+        val convRegex = Regex("""^(-?\d+(?:\.\d+)?)\s*([a-z°]+)\s*(?:to|in)\s*([a-z°]+)$""")
+        convRegex.matchEntire(clean)?.let { m ->
+            val v = m.groupValues[1].toDoubleOrNull()
+            val from = m.groupValues[2].replace("°", "")
+            val to = m.groupValues[3].replace("°", "")
+            if (v != null) {
+                val out = when (from to to) {
+                    "c" to "f" -> v * 9.0 / 5.0 + 32.0
+                    "f" to "c" -> (v - 32.0) * 5.0 / 9.0
+                    "km" to "mi" -> v * 0.621371
+                    "mi" to "km" -> v / 0.621371
+                    "kg" to "lb", "kg" to "lbs" -> v * 2.20462
+                    "lb" to "kg", "lbs" to "kg" -> v / 2.20462
+                    "cm" to "in" -> v / 2.54
+                    "in" to "cm" -> v * 2.54
+                    else -> null
+                }
+                if (out != null) {
+                    val formatted = "%.2f %s".format(Locale.US, out, to)
+                    return AgentActionResult(executed = true, summary = "$v $from = $formatted", resultData = "$v $from = $formatted", success = true)
+                }
+            }
+        }
+        val mathRegex = Regex("""^(-?\d+(?:\.\d+)?)\s*([+\-*/%])\s*(-?\d+(?:\.\d+)?)$""")
+        mathRegex.matchEntire(clean)?.let { m ->
+            val a = m.groupValues[1].toDoubleOrNull()
+            val op = m.groupValues[2]
+            val b = m.groupValues[3].toDoubleOrNull()
+            if (a != null && b != null) {
+                val res = when (op) {
+                    "+" -> a + b
+                    "-" -> a - b
+                    "*" -> a * b
+                    "/" -> if (b != 0.0) a / b else null
+                    "%" -> if (b != 0.0) a % b else null
+                    else -> null
+                }
+                if (res != null) {
+                    val text = if (res % 1.0 == 0.0) res.toLong().toString() else "%.4f".format(Locale.US, res).trimEnd('0').trimEnd('.')
+                    return AgentActionResult(executed = true, summary = "$expression = $text", resultData = "$expression = $text", success = true)
+                }
+            }
+        }
+        return AgentActionResult(executed = true, summary = "Could not parse expression", resultData = "Could not evaluate \"$expression\".", success = false)
+    }
+
+    private fun getStorageAndMemory(): AgentActionResult {
+        val stat = StatFs(Environment.getDataDirectory().path)
+        val totalGb = (stat.blockCountLong * stat.blockSizeLong) / (1024.0 * 1024.0 * 1024.0)
+        val freeGb = (stat.availableBlocksLong * stat.blockSizeLong) / (1024.0 * 1024.0 * 1024.0)
+        val am = context.getSystemService(Context.ACTIVITY_SERVICE) as? android.app.ActivityManager
+        val mi = android.app.ActivityManager.MemoryInfo()
+        am?.getMemoryInfo(mi)
+        val availRamGb = mi.availMem / (1024.0 * 1024.0 * 1024.0)
+        val totalRamGb = mi.totalMem / (1024.0 * 1024.0 * 1024.0)
+        val summary = "Storage: ${"%.1f".format(Locale.US, freeGb)}/${"%.1f".format(Locale.US, totalGb)} GB free • RAM: ${"%.1f".format(Locale.US, availRamGb)}/${"%.1f".format(Locale.US, totalRamGb)} GB free"
+        return AgentActionResult(executed = true, summary = "Checked storage & RAM", resultData = summary, success = true)
+    }
+
+    private fun translateText(text: String, targetLang: String): AgentActionResult {
+        val clean = text.trim()
+        if (clean.isEmpty()) return AgentActionResult(executed = true, summary = "No text to translate", resultData = "No text provided.", success = false)
+        val url = "https://translate.google.com/?sl=auto&tl=${Uri.encode(targetLang.ifBlank { "en" })}&text=${Uri.encode(clean)}&op=translate"
+        return launchIntentOrFail(Intent(Intent.ACTION_VIEW, Uri.parse(url)).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK), "Opened Translate ($targetLang)")
+    }
+
+    private fun setRingerMode(mode: String): AgentActionResult {
+        val am = context.getSystemService(Context.AUDIO_SERVICE) as? AudioManager
+            ?: return AgentActionResult(executed = true, summary = "Audio service unavailable", resultData = "AudioManager unavailable", success = false)
+        return runCatching {
+            val targetMode = when (mode.lowercase(Locale.ROOT).trim()) {
+                "vibrate" -> AudioManager.RINGER_MODE_VIBRATE
+                "silent", "mute" -> AudioManager.RINGER_MODE_SILENT
+                else -> AudioManager.RINGER_MODE_NORMAL
+            }
+            am.ringerMode = targetMode
+            AgentActionResult(executed = true, summary = "Ringer set to $mode", resultData = "Set ringer mode to $mode.", success = true)
+        }.getOrElse {
+            launchIntentOrFail(Intent(Settings.ACTION_SOUND_SETTINGS).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK), "Opened Sound Settings (DND access needed for silent)")
+        }
     }
 
     private fun findContact(name: String): AgentActionResult {

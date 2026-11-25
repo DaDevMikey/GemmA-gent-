@@ -156,8 +156,12 @@ import androidx.core.content.ContextCompat
 import androidx.health.connect.client.HealthConnectClient
 import androidx.health.connect.client.PermissionController
 import androidx.health.connect.client.permission.HealthPermission
+import androidx.health.connect.client.records.DistanceRecord
+import androidx.health.connect.client.records.ExerciseSessionRecord
 import androidx.health.connect.client.records.HeartRateRecord
+import androidx.health.connect.client.records.SleepSessionRecord
 import androidx.health.connect.client.records.StepsRecord
+import androidx.health.connect.client.records.TotalCaloriesBurnedRecord
 import androidx.lifecycle.compose.LifecycleResumeEffect
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
@@ -176,6 +180,8 @@ import com.kairo.agent.engine.CompatibilityChecker
 import com.kairo.agent.engine.ModelAvailability
 import com.kairo.agent.service.WakeWordService
 import com.kairo.agent.ui.components.GemmASparkleIcon
+import com.kairo.agent.ui.components.ResponseShineSweep
+import com.kairo.agent.ui.components.StarDustParticles
 import com.kairo.agent.ui.components.ListeningWaveformIndicator
 import com.kairo.agent.ui.components.ReactiveAuroraBackground
 import com.kairo.agent.ui.components.RichResponseText
@@ -259,7 +265,11 @@ fun MainScreen(
     val healthPermissions = remember {
         setOf(
             HealthPermission.getReadPermission(StepsRecord::class),
-            HealthPermission.getReadPermission(HeartRateRecord::class)
+            HealthPermission.getReadPermission(HeartRateRecord::class),
+            HealthPermission.getReadPermission(SleepSessionRecord::class),
+            HealthPermission.getReadPermission(DistanceRecord::class),
+            HealthPermission.getReadPermission(TotalCaloriesBurnedRecord::class),
+            HealthPermission.getReadPermission(ExerciseSessionRecord::class)
         )
     }
 
@@ -1334,25 +1344,60 @@ internal fun MainScreenContent(
         val notifGranted = com.kairo.agent.service.NotificationCatchUpStore.isAccessGranted(ctx)
         val writeSettingsGranted = Settings.System.canWrite(ctx)
 
+        var pendingDisclosure by remember { mutableStateOf<Triple<String, String, () -> Unit>?>(null) }
+        pendingDisclosure?.let { (title, body, proceed) ->
+            androidx.compose.material3.AlertDialog(
+                onDismissRequest = { pendingDisclosure = null },
+                containerColor = GeminiDrawerBg,
+                titleContentColor = GeminiTextPrimary,
+                textContentColor = GeminiTextSecondary,
+                title = { Text(title, fontWeight = FontWeight.SemiBold) },
+                text = { Text(body) },
+                confirmButton = {
+                    Button(onClick = {
+                        pendingDisclosure = null
+                        proceed()
+                    }) { Text("Continue") }
+                },
+                dismissButton = {
+                    TextButton(onClick = { pendingDisclosure = null }) { Text("Cancel", color = GeminiTextSecondary) }
+                }
+            )
+        }
+
         ModalBottomSheet(onDismissRequest = { showConnectionsSheet = false }, containerColor = GeminiDrawerBg, contentColor = GeminiTextPrimary) {
             Column(
                 modifier = Modifier.fillMaxWidth().padding(horizontal = 20.dp, vertical = 12.dp).verticalScroll(rememberScrollState()),
                 verticalArrangement = Arrangement.spacedBy(10.dp)
             ) {
                 Text("Connections & Permissions", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
-                Text("Manage optional Android permissions and power features.", style = MaterialTheme.typography.bodySmall, color = GeminiTextSecondary)
+                Text("Manage optional Android permissions and power features. All processing stays on-device.", style = MaterialTheme.typography.bodySmall, color = GeminiTextSecondary)
 
-                ConnectionPermRow("Microphone", "Voice prompts & wake word", micGranted, onMicClick)
-                ConnectionPermRow("Location", "Local weather, nearby places & GPS context", locationGranted, onGrantLocation)
-                ConnectionPermRow("Contacts", "Call & text people by name", contactsGranted, onGrantContacts)
-                ConnectionPermRow("Direct Calling", "Place calls directly", callGranted, onGrantCall)
-                ConnectionPermRow("Notification Catch-Up", "Summarize unread messages", notifGranted, onOpenNotificationAccess)
-                ConnectionPermRow("Health Connect", "Read steps & heart rate", state.healthConnectGranted, onGrantHealthConnect)
+                ConnectionPermRow("Microphone", "Voice prompts & wake word", micGranted) {
+                    pendingDisclosure = Triple("Microphone Access", "Used strictly when you tap the mic or enable 'Hey Kairo' wake word. Audio is processed locally and never uploaded.", onMicClick)
+                }
+                ConnectionPermRow("Location", "Local weather, nearby places & GPS context", locationGranted) {
+                    pendingDisclosure = Triple("Location Access", "Used only when you ask location-based questions (weather, nearby places). Coordinates stay 100% on-device.", onGrantLocation)
+                }
+                ConnectionPermRow("Contacts", "Call & text people by name", contactsGranted) {
+                    pendingDisclosure = Triple("Contacts Access", "Used locally on-device solely to resolve spoken/typed contact names to phone numbers or emails.", onGrantContacts)
+                }
+                ConnectionPermRow("Direct Calling", "Place calls directly", callGranted) {
+                    pendingDisclosure = Triple("Direct Calling Access", "Allows Kairo to place calls directly when you ask instead of stopping at the dialer.", onGrantCall)
+                }
+                ConnectionPermRow("Notification Catch-Up", "Summarize unread messages", notifGranted) {
+                    pendingDisclosure = Triple("Notification Catch-Up", "Reads unread notifications locally in memory so Kairo can summarize what you missed.", onOpenNotificationAccess)
+                }
+                ConnectionPermRow("Health Connect", "Steps, heart rate, sleep, distance, calories & workouts", state.healthConnectGranted) {
+                    pendingDisclosure = Triple("Health Connect Access", "Reads your local Health Connect fitness & sleep metrics solely for private on-device summaries.", onGrantHealthConnect)
+                }
                 ConnectionPermRow("System Brightness", "Adjust screen brightness", writeSettingsGranted) {
-                    val pkgIntent = Intent(Settings.ACTION_MANAGE_WRITE_SETTINGS, Uri.parse("package:${ctx.packageName}"))
-                    val fallbackIntent = Intent(Settings.ACTION_MANAGE_WRITE_SETTINGS)
-                    val target = if (pkgIntent.resolveActivity(ctx.packageManager) != null) pkgIntent else fallbackIntent
-                    ctx.startActivity(target)
+                    pendingDisclosure = Triple("Modify System Settings", "Lets Kairo adjust screen brightness directly when you ask.") {
+                        val pkgIntent = Intent(Settings.ACTION_MANAGE_WRITE_SETTINGS, Uri.parse("package:${ctx.packageName}"))
+                        val fallbackIntent = Intent(Settings.ACTION_MANAGE_WRITE_SETTINGS)
+                        val target = if (pkgIntent.resolveActivity(ctx.packageManager) != null) pkgIntent else fallbackIntent
+                        ctx.startActivity(target)
+                    }
                 }
 
                 HorizontalDivider(color = Color(0xFF232528), modifier = Modifier.padding(vertical = 4.dp))
@@ -1755,13 +1800,28 @@ private fun ConversationTurnItem(
                     }
                 }
 
-                if (turn.isStreaming && turn.response.isEmpty()) {
-                    ThinkingDotsIndicator()
-                } else {
-                    RichResponseText(
-                        text = if (turn.isStreaming) "${turn.response} ▌" else turn.response,
-                        textColor = GeminiTextPrimary
-                    )
+                var wasStreaming by remember { mutableStateOf(turn.isStreaming) }
+                var shineTrigger by remember { mutableStateOf(false) }
+                LaunchedEffect(turn.isStreaming) {
+                    if (wasStreaming && !turn.isStreaming && turn.response.isNotEmpty()) {
+                        shineTrigger = true
+                    }
+                    wasStreaming = turn.isStreaming
+                }
+
+                Box(modifier = Modifier.fillMaxWidth().clip(RoundedCornerShape(12.dp))) {
+                    if (turn.isStreaming) {
+                        StarDustParticles(modifier = Modifier.matchParentSize())
+                    }
+                    if (turn.isStreaming && turn.response.isEmpty()) {
+                        ThinkingDotsIndicator()
+                    } else {
+                        RichResponseText(
+                            text = if (turn.isStreaming) "${turn.response} ▌" else turn.response,
+                            textColor = GeminiTextPrimary
+                        )
+                    }
+                    ResponseShineSweep(trigger = shineTrigger, modifier = Modifier.matchParentSize())
                 }
 
                 if (!turn.isStreaming && turn.response.isNotEmpty()) {

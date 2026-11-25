@@ -101,7 +101,9 @@ import com.kairo.agent.agent.AgentPersona
 import com.kairo.agent.agent.NerdStats
 import com.kairo.agent.ui.components.GemmASparkleIcon
 import com.kairo.agent.ui.components.ListeningWaveformIndicator
+import com.kairo.agent.ui.components.ResponseShineSweep
 import com.kairo.agent.ui.components.RichResponseText
+import com.kairo.agent.ui.components.StarDustParticles
 import com.kairo.agent.ui.components.ThinkingDotsIndicator
 
 private val SheetSurface = Color(0xEC131314)
@@ -180,9 +182,26 @@ fun GemmaAssistantSheet(
         label = "rim_angle"
     )
 
+    var isFullscreen by remember { mutableStateOf(false) }
+    val horizPad by animateDpAsState(
+        targetValue = if (isFullscreen) 0.dp else 10.dp,
+        animationSpec = spring(dampingRatio = Spring.DampingRatioLowBouncy, stiffness = Spring.StiffnessMediumLow),
+        label = "fs_hpad"
+    )
+    val vertPad by animateDpAsState(
+        targetValue = if (isFullscreen) 0.dp else 8.dp,
+        animationSpec = spring(dampingRatio = Spring.DampingRatioLowBouncy, stiffness = Spring.StiffnessMediumLow),
+        label = "fs_vpad"
+    )
+    val cornerRadius by animateDpAsState(
+        targetValue = if (isFullscreen) 18.dp else 28.dp,
+        animationSpec = spring(dampingRatio = Spring.DampingRatioLowBouncy, stiffness = Spring.StiffnessMediumLow),
+        label = "fs_corner"
+    )
+    val sheetShape = RoundedCornerShape(cornerRadius)
     val targetBorderWidth = when {
         isListening -> (1.5f + (rmsDb / 12f) * 3.5f).dp
-        isGenerating -> 2.2.dp
+        isGenerating || isFullscreen -> 2.4.dp
         else -> 1.dp
     }
     val borderWidth by animateDpAsState(
@@ -216,13 +235,11 @@ fun GemmaAssistantSheet(
         }
     }
 
-    val sheetShape = RoundedCornerShape(28.dp)
-
     Box(
         modifier = Modifier
             .fillMaxSize()
             .background(Color.Black.copy(alpha = 0.42f))
-            .systemBarsPadding()
+            .then(if (isFullscreen) Modifier else Modifier.systemBarsPadding())
             .imePadding()
             .clickable(
                 interactionSource = remember { MutableInteractionSource() },
@@ -241,17 +258,20 @@ fun GemmaAssistantSheet(
             Surface(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(horizontal = 10.dp, vertical = 8.dp)
+                    .then(if (isFullscreen) Modifier.fillMaxSize() else Modifier)
+                    .padding(horizontal = horizPad, vertical = vertPad)
                     .animateContentSize(spring(dampingRatio = Spring.DampingRatioMediumBouncy, stiffness = Spring.StiffnessMediumLow))
                     .clip(sheetShape)
                     .border(width = borderWidth, brush = rimBrush, shape = sheetShape)
-                    .pointerInput(Unit) {
+                    .pointerInput(isFullscreen) {
                         detectVerticalDragGestures(
                             onDragStart = { totalDrag = 0f },
                             onVerticalDrag = { _, dragAmount -> totalDrag += dragAmount },
                             onDragEnd = {
-                                if (totalDrag < -90f) onOpenFullscreen()
-                                else if (totalDrag > 110f) onDismiss()
+                                if (totalDrag < -90f) isFullscreen = true
+                                else if (totalDrag > 110f) {
+                                    if (isFullscreen) isFullscreen = false else onDismiss()
+                                }
                                 totalDrag = 0f
                             }
                         )
@@ -333,7 +353,7 @@ fun GemmaAssistantSheet(
                                 IconButton(onClick = onToggleMiniMode, modifier = Modifier.size(30.dp)) {
                                     Icon(Icons.Default.Compress, contentDescription = "Mini mode", tint = SecondaryText, modifier = Modifier.size(16.dp))
                                 }
-                                IconButton(onClick = onOpenFullscreen, modifier = Modifier.size(30.dp)) {
+                                IconButton(onClick = { isFullscreen = !isFullscreen }, modifier = Modifier.size(30.dp)) {
                                     Icon(Icons.Default.OpenInFull, contentDescription = "Fullscreen", tint = AccentBlue, modifier = Modifier.size(16.dp))
                                 }
                             }
@@ -362,18 +382,39 @@ fun GemmaAssistantSheet(
                         }
 
                         if (isGenerating && responseText.isEmpty()) {
-                            ThinkingDotsIndicator(modifier = Modifier.padding(vertical = 4.dp))
+                            Box(modifier = Modifier.fillMaxWidth().heightIn(min = 36.dp)) {
+                                StarDustParticles(modifier = Modifier.matchParentSize())
+                                ThinkingDotsIndicator(modifier = Modifier.padding(vertical = 4.dp))
+                            }
                         } else if (responseText.isNotEmpty() || isGenerating) {
+                            var wasGen by remember { mutableStateOf(isGenerating) }
+                            var shine by remember { mutableStateOf(false) }
+                            LaunchedEffect(isGenerating) {
+                                if (wasGen && !isGenerating && responseText.isNotEmpty()) {
+                                    shine = true
+                                }
+                                wasGen = isGenerating
+                            }
                             val displayResponse = if (isGenerating) "$responseText ▌" else responseText
-                            RichResponseText(
-                                text = displayResponse,
-                                textColor = PrimaryText,
+                            Box(
                                 modifier = Modifier
                                     .fillMaxWidth()
                                     .weight(1f, fill = false)
-                                    .heightIn(max = 240.dp)
-                                    .verticalScroll(scrollState)
-                            )
+                                    .heightIn(max = if (isFullscreen) 560.dp else 240.dp)
+                                    .clip(RoundedCornerShape(12.dp))
+                            ) {
+                                if (isGenerating) {
+                                    StarDustParticles(modifier = Modifier.matchParentSize())
+                                }
+                                RichResponseText(
+                                    text = displayResponse,
+                                    textColor = PrimaryText,
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .verticalScroll(scrollState)
+                                )
+                                ResponseShineSweep(trigger = shine, modifier = Modifier.matchParentSize())
+                            }
                             if (!isGenerating) {
                                 Row(
                                     modifier = Modifier.fillMaxWidth(),
