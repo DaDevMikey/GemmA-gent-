@@ -8,11 +8,11 @@ android {
   namespace = "com.kairo.agent"
   compileSdk = 36
   defaultConfig {
-    applicationId = "com.kairo.agent"
+    applicationId = "com.kairo.agent.lite"
     minSdk = 26
     targetSdk = 36
-    versionCode = 13
-    versionName = "1.1.2"
+    versionCode = 14
+    versionName = "1.1.3"
   }
 
   buildTypes {

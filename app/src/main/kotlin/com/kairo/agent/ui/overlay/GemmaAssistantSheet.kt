@@ -268,7 +268,7 @@ fun GemmaAssistantSheet(
                             onDragStart = { totalDrag = 0f },
                             onVerticalDrag = { _, dragAmount -> totalDrag += dragAmount },
                             onDragEnd = {
-                                if (totalDrag < -90f) isFullscreen = true
+                                if (totalDrag < -90f) onOpenFullscreen()
                                 else if (totalDrag > 110f) {
                                     if (isFullscreen) isFullscreen = false else onDismiss()
                                 }
@@ -401,10 +401,12 @@ fun GemmaAssistantSheet(
                                     .fillMaxWidth()
                                     .weight(1f, fill = false)
                                     .heightIn(max = if (isFullscreen) 560.dp else 240.dp)
-                                    .clip(RoundedCornerShape(12.dp))
                             ) {
-                                if (isGenerating) {
-                                    StarDustParticles(modifier = Modifier.matchParentSize())
+                                Box(modifier = Modifier.matchParentSize().clip(RoundedCornerShape(14.dp))) {
+                                    if (isGenerating) {
+                                        StarDustParticles(modifier = Modifier.matchParentSize())
+                                    }
+                                    ResponseShineSweep(trigger = shine, modifier = Modifier.matchParentSize())
                                 }
                                 RichResponseText(
                                     text = displayResponse,
@@ -412,8 +414,8 @@ fun GemmaAssistantSheet(
                                     modifier = Modifier
                                         .fillMaxWidth()
                                         .verticalScroll(scrollState)
+                                        .padding(horizontal = 4.dp, vertical = 2.dp)
                                 )
-                                ResponseShineSweep(trigger = shine, modifier = Modifier.matchParentSize())
                             }
                             if (!isGenerating) {
                                 Row(

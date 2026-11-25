@@ -5,7 +5,8 @@ import android.content.Context
 enum class EngineBackendMode {
     AUTO,
     AICORE,
-    LOCAL_HTTP
+    LOCAL_HTTP,
+    CLOUD_AI
 }
 
 enum class AiCoreModelProfile(val label: String) {
@@ -25,7 +26,11 @@ data class AgentSettings(
     val backendMode: EngineBackendMode = EngineBackendMode.AUTO,
     val aiCoreModelProfile: AiCoreModelProfile = AiCoreModelProfile.AUTO,
     val localEndpointUrl: String = "http://127.0.0.1:8080/v1/chat/completions",
-    val localModelName: String = "gemma-4"
+    val localModelName: String = "gemma-4",
+    val cloudEndpointUrl: String = "https://api.openai.com/v1/chat/completions",
+    val cloudApiKey: String = "",
+    val cloudModelName: String = "gpt-4o-mini",
+    val mcpServerUrls: String = ""
 )
 
 /**
@@ -48,7 +53,12 @@ class AgentSettingsStore(context: Context) {
         }.getOrDefault(AiCoreModelProfile.AUTO),
         localEndpointUrl = prefs.getString(KEY_LOCAL_URL, "http://127.0.0.1:8080/v1/chat/completions")
             ?: "http://127.0.0.1:8080/v1/chat/completions",
-        localModelName = prefs.getString(KEY_LOCAL_MODEL, "gemma-4") ?: "gemma-4"
+        localModelName = prefs.getString(KEY_LOCAL_MODEL, "gemma-4") ?: "gemma-4",
+        cloudEndpointUrl = prefs.getString(KEY_CLOUD_URL, "https://api.openai.com/v1/chat/completions")
+            ?: "https://api.openai.com/v1/chat/completions",
+        cloudApiKey = prefs.getString(KEY_CLOUD_KEY, "") ?: "",
+        cloudModelName = prefs.getString(KEY_CLOUD_MODEL, "gpt-4o-mini") ?: "gpt-4o-mini",
+        mcpServerUrls = prefs.getString(KEY_MCP_URLS, "") ?: ""
     )
 
     fun save(settings: AgentSettings) {
@@ -62,6 +72,10 @@ class AgentSettingsStore(context: Context) {
             .putString(KEY_AICORE_PROFILE, settings.aiCoreModelProfile.name)
             .putString(KEY_LOCAL_URL, settings.localEndpointUrl)
             .putString(KEY_LOCAL_MODEL, settings.localModelName)
+            .putString(KEY_CLOUD_URL, settings.cloudEndpointUrl)
+            .putString(KEY_CLOUD_KEY, settings.cloudApiKey)
+            .putString(KEY_CLOUD_MODEL, settings.cloudModelName)
+            .putString(KEY_MCP_URLS, settings.mcpServerUrls)
             .apply()
     }
 
@@ -75,5 +89,9 @@ class AgentSettingsStore(context: Context) {
         const val KEY_AICORE_PROFILE = "aicore_model_profile"
         const val KEY_LOCAL_URL = "local_endpoint_url"
         const val KEY_LOCAL_MODEL = "local_model_name"
+        const val KEY_CLOUD_URL = "cloud_endpoint_url"
+        const val KEY_CLOUD_KEY = "cloud_api_key"
+        const val KEY_CLOUD_MODEL = "cloud_model_name"
+        const val KEY_MCP_URLS = "mcp_server_urls"
     }
 }

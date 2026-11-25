@@ -485,6 +485,7 @@ internal fun MainScreenContent(
                 Column(
                     modifier = Modifier
                         .fillMaxSize()
+                        .verticalScroll(rememberScrollState())
                         .padding(horizontal = 16.dp, vertical = 14.dp)
                 ) {
                     Row(
@@ -626,10 +627,10 @@ internal fun MainScreenContent(
                             color = GeminiTextSecondary,
                             modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp)
                         )
-                        Spacer(Modifier.weight(1f))
+                        Spacer(Modifier.height(24.dp))
                     } else {
-                        LazyColumn(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
-                            items(filteredChats, key = { it.id }) { chat ->
+                        Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                            filteredChats.forEach { chat ->
                                 Row(
                                     modifier = Modifier
                                         .fillMaxWidth()
@@ -740,7 +741,23 @@ internal fun MainScreenContent(
                     }
 
                     Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
-                        if (state.settings.showNerdStats && state.nerdStats != null && state.nerdStats.tokensPerSec > 0f) {
+                        if (state.settings.backendMode == EngineBackendMode.CLOUD_AI) {
+                            Surface(
+                                color = Color(0xFF4A1E24),
+                                shape = RoundedCornerShape(50),
+                                modifier = Modifier.clickable {
+                                    onUpdateSettings(state.settings.copy(backendMode = EngineBackendMode.AUTO))
+                                }
+                            ) {
+                                Text(
+                                    text = "Cloud AI • Tap to Off",
+                                    color = Color(0xFFF28B82),
+                                    style = MaterialTheme.typography.labelSmall,
+                                    fontWeight = FontWeight.SemiBold,
+                                    modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp)
+                                )
+                            }
+                        } else if (state.settings.showNerdStats && state.nerdStats != null && state.nerdStats.tokensPerSec > 0f) {
                             Surface(color = GeminiChipBg, shape = RoundedCornerShape(50)) {
                                 Text(
                                     text = "${"%.1f".format(state.nerdStats.tokensPerSec)} tok/s • ${state.nerdStats.ramUsedMb}MB",
@@ -1433,7 +1450,10 @@ internal fun MainScreenContent(
 
     if (showPrivacySheet) {
         ModalBottomSheet(onDismissRequest = { showPrivacySheet = false }, containerColor = GeminiDrawerBg, contentColor = GeminiTextPrimary) {
-            Column(modifier = Modifier.fillMaxWidth().padding(horizontal = 20.dp, vertical = 12.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+            Column(
+                modifier = Modifier.fillMaxWidth().verticalScroll(rememberScrollState()).padding(horizontal = 20.dp, vertical = 12.dp),
+                verticalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
                 Text("Privacy Policy, Terms & Credits", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
                 Text("100% Local On-Device Agent", style = MaterialTheme.typography.labelLarge, color = GeminiAccentBlue)
                 Text(
@@ -1460,6 +1480,56 @@ internal fun MainScreenContent(
     if (showSettingsSheet) {
         var endpointDraft by remember(state.settings.localEndpointUrl) { mutableStateOf(state.settings.localEndpointUrl) }
         var modelDraft by remember(state.settings.localModelName) { mutableStateOf(state.settings.localModelName) }
+        var cloudEndpointDraft by remember(state.settings.cloudEndpointUrl) { mutableStateOf(state.settings.cloudEndpointUrl) }
+        var cloudKeyDraft by remember(state.settings.cloudApiKey) { mutableStateOf(state.settings.cloudApiKey) }
+        var cloudModelDraft by remember(state.settings.cloudModelName) { mutableStateOf(state.settings.cloudModelName) }
+        var mcpDraft by remember(state.settings.mcpServerUrls) { mutableStateOf(state.settings.mcpServerUrls) }
+        var mcpStatus by remember { mutableStateOf<String?>(null) }
+        var cloudConfirmStep by remember { mutableStateOf(0) }
+
+        if (cloudConfirmStep == 1) {
+            androidx.compose.material3.AlertDialog(
+                onDismissRequest = { cloudConfirmStep = 0 },
+                containerColor = GeminiDrawerBg,
+                titleContentColor = GeminiTextPrimary,
+                textContentColor = GeminiTextSecondary,
+                title = { Text("Privacy Warning: Cloud AI", fontWeight = FontWeight.SemiBold) },
+                text = {
+                    Text(
+                        "Enabling Cloud AI sends your prompts, images, and context to an external third-party server. " +
+                            "On-device privacy is NO LONGER guaranteed while Cloud AI is active.\n\n" +
+                            "You can turn Cloud AI off at any time from the top bar or Settings."
+                    )
+                },
+                confirmButton = {
+                    Button(onClick = { cloudConfirmStep = 2 }) { Text("I Understand, Continue") }
+                },
+                dismissButton = {
+                    TextButton(onClick = { cloudConfirmStep = 0 }) { Text("Stay On-Device", color = GeminiAccentBlue) }
+                }
+            )
+        } else if (cloudConfirmStep == 2) {
+            androidx.compose.material3.AlertDialog(
+                onDismissRequest = { cloudConfirmStep = 0 },
+                containerColor = GeminiDrawerBg,
+                titleContentColor = GeminiTextPrimary,
+                textContentColor = GeminiTextSecondary,
+                title = { Text("Final Confirmation", fontWeight = FontWeight.SemiBold) },
+                text = {
+                    Text("Are you completely sure you want to switch to Cloud AI? Third-party servers will process your requests.")
+                },
+                confirmButton = {
+                    Button(onClick = {
+                        cloudConfirmStep = 0
+                        onUpdateSettings(state.settings.copy(backendMode = EngineBackendMode.CLOUD_AI))
+                    }) { Text("Enable Cloud AI") }
+                },
+                dismissButton = {
+                    TextButton(onClick = { cloudConfirmStep = 0 }) { Text("Cancel", color = GeminiTextSecondary) }
+                }
+            )
+        }
+
         ModalBottomSheet(onDismissRequest = { showSettingsSheet = false }, containerColor = GeminiDrawerBg, contentColor = GeminiTextPrimary) {
             Column(
                 modifier = Modifier.fillMaxWidth().padding(horizontal = 20.dp, vertical = 12.dp).verticalScroll(rememberScrollState()),
@@ -1480,12 +1550,6 @@ internal fun MainScreenContent(
                     onCheckedChange = { onUpdateSettings(state.settings.copy(miniModeOverlay = it)) }
                 )
                 SetupSwitchRow(
-                    title = "Root / Shell Power Mode",
-                    subtitle = "Allow shell / root commands when requested",
-                    checked = state.settings.rootPowerMode,
-                    onCheckedChange = { onUpdateSettings(state.settings.copy(rootPowerMode = it)) }
-                )
-                SetupSwitchRow(
                     title = "Bypass compatibility checks",
                     subtitle = "Continue even if AICore is unavailable",
                     checked = state.settings.bypassCompatibility,
@@ -1494,15 +1558,69 @@ internal fun MainScreenContent(
 
                 HorizontalDivider(color = Color(0xFF232528))
                 Text("Inference Backend", style = MaterialTheme.typography.labelLarge, color = GeminiAccentBlue)
-                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                FlowRow(
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    verticalArrangement = Arrangement.spacedBy(6.dp)
+                ) {
                     EngineBackendMode.entries.forEach { mode ->
                         FilterChip(
                             selected = state.settings.backendMode == mode,
-                            onClick = { onUpdateSettings(state.settings.copy(backendMode = mode)) },
+                            onClick = {
+                                if (mode == EngineBackendMode.CLOUD_AI && state.settings.backendMode != EngineBackendMode.CLOUD_AI) {
+                                    cloudConfirmStep = 1
+                                } else {
+                                    onUpdateSettings(state.settings.copy(backendMode = mode))
+                                }
+                            },
                             label = { Text(mode.name) }
                         )
                     }
                 }
+
+                if (state.settings.backendMode == EngineBackendMode.CLOUD_AI) {
+                    Surface(color = Color(0xFF4A1E24), shape = RoundedCornerShape(14.dp)) {
+                        Column(modifier = Modifier.fillMaxWidth().padding(12.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                            Text("Cloud AI Active — Privacy Not Guaranteed", color = Color(0xFFF28B82), style = MaterialTheme.typography.labelLarge, fontWeight = FontWeight.SemiBold)
+                            Text("Requests are sent to your configured cloud endpoint.", color = GeminiTextSecondary, style = MaterialTheme.typography.bodySmall)
+                            Button(
+                                onClick = { onUpdateSettings(state.settings.copy(backendMode = EngineBackendMode.AUTO)) },
+                                modifier = Modifier.fillMaxWidth()
+                            ) { Text("Turn Off Cloud AI (Return to On-Device)") }
+                        }
+                    }
+                    OutlinedTextField(
+                        value = cloudEndpointDraft,
+                        onValueChange = {
+                            cloudEndpointDraft = it
+                            onUpdateSettings(state.settings.copy(cloudEndpointUrl = it))
+                        },
+                        label = { Text("Cloud AI Endpoint (OpenAI-compatible)") },
+                        singleLine = true,
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                    OutlinedTextField(
+                        value = cloudKeyDraft,
+                        onValueChange = {
+                            cloudKeyDraft = it
+                            onUpdateSettings(state.settings.copy(cloudApiKey = it))
+                        },
+                        label = { Text("Cloud API Key") },
+                        visualTransformation = androidx.compose.ui.text.input.PasswordVisualTransformation(),
+                        singleLine = true,
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                    OutlinedTextField(
+                        value = cloudModelDraft,
+                        onValueChange = {
+                            cloudModelDraft = it
+                            onUpdateSettings(state.settings.copy(cloudModelName = it))
+                        },
+                        label = { Text("Cloud Model Name (e.g. gpt-4o-mini)") },
+                        singleLine = true,
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                }
+
                 OutlinedTextField(
                     value = endpointDraft,
                     onValueChange = {
@@ -1523,6 +1641,43 @@ internal fun MainScreenContent(
                     singleLine = true,
                     modifier = Modifier.fillMaxWidth()
                 )
+
+                HorizontalDivider(color = Color(0xFF232528))
+                Text("MCP Servers (Model Context Protocol)", style = MaterialTheme.typography.labelLarge, color = GeminiAccentBlue)
+                OutlinedTextField(
+                    value = mcpDraft,
+                    onValueChange = {
+                        mcpDraft = it
+                        onUpdateSettings(state.settings.copy(mcpServerUrls = it))
+                    },
+                    label = { Text("MCP HTTP Server URLs (one per line)") },
+                    placeholder = { Text("http://127.0.0.1:3000/mcp") },
+                    modifier = Modifier.fillMaxWidth()
+                )
+                Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
+                    FilledTonalButton(onClick = {
+                        val urls = com.kairo.agent.agent.McpClientManager.parseServerUrls(mcpDraft)
+                        if (urls.isEmpty()) {
+                            mcpStatus = "Enter at least one http:// or https:// MCP URL."
+                        } else {
+                            mcpStatus = "Checking ${urls.size} server(s)..."
+                            scope.launch {
+                                val results = urls.map { url ->
+                                    val res = com.kairo.agent.agent.McpClientManager.listTools(url)
+                                    res.fold(
+                                        onSuccess = { list -> "$url: ${list.size} tool(s) (${list.joinToString { it.name }})" },
+                                        onFailure = { err -> "$url: ${err.localizedMessage ?: "error"}" }
+                                    )
+                                }
+                                mcpStatus = results.joinToString("\n")
+                            }
+                        }
+                    }) { Text("Test MCP Tools") }
+                }
+                if (!mcpStatus.isNullOrBlank()) {
+                    Text(mcpStatus!!, style = MaterialTheme.typography.bodySmall, color = GeminiTextSecondary)
+                }
+
                 OutlinedButton(
                     onClick = {
                         showSettingsSheet = false
@@ -1693,19 +1848,22 @@ private fun ConversationTurnItem(
                     wasStreaming = turn.isStreaming
                 }
 
-                Box(modifier = Modifier.fillMaxWidth().clip(RoundedCornerShape(12.dp))) {
-                    if (turn.isStreaming) {
-                        StarDustParticles(modifier = Modifier.matchParentSize())
+                Box(modifier = Modifier.fillMaxWidth()) {
+                    Box(modifier = Modifier.matchParentSize().clip(RoundedCornerShape(14.dp))) {
+                        if (turn.isStreaming) {
+                            StarDustParticles(modifier = Modifier.matchParentSize())
+                        }
+                        ResponseShineSweep(trigger = shineTrigger, modifier = Modifier.matchParentSize())
                     }
                     if (turn.isStreaming && turn.response.isEmpty()) {
                         ThinkingDotsIndicator()
                     } else {
                         RichResponseText(
                             text = if (turn.isStreaming) "${turn.response} ▌" else turn.response,
-                            textColor = GeminiTextPrimary
+                            textColor = GeminiTextPrimary,
+                            modifier = Modifier.padding(horizontal = 4.dp, vertical = 2.dp)
                         )
                     }
-                    ResponseShineSweep(trigger = shineTrigger, modifier = Modifier.matchParentSize())
                 }
 
                 if (!turn.isStreaming && turn.response.isNotEmpty()) {

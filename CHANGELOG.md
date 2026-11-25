@@ -1,5 +1,15 @@
 # Changelog
 
+## v1.1.3 (2026-11-25)
+### Added & Fixed
+- **Fixed Chat Output Letter Clipping**: Moved rounded clipping onto the shine/stardust overlay layer so letters never get cut off at corners.
+- **Fixed Swipe-Up to Open Full App**: Overlay swipe-up now reliably brings `MainActivity` to the foreground before closing the overlay.
+- **In-App Web Search Results**: `web_search` now fetches live summaries/snippets in-app via DuckDuckGo & Wikipedia so Kairo answers directly inside chat.
+- **Optional Cloud AI (Double Confirmation + Always-Off Switch)**: Added `CLOUD_AI` backend with a 2-step privacy warning confirmation, API key/endpoint config, and a persistent 1-tap **"Cloud AI • Tap to Off"** pill in the top bar.
+- **MCP (Model Context Protocol) Support**: Added `McpClientManager` (`tools/list`, `tools/call`) and MCP server configuration + testing in Settings.
+- **Scrollable Menus Everywhere**: Made the entire navigation drawer and all bottom sheets scrollable for foldable and compact displays.
+- **Google Play `.lite` Package**: `google-play` branch now uses `com.kairo.agent.lite` (`applicationId` + `FileProvider`).
+
 ## v1.1.2 (2026-11-25)
 ### Added
 - **Local Python Script Runner (`run_python_script`) & Exact Time (`get_current_time`)**: Kairo can now run local Python scripts (`math`, `datetime.now()`, variables, lists, `print(...)`) using `python3` when available on-device or its built-in sandboxed Python-subset evaluator, and confirm exact local time, date, weekday, and timezone.

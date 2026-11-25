@@ -33,7 +33,7 @@
 
         <provider
             android:name="androidx.core.content.FileProvider"
-            android:authorities="com.kairo.agent.fileprovider"
+            android:authorities="com.kairo.agent.lite.fileprovider"
             android:exported="false"
             android:grantUriPermissions="true">
             <meta-data

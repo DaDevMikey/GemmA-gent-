@@ -199,9 +199,20 @@ class GemmaAssistantEngine {
         thinkHarder: Boolean = false,
         settings: AgentSettings = AgentSettings()
     ): Flow<String> {
+        if (settings.backendMode == EngineBackendMode.CLOUD_AI) {
+            return streamFromLocalHttp(
+                userQuery = userQuery,
+                image = image,
+                endpointUrl = settings.cloudEndpointUrl,
+                modelName = settings.cloudModelName,
+                temperatureValue = if (thinkHarder) 0.2f else 0.4f,
+                apiKey = settings.cloudApiKey
+            )
+        }
+
         val useLocalHttp = when (settings.backendMode) {
             EngineBackendMode.LOCAL_HTTP -> true
-            EngineBackendMode.AICORE -> false
+            EngineBackendMode.AICORE, EngineBackendMode.CLOUD_AI -> false
             EngineBackendMode.AUTO -> false // handled dynamically below
         }
 
@@ -287,7 +298,8 @@ class GemmaAssistantEngine {
         image: Bitmap?,
         endpointUrl: String,
         modelName: String,
-        temperatureValue: Float
+        temperatureValue: Float,
+        apiKey: String = ""
     ): Flow<String> = flow {
         val conn = (URL(endpointUrl).openConnection() as HttpURLConnection).apply {
             requestMethod = "POST"
@@ -295,6 +307,9 @@ class GemmaAssistantEngine {
             connectTimeout = 8000
             readTimeout = 60000
             setRequestProperty("Content-Type", "application/json")
+            if (apiKey.isNotBlank()) {
+                setRequestProperty("Authorization", "Bearer ${apiKey.trim()}")
+            }
         }
 
         val contentArray = JSONArray().apply {
