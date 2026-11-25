@@ -146,6 +146,8 @@ class AndroidAgentTools(
         appendLine("""- send_email: {"to": "string", "subject": "string", "body": "string"}""")
         appendLine("""- create_calendar_event: {"title": "string", "description": "optional string"}""")
         appendLine("""- get_weather: {"location": "city or 'current'"} (fetches live weather in-app)""")
+        appendLine("""- run_python_script: {"script": "python code"} (runs local Python calculation/time script, e.g. math, variables, datetime.now())""")
+        appendLine("""- get_current_time: {} (confirms exact current local time, date, weekday, and timezone)""")
         appendLine("""- calculate_or_convert: {"expression": "math or conversion like '25 c to f' or '10 km to mi'"}""")
         appendLine("""- get_storage_and_memory: {} (checks free/total storage & RAM)""")
         appendLine("""- translate_text: {"text": "string", "target_lang": "e.g. es, fr, de, nl, ja"}""")
@@ -329,6 +331,8 @@ class AndroidAgentTools(
             "send_email" -> sendEmail(args.optString("to"), args.optString("subject", ""), args.optString("body", ""))
             "create_calendar_event" -> createCalendarEvent(args.optString("title"), args.optString("description", ""))
             "get_weather" -> getWeather(args.optString("location"))
+            "run_python_script" -> runPythonScript(args.optString("script"))
+            "get_current_time" -> getCurrentTime()
             "calculate_or_convert" -> calculateOrConvert(args.optString("expression"))
             "get_storage_and_memory" -> getStorageAndMemory()
             "translate_text" -> translateText(args.optString("text"), args.optString("target_lang", "en"))
@@ -556,6 +560,31 @@ class AndroidAgentTools(
         }.getOrElse {
             webSearch("weather $clean".trim())
         }
+    }
+
+    private fun runPythonScript(script: String): AgentActionResult {
+        val res = LocalPythonScriptRunner.run(
+            script = script,
+            cacheDir = context.cacheDir,
+            allowNativePython = true
+        )
+        val runnerTag = if (res.usedNativePython) "python3" else "local Python"
+        return AgentActionResult(
+            executed = true,
+            summary = if (res.success) "Ran $runnerTag: ${res.output.lines().firstOrNull().orEmpty().take(48)}" else "Python error",
+            resultData = res.output,
+            success = res.success
+        )
+    }
+
+    private fun getCurrentTime(): AgentActionResult {
+        val formatted = SimpleDateFormat("EEEE, MMMM d, yyyy HH:mm:ss z", Locale.getDefault()).format(Date())
+        return AgentActionResult(
+            executed = true,
+            summary = formatted,
+            resultData = "Exact current local time: $formatted",
+            success = true
+        )
     }
 
     private fun calculateOrConvert(expression: String): AgentActionResult {
