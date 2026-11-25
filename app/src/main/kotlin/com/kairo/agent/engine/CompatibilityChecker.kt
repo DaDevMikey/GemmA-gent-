@@ -22,9 +22,11 @@ data class CompatibilityReport(
     val items: List<CompatibilityCheckItem>,
     val aiCoreReady: Boolean,
     val localServerReady: Boolean,
-    val healthConnectGranted: Boolean = false
+    val healthConnectGranted: Boolean = false,
+    val socAllowlisted: Boolean = false,
+    val socName: String = ""
 ) {
-    val allCorePassed: Boolean get() = aiCoreReady || localServerReady
+    val allCorePassed: Boolean get() = aiCoreReady || localServerReady || socAllowlisted
 }
 
 /**
@@ -49,8 +51,15 @@ class CompatibilityChecker(private val context: Context) {
             ContextCompat.checkSelfPermission(context, Manifest.permission.ACCESS_COARSE_LOCATION) == PackageManager.PERMISSION_GRANTED
         val contactsOk = ContextCompat.checkSelfPermission(context, Manifest.permission.READ_CONTACTS) == PackageManager.PERMISSION_GRANTED
         val notifOk = NotificationCatchUpStore.isAccessGranted(context)
+        val socInfo = detectSocInfo()
+        val socOk = isSocAllowlisted(socInfo)
 
         val items = listOf(
+            CompatibilityCheckItem(
+                label = "SoC / NPU Allowlist",
+                detail = if (socOk) "$socInfo (Verified flagship NPU)" else "$socInfo (Not on flagship allowlist)",
+                passed = socOk
+            ),
             CompatibilityCheckItem(
                 label = "Android OS & RAM",
                 detail = "Android ${Build.VERSION.RELEASE} (API ${Build.VERSION.SDK_INT}) • ${"%.1f".format(totalRamGb)} GB RAM",
@@ -97,8 +106,36 @@ class CompatibilityChecker(private val context: Context) {
             items = items,
             aiCoreReady = aiCoreOk,
             localServerReady = localReachable,
-            healthConnectGranted = false
+            healthConnectGranted = false,
+            socAllowlisted = socOk,
+            socName = socInfo
         )
+    }
+
+    private fun detectSocInfo(): String {
+        val socModel = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+            Build.SOC_MODEL.takeIf { it.isNotBlank() && it != Build.UNKNOWN }
+        } else null
+        return listOfNotNull(socModel, Build.HARDWARE, Build.BOARD)
+            .distinct()
+            .joinToString(" / ")
+            .ifBlank { "Unknown SoC" }
+    }
+
+    private fun isSocAllowlisted(socInfo: String): Boolean {
+        val upper = socInfo.uppercase()
+        val allowlist = listOf(
+            "SM8750", // Snapdragon 8 Elite
+            "SM8850", // Snapdragon 8 Elite 2 / Gen 5
+            "SM8950", // Future 8-series
+            "8 ELITE",
+            "SUN", // SM8750 board/platform codename
+            "TENSOR G5",
+            "TENSOR G6",
+            "LAGUNA", // Tensor G5 codename
+            "MALIBU"
+        )
+        return allowlist.any { upper.contains(it) }
     }
 
     private fun probeLocalEndpoint(endpointUrl: String): Boolean {

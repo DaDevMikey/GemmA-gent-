@@ -358,3 +358,32 @@ fun BlurIntoText(
         content()
     }
 }
+
+/**
+ * Twidget-style per-character staggered blur-into-sharp + rise settle animation.
+ */
+@Composable
+fun StaggeredBlurText(
+    text: String,
+    style: androidx.compose.ui.text.TextStyle,
+    color: Color,
+    key: Any? = text,
+    initialDelayMs: Long = 40L,
+    charDelayMs: Long = 22L,
+    modifier: Modifier = Modifier
+) {
+    androidx.compose.foundation.layout.Row(modifier = modifier) {
+        text.forEachIndexed { index, ch ->
+            BlurIntoText(
+                key = "$key-$index",
+                delayMs = initialDelayMs + index * charDelayMs
+            ) {
+                androidx.compose.material3.Text(
+                    text = ch.toString(),
+                    style = style,
+                    color = color
+                )
+            }
+        }
+    }
+}

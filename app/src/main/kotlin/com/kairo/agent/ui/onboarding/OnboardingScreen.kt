@@ -1,7 +1,10 @@
 package com.kairo.agent.ui.onboarding
 
 import android.Manifest
+import android.content.Intent
 import android.content.pm.PackageManager
+import android.net.Uri
+import androidx.compose.foundation.clickable
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.core.CubicBezierEasing
 import androidx.compose.animation.core.FastOutSlowInEasing
@@ -113,6 +116,7 @@ fun OnboardingScreen(
 ) {
     var step by remember { mutableIntStateOf(0) }
     var userName by remember { mutableStateOf("") }
+    var privacyAccepted by remember { mutableStateOf(false) }
     var pendingDisclosure by remember { mutableStateOf<Triple<String, String, () -> Unit>?>(null) }
     val context = LocalContext.current
 
@@ -182,15 +186,20 @@ fun OnboardingScreen(
                                 verticalArrangement = Arrangement.spacedBy(18.dp)
                             ) {
                                 GemmASparkleIcon(size = 68.dp, isAnimating = true)
-                                AnimatedHeadline("Welcome to Kairo")
-                                BlurIntoText(key = "sub_0", delayMs = 140L) {
+                                com.kairo.agent.ui.components.StaggeredBlurText(
+                                    text = "Welcome to Kairo",
+                                    style = MaterialTheme.typography.headlineMedium.copy(fontWeight = FontWeight.Bold),
+                                    color = TextPrimary,
+                                    key = "welcome_title"
+                                )
+                                BlurIntoText(key = "sub_0", delayMs = 340L) {
                                     Text(
                                         text = "Pronounced /kaj/roo/ • 100% On-Device",
                                         color = AccentBlue,
                                         style = MaterialTheme.typography.labelLarge
                                     )
                                 }
-                                BlurIntoText(key = "desc_0", delayMs = 240L) {
+                                BlurIntoText(key = "desc_0", delayMs = 460L) {
                                     Text(
                                         text = "Your private Android AI agent powered by Gemma 4. Prompts, voice, images, and screen context never leave your device.",
                                         color = TextSecondary,
@@ -199,9 +208,51 @@ fun OnboardingScreen(
                                     )
                                 }
                                 OnDevicePrivacyBanner()
+                                Surface(
+                                    color = FrostedCardBg,
+                                    shape = RoundedCornerShape(16.dp),
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .border(1.dp, FrostedBorder, RoundedCornerShape(16.dp))
+                                        .clickable { privacyAccepted = !privacyAccepted }
+                                ) {
+                                    Row(
+                                        modifier = Modifier.padding(horizontal = 12.dp, vertical = 10.dp),
+                                        verticalAlignment = Alignment.CenterVertically,
+                                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                                    ) {
+                                        androidx.compose.material3.Checkbox(
+                                            checked = privacyAccepted,
+                                            onCheckedChange = { privacyAccepted = it }
+                                        )
+                                        Column(modifier = Modifier.weight(1f)) {
+                                            Text(
+                                                "I agree to the Privacy Policy",
+                                                color = TextPrimary,
+                                                style = MaterialTheme.typography.labelLarge,
+                                                fontWeight = FontWeight.SemiBold
+                                            )
+                                            Text(
+                                                "On-device by default; optional Cloud AI is strictly opt-in.",
+                                                color = TextSecondary,
+                                                style = MaterialTheme.typography.labelSmall
+                                            )
+                                        }
+                                        TextButton(onClick = {
+                                            runCatching {
+                                                context.startActivity(
+                                                    Intent(Intent.ACTION_VIEW, Uri.parse("https://dadevmikey.github.io/Kairo/privacy.html"))
+                                                )
+                                            }
+                                        }) {
+                                            Text("Read", color = AccentBlue)
+                                        }
+                                    }
+                                }
                             }
                             Button(
                                 onClick = { step = 1 },
+                                enabled = privacyAccepted,
                                 modifier = Modifier.fillMaxWidth().height(56.dp),
                                 shape = RoundedCornerShape(50)
                             ) {
@@ -284,7 +335,7 @@ fun OnboardingScreen(
                                                 else Text("Re-check", color = AccentBlue)
                                             }
                                         }
-                                        compatibilityReport?.items?.take(3)?.forEach { item ->
+                                        compatibilityReport?.items?.take(4)?.forEach { item ->
                                             Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                                                 Icon(
                                                     imageVector = if (item.passed) Icons.Default.CheckCircle else Icons.Default.ErrorOutline,
@@ -358,15 +409,51 @@ fun OnboardingScreen(
 
                                 SetupToggle(
                                     title = "Bypass compatibility checks",
-                                    subtitle = "Continue even if AICore is unavailable",
+                                    subtitle = "Continue even if AICore or SoC allowlist is unavailable",
                                     checked = settings.bypassCompatibility,
                                     onCheckedChange = { onUpdateSettings(settings.copy(bypassCompatibility = it)) }
                                 )
+
+                                if (compatibilityReport != null && !compatibilityReport.allCorePassed && !settings.bypassCompatibility) {
+                                    Surface(
+                                        color = Color(0xFF3E2226),
+                                        shape = RoundedCornerShape(14.dp),
+                                        modifier = Modifier.fillMaxWidth()
+                                    ) {
+                                        Column(modifier = Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                                            Text(
+                                                "Device reported as incompatible",
+                                                color = Color(0xFFF28B82),
+                                                style = MaterialTheme.typography.labelLarge,
+                                                fontWeight = FontWeight.SemiBold
+                                            )
+                                            Text(
+                                                "Your SoC (${compatibilityReport.socName}) is not on the Snapdragon 8 Elite / Tensor G5+ allowlist and AICore/Local endpoint isn't ready. You can still bypass this check to continue.",
+                                                color = TextSecondary,
+                                                style = MaterialTheme.typography.bodySmall
+                                            )
+                                            FilledTonalButton(
+                                                onClick = {
+                                                    onUpdateSettings(settings.copy(bypassCompatibility = true))
+                                                    step = 3
+                                                },
+                                                modifier = Modifier.fillMaxWidth()
+                                            ) {
+                                                Text("Bypass & Continue Anyway")
+                                            }
+                                        }
+                                    }
+                                }
                             }
 
+                            val canContinueCompat = (compatibilityReport?.allCorePassed == true) || settings.bypassCompatibility
                             Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                                 OutlinedButton(onClick = { step = 1 }, modifier = Modifier.weight(1f).height(50.dp)) { Text("Back") }
-                                Button(onClick = { step = 3 }, modifier = Modifier.weight(1f).height(50.dp)) { Text("Next") }
+                                Button(
+                                    onClick = { step = 3 },
+                                    enabled = canContinueCompat,
+                                    modifier = Modifier.weight(1f).height(50.dp)
+                                ) { Text("Next") }
                             }
                         }
                     }
