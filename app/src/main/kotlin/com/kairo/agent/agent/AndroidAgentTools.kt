@@ -30,9 +30,13 @@ import androidx.core.content.ContextCompat
 import androidx.core.content.FileProvider
 import androidx.health.connect.client.HealthConnectClient
 import androidx.health.connect.client.permission.HealthPermission
+import androidx.health.connect.client.records.ActiveCaloriesBurnedRecord
 import androidx.health.connect.client.records.DistanceRecord
 import androidx.health.connect.client.records.ExerciseSessionRecord
+import androidx.health.connect.client.records.FloorsClimbedRecord
 import androidx.health.connect.client.records.HeartRateRecord
+import androidx.health.connect.client.records.HydrationRecord
+import androidx.health.connect.client.records.RestingHeartRateRecord
 import androidx.health.connect.client.records.SleepSessionRecord
 import androidx.health.connect.client.records.StepsRecord
 import androidx.health.connect.client.records.TotalCaloriesBurnedRecord
@@ -89,7 +93,7 @@ class AndroidAgentTools(
         persona: AgentPersona = AgentPersona.DEFAULT,
         rootPowerMode: Boolean = false
     ): String = buildString {
-        appendLine("You are Kairo (Kairo Agent), a helpful on-device Android AI agent powered by Gemma 4.")
+        appendLine("You are Kairo (pronounced /kaj/roo/), a helpful on-device Android AI agent powered by Gemma 4.")
         appendLine("Persona instruction: ${persona.instruction}")
         appendLine("Live device context: ${currentTimeString()}, ${batteryContextString()}.")
 
@@ -588,11 +592,15 @@ class AndroidAgentTools(
         val granted = runCatching { client.permissionController.getGrantedPermissions() }.getOrElse { emptySet() }
         val stepsPerm = HealthPermission.getReadPermission(StepsRecord::class)
         val hrPerm = HealthPermission.getReadPermission(HeartRateRecord::class)
+        val restingHrPerm = HealthPermission.getReadPermission(RestingHeartRateRecord::class)
         val sleepPerm = HealthPermission.getReadPermission(SleepSessionRecord::class)
         val distPerm = HealthPermission.getReadPermission(DistanceRecord::class)
         val calPerm = HealthPermission.getReadPermission(TotalCaloriesBurnedRecord::class)
+        val activeCalPerm = HealthPermission.getReadPermission(ActiveCaloriesBurnedRecord::class)
+        val hydrationPerm = HealthPermission.getReadPermission(HydrationRecord::class)
+        val floorsPerm = HealthPermission.getReadPermission(FloorsClimbedRecord::class)
         val exPerm = HealthPermission.getReadPermission(ExerciseSessionRecord::class)
-        val anyGranted = listOf(stepsPerm, hrPerm, sleepPerm, distPerm, calPerm, exPerm).any { it in granted }
+        val anyGranted = listOf(stepsPerm, hrPerm, restingHrPerm, sleepPerm, distPerm, calPerm, activeCalPerm, hydrationPerm, floorsPerm, exPerm).any { it in granted }
         if (!anyGranted) {
             val msg = "Health Connect permissions are not granted yet. Open Kairo's drawer → Connections to grant Health Connect access."
             return AgentActionResult(executed = true, summary = "Health Connect permission needed", resultData = msg, success = false)
@@ -618,7 +626,34 @@ class AndroidAgentTools(
             runCatching {
                 val agg = client.aggregate(AggregateRequest(metrics = setOf(TotalCaloriesBurnedRecord.ENERGY_TOTAL), timeRangeFilter = TimeRangeFilter.between(startOfDay, now)))
                 val kcal = agg[TotalCaloriesBurnedRecord.ENERGY_TOTAL]?.inKilocalories ?: 0.0
-                if (kcal > 0) parts.add("Calories burned: ${kcal.toInt()} kcal")
+                if (kcal > 0) parts.add("Total calories: ${kcal.toInt()} kcal")
+            }
+        }
+        if (activeCalPerm in granted) {
+            runCatching {
+                val agg = client.aggregate(AggregateRequest(metrics = setOf(ActiveCaloriesBurnedRecord.ACTIVE_CALORIES_TOTAL), timeRangeFilter = TimeRangeFilter.between(startOfDay, now)))
+                val kcal = agg[ActiveCaloriesBurnedRecord.ACTIVE_CALORIES_TOTAL]?.inKilocalories ?: 0.0
+                if (kcal > 0) parts.add("Active calories: ${kcal.toInt()} kcal")
+            }
+        }
+        if (hydrationPerm in granted) {
+            runCatching {
+                val agg = client.aggregate(AggregateRequest(metrics = setOf(HydrationRecord.VOLUME_TOTAL), timeRangeFilter = TimeRangeFilter.between(startOfDay, now)))
+                val liters = agg[HydrationRecord.VOLUME_TOTAL]?.inLiters ?: 0.0
+                if (liters > 0) parts.add("Hydration: ${"%.2f".format(Locale.US, liters)} L")
+            }
+        }
+        if (floorsPerm in granted) {
+            runCatching {
+                val agg = client.aggregate(AggregateRequest(metrics = setOf(FloorsClimbedRecord.FLOORS_CLIMBED_TOTAL), timeRangeFilter = TimeRangeFilter.between(startOfDay, now)))
+                val floors = agg[FloorsClimbedRecord.FLOORS_CLIMBED_TOTAL] ?: 0.0
+                if (floors > 0) parts.add("Floors climbed: ${floors.toInt()}")
+            }
+        }
+        if (restingHrPerm in granted) {
+            runCatching {
+                val rhrResp = client.readRecords(ReadRecordsRequest(recordType = RestingHeartRateRecord::class, timeRangeFilter = TimeRangeFilter.between(last24h, now)))
+                rhrResp.records.lastOrNull()?.beatsPerMinute?.let { parts.add("Resting heart rate: $it bpm") }
             }
         }
         if (hrPerm in granted) {
@@ -1177,9 +1212,11 @@ class AndroidAgentTools(
             }
         }
 
-        launchIntentOrFail(
-            Intent(Intent.ACTION_VIEW, Uri.parse("https://www.google.com/search?q=${Uri.encode(clean)}")).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK),
-            "Opened browser search for \"$clean\""
+        AgentActionResult(
+            executed = true,
+            summary = "No instant summary for \"$clean\"",
+            resultData = "No instant in-app summary was returned for \"$clean\". Answer using your local knowledge or suggest a more specific query.",
+            success = false
         )
     }
 

@@ -41,12 +41,31 @@ class MemoryStore(context: Context) {
         }.getOrElse { emptyList() }
     }
 
+    private fun normalizeForDedup(text: String): String =
+        text.lowercase().replace(Regex("[^a-z0-9\\s]"), " ").replace(Regex("\\s+"), " ").trim()
+
     fun addMemory(fact: String): Boolean {
         val cleaned = fact.trim()
         if (cleaned.isEmpty()) return false
 
+        val normNew = normalizeForDedup(cleaned)
+        if (normNew.isEmpty()) return false
+        val newWords = normNew.split(" ").filter { it.length > 2 }.toSet()
+
         val existing = loadMemories()
-        if (existing.any { it.fact.equals(cleaned, ignoreCase = true) }) {
+        val isDuplicate = existing.any { item ->
+            val normOld = normalizeForDedup(item.fact)
+            if (normOld == normNew || normOld.contains(normNew) || normNew.contains(normOld)) {
+                true
+            } else if (newWords.size >= 3) {
+                val oldWords = normOld.split(" ").filter { it.length > 2 }.toSet()
+                val overlap = newWords.intersect(oldWords).size
+                overlap.toFloat() / maxOf(newWords.size, oldWords.size).toFloat() >= 0.75f
+            } else {
+                false
+            }
+        }
+        if (isDuplicate) {
             return false
         }
 

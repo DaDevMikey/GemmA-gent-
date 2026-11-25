@@ -77,6 +77,10 @@ class AgentRunner(
 
         if (!tools.hasToolCall(rawOutput)) {
             val clean = tools.stripToolCallMarkup(rawOutput)
+                .ifBlank {
+                    if (autoSavedMemories.isNotEmpty()) "Got it — I've remembered that (${autoSavedMemories.first()})."
+                    else "I didn't receive a response from the model for that prompt. Try rephrasing or tapping Regenerate."
+                }
             val memSummary = if (autoSavedMemories.isNotEmpty()) "Remembered: ${autoSavedMemories.first()}" else null
             emit(
                 AgentStreamEvent.Finished(
@@ -126,8 +130,9 @@ class AgentRunner(
         }
 
         val finalClean = tools.stripToolCallMarkup(secondTurnRaw.toString())
-            .ifEmpty { tools.stripToolCallMarkup(rawOutput) }
-            .ifEmpty { summary.orEmpty() }
+            .ifBlank { tools.stripToolCallMarkup(rawOutput) }
+            .ifBlank { actionResult.resultData?.takeIf { it.isNotBlank() } ?: summary.orEmpty() }
+            .ifBlank { "Done." }
 
         emit(
             AgentStreamEvent.Finished(
