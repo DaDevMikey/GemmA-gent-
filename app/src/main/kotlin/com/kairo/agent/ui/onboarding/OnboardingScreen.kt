@@ -63,7 +63,6 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
-import androidx.compose.ui.draw.scale
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
@@ -550,14 +549,14 @@ private fun PermissionCard(
 @Composable
 private fun OnDevicePrivacyBanner(compact: Boolean = false) {
     val infinite = rememberInfiniteTransition(label = "privacy_pulse")
-    val pulseScale by infinite.animateFloat(
-        initialValue = 0.94f,
-        targetValue = 1.08f,
+    val shimmerAlpha by infinite.animateFloat(
+        initialValue = 0.72f,
+        targetValue = 1f,
         animationSpec = infiniteRepeatable(
-            animation = tween(1600, easing = FastOutSlowInEasing),
+            animation = tween(1400, easing = FastOutSlowInEasing),
             repeatMode = RepeatMode.Reverse
         ),
-        label = "privacy_icon_scale"
+        label = "privacy_icon_alpha"
     )
     Surface(
         color = Color(0x9913221A),
@@ -574,7 +573,7 @@ private fun OnDevicePrivacyBanner(compact: Boolean = false) {
             Row(
                 horizontalArrangement = Arrangement.spacedBy(4.dp),
                 verticalAlignment = Alignment.CenterVertically,
-                modifier = Modifier.scale(pulseScale)
+                modifier = Modifier.alpha(shimmerAlpha)
             ) {
                 Icon(Icons.Default.Security, contentDescription = null, tint = SuccessGreen, modifier = Modifier.size(20.dp))
                 Icon(Icons.Default.Memory, contentDescription = null, tint = AccentBlue, modifier = Modifier.size(18.dp))

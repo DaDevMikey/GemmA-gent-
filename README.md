@@ -7,6 +7,12 @@ An on-device Android AI agent created by **DaManMikey** ([damanmikey.me](https:/
 - **Privacy Policy:** [PRIVACY_POLICY.md](PRIVACY_POLICY.md)
 - **Terms of Service:** [TERMS_OF_SERVICE.md](TERMS_OF_SERVICE.md)
 
+## Screenshots
+
+| Home & Quick Prompts | AI Engine & Model Selector | Floating Overlay & Widget | Drawer & Recent Chats |
+| :---: | :---: | :---: | :---: |
+| ![Kairo Home](screenshots/kairo_home.png) | ![AICore Models](screenshots/kairo_models.png) | ![Floating Overlay](screenshots/kairo_overlay.png) | ![Drawer](screenshots/kairo_drawer.png) |
+
 ## Features
 - **100% Local On-Device Gemma 4**: Streaming text and multimodal image understanding (`ImagePart`) with zero external AI servers.
 - **System Digital Assistant**: Integrates with `VoiceInteractionService` + `ACTION_ASSIST` and a dedicated **Kairo Overlay** launcher with swipe-to-fullscreen.
