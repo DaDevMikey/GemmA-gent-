@@ -1,5 +1,12 @@
 # Changelog
 
+## v1.1.7
+- Full Markdown rendering in Release Notes & chat (`#`/`##`/`###` headings, bullet lists, inline code, bold)
+- Added **Micro-Agent Router** (intent splitting) and **Self-Healing Retry Loop** in `AgentRunner`
+- Added **Ephemeral Clipboard & Screen Memory** (7-day rolling local store)
+- Added **HardwareGuard** for thermal and battery-aware execution
+- Added **Exynos 2500+** (`S5E9955`, `EXYNOS 2600`) to the SoC allowlist
+
 ## v1.1.6
 - Fixed dual launcher icon by removing `LAUNCHER` intent-filter from `LaunchOverlayActivity` and setting `singleTask` on `MainActivity`
 - Added Snapdragon 8 Elite+ & Tensor G5+ SoC allowlist check in Setup with explicit "Bypass & Continue Anyway" option for incompatible devices

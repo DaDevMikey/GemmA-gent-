@@ -62,11 +62,45 @@ fun RichResponseText(
                 when (segment) {
                     is ResponseSegment.Prose -> {
                         if (segment.text.isNotBlank()) {
-                            Text(
-                                text = formatInlineMarkdown(segment.text),
-                                color = textColor,
-                                style = MaterialTheme.typography.bodyLarge
-                            )
+                            Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                                segment.text.lines().forEach { line ->
+                                    val trimmed = line.trimStart()
+                                    when {
+                                        trimmed.startsWith("### ") -> Text(
+                                            text = formatInlineMarkdown(trimmed.removePrefix("### ")),
+                                            color = textColor,
+                                            style = MaterialTheme.typography.titleSmall,
+                                            fontWeight = FontWeight.SemiBold,
+                                            modifier = Modifier.padding(top = 4.dp)
+                                        )
+                                        trimmed.startsWith("## ") -> Text(
+                                            text = formatInlineMarkdown(trimmed.removePrefix("## ")),
+                                            color = Color(0xFFA8C7FA),
+                                            style = MaterialTheme.typography.titleMedium,
+                                            fontWeight = FontWeight.Bold,
+                                            modifier = Modifier.padding(top = 6.dp)
+                                        )
+                                        trimmed.startsWith("# ") -> Text(
+                                            text = formatInlineMarkdown(trimmed.removePrefix("# ")),
+                                            color = Color(0xFFA8C7FA),
+                                            style = MaterialTheme.typography.titleLarge,
+                                            fontWeight = FontWeight.Bold,
+                                            modifier = Modifier.padding(top = 6.dp)
+                                        )
+                                        trimmed.startsWith("- ") || trimmed.startsWith("* ") -> Text(
+                                            text = formatInlineMarkdown("• " + trimmed.drop(2)),
+                                            color = textColor,
+                                            style = MaterialTheme.typography.bodyMedium,
+                                            modifier = Modifier.padding(start = 6.dp)
+                                        )
+                                        trimmed.isNotEmpty() -> Text(
+                                            text = formatInlineMarkdown(line),
+                                            color = textColor,
+                                            style = MaterialTheme.typography.bodyLarge
+                                        )
+                                    }
+                                }
+                            }
                         }
                     }
                     is ResponseSegment.CodeBlock -> {
