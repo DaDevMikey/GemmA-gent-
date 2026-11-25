@@ -43,20 +43,20 @@ fun GemmASparkleIcon(
     isAnimating: Boolean = false
 ) {
     val transition = rememberInfiniteTransition(label = "sparkle_anim")
-    val pulseScale by transition.animateFloat(
-        initialValue = 1f,
-        targetValue = 1.16f,
+    val shimmerAlpha by transition.animateFloat(
+        initialValue = 0.78f,
+        targetValue = 1f,
         animationSpec = infiniteRepeatable(
-            animation = tween(durationMillis = 750, easing = FastOutSlowInEasing),
+            animation = tween(durationMillis = 1000, easing = FastOutSlowInEasing),
             repeatMode = RepeatMode.Reverse
         ),
-        label = "sparkle_scale"
+        label = "sparkle_alpha"
     )
     val spinAngle by transition.animateFloat(
         initialValue = 0f,
         targetValue = 360f,
         animationSpec = infiniteRepeatable(
-            animation = tween(durationMillis = 4000),
+            animation = tween(durationMillis = 4800),
             repeatMode = RepeatMode.Restart
         ),
         label = "sparkle_spin"
@@ -67,8 +67,7 @@ fun GemmASparkleIcon(
             .size(size)
             .graphicsLayer {
                 if (isAnimating) {
-                    scaleX = pulseScale
-                    scaleY = pulseScale
+                    alpha = shimmerAlpha
                     rotationZ = spinAngle
                 }
             }

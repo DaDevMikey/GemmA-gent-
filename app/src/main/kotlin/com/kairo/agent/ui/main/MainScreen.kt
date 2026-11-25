@@ -30,8 +30,8 @@ import androidx.compose.animation.core.tween
 import androidx.compose.animation.expandVertically
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
-import androidx.compose.animation.scaleIn
 import androidx.compose.animation.shrinkVertically
+import androidx.compose.animation.slideInVertically
 import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.Image
@@ -300,8 +300,8 @@ fun MainScreen(
     AnimatedContent(
         targetState = state.settings.hasCompletedOnboarding,
         transitionSpec = {
-            (fadeIn(tween(420)) + scaleIn(initialScale = 0.96f, animationSpec = tween(420))) togetherWith
-                fadeOut(tween(240))
+            (slideInVertically(tween(340, easing = FastOutSlowInEasing)) { it / 16 } + fadeIn(tween(340))) togetherWith
+                fadeOut(tween(220))
         },
         label = "onboarding_to_main"
     ) { onboarded ->
