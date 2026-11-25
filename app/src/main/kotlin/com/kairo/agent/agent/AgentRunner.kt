@@ -49,8 +49,16 @@ class AgentRunner(
         var firstTokenMs = 0L
         var chunkCount = 0
 
+        val route = classifyIntent(userPrompt, !screenText.isNullOrBlank())
+        val routedPrompt = when (route) {
+            MicroAgentRoute.TOOL_ACTION -> "$userPrompt\n[Router: Focus on accurate JSON tool-calling.]"
+            MicroAgentRoute.SUMMARIZE -> "$userPrompt\n[Router: Focus on concise, structured summarization.]"
+            MicroAgentRoute.MEMORY_QUERY -> "$userPrompt\n[Router: Check local memory/ephemeral clipboard if relevant.]"
+            MicroAgentRoute.GENERAL -> userPrompt
+        }
+
         val initialPrompt = tools.buildAgentPrompt(
-            userMessage = userPrompt,
+            userMessage = routedPrompt,
             screenText = screenText,
             conversationHistory = conversationHistory,
             persona = persona,
@@ -111,11 +119,40 @@ class AgentRunner(
         }
         emit(AgentStreamEvent.RunningTool(detectedTool))
 
-        val actionResult = tools.executeFromModelOutput(
+        var actionResult = tools.executeFromModelOutput(
             rawOutput = rawOutput,
             attachedImage = image,
             rootPowerMode = settings.rootPowerMode
         )
+
+        // Self-healing retry loop: if a tool call fails, feed the error back once so Kairo can course-correct
+        if (!actionResult.success) {
+            val retryPrompt = tools.buildFollowUpPrompt(
+                userMessage = "$userPrompt\n[System: Previous tool `${actionResult.toolName ?: detectedTool}` failed with: ${actionResult.summary ?: actionResult.resultData}. Course-correct with another tool call if possible, or explain clearly.]",
+                toolName = actionResult.toolName ?: detectedTool,
+                toolResult = actionResult.resultData ?: actionResult.summary.orEmpty(),
+                success = false,
+                persona = persona
+            )
+            val retryRaw = StringBuilder()
+            engine.streamResponse(
+                userQuery = retryPrompt,
+                thinkHarder = thinkHarder,
+                settings = settings
+            ).collect { chunk -> retryRaw.append(chunk) }
+            val retryStr = retryRaw.toString()
+            if (tools.hasToolCall(retryStr)) {
+                val retryTool = tools.extractToolName(retryStr) ?: "action"
+                if (retryTool !in DANGEROUS_TOOLS || confirmDangerousTool == null || confirmDangerousTool(retryTool, retryStr.take(240))) {
+                    emit(AgentStreamEvent.RunningTool(retryTool))
+                    actionResult = tools.executeFromModelOutput(
+                        rawOutput = retryStr,
+                        attachedImage = image,
+                        rootPowerMode = settings.rootPowerMode
+                    )
+                }
+            }
+        }
         val summary = actionResult.summary
         if (summary != null) {
             emit(AgentStreamEvent.ToolCompleted(summary = summary, success = actionResult.success))
@@ -171,6 +208,20 @@ class AgentRunner(
             ramUsedMb = ramMb
         )
     }
+
+    private fun classifyIntent(prompt: String, hasScreenText: Boolean): MicroAgentRoute {
+        val lower = prompt.lowercase()
+        return when {
+            lower.containsAny("copied", "clipboard", "earlier", "remember", "forgot") -> MicroAgentRoute.MEMORY_QUERY
+            lower.containsAny("summarize", "summary", "tldr", "tl;dr", "catch up") || hasScreenText -> MicroAgentRoute.SUMMARIZE
+            lower.containsAny("call ", "text ", "open ", "alarm", "timer", "calculate", "python", "weather", "search", "time") -> MicroAgentRoute.TOOL_ACTION
+            else -> MicroAgentRoute.GENERAL
+        }
+    }
+
+    private fun String.containsAny(vararg needles: String): Boolean = needles.any { this.contains(it) }
+
+    private enum class MicroAgentRoute { TOOL_ACTION, SUMMARIZE, MEMORY_QUERY, GENERAL }
 
     private companion object {
         val DANGEROUS_TOOLS = setOf(

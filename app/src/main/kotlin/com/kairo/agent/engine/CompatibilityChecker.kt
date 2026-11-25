@@ -133,7 +133,13 @@ class CompatibilityChecker(private val context: Context) {
             "TENSOR G5",
             "TENSOR G6",
             "LAGUNA", // Tensor G5 codename
-            "MALIBU"
+            "MALIBU",
+            "EXYNOS 2500",
+            "EXYNOS2500",
+            "S5E9955", // Exynos 2500
+            "EXYNOS 2600",
+            "EXYNOS2600",
+            "S5E9965" // Exynos 2600
         )
         return allowlist.any { upper.contains(it) }
     }
