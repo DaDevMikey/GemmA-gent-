@@ -37,6 +37,7 @@ data class ConversationTurn(
     val prompt: String,
     val response: String,
     val image: Bitmap? = null,
+    val responseImage: Bitmap? = null,
     val actionSummary: String? = null,
     val actionSuccess: Boolean = true,
     val isStreaming: Boolean = false
@@ -70,7 +71,8 @@ data class GemmAHomeState(
     val releaseNotes: List<GitHubReleaseNote> = emptyList(),
     val isLoadingReleaseNotes: Boolean = false,
     val releaseNotesError: String? = null,
-    val pendingToolConfirmation: PendingToolConfirmation? = null
+    val pendingToolConfirmation: PendingToolConfirmation? = null,
+    val incognitoMode: Boolean = false
 )
 
 class MainScreenViewModel(
@@ -193,6 +195,10 @@ class MainScreenViewModel(
     fun clearMemories() {
         memoryStore?.clearMemories()
         _state.update { it.copy(memories = emptyList()) }
+    }
+
+    fun toggleIncognitoMode() {
+        _state.update { it.copy(incognitoMode = !it.incognitoMode) }
     }
 
     fun startNewChat() {
@@ -407,6 +413,7 @@ class MainScreenViewModel(
                                 if (turnIndex in updatedTurns.indices) {
                                     updatedTurns[turnIndex] = updatedTurns[turnIndex].copy(
                                         response = event.finalText,
+                                        responseImage = event.attachedImage,
                                         actionSummary = event.actionSummary,
                                         actionSuccess = event.actionSuccess,
                                         isStreaming = false
@@ -418,13 +425,15 @@ class MainScreenViewModel(
                                     nerdStats = event.stats
                                 )
                             }
-                            chatHistoryStore?.saveChat(
-                                prompt = effectivePrompt,
-                                response = event.finalText,
-                                actionSummary = event.actionSummary
-                            )
-                            refreshChats()
-                            refreshMemories()
+                            if (!_state.value.incognitoMode) {
+                                chatHistoryStore?.saveChat(
+                                    prompt = effectivePrompt,
+                                    response = event.finalText,
+                                    actionSummary = event.actionSummary
+                                )
+                                refreshChats()
+                                refreshMemories()
+                            }
                         }
                     }
                 }

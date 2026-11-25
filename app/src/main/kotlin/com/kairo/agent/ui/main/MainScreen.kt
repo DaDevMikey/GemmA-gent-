@@ -361,6 +361,7 @@ fun MainScreen(
                 },
                 onSelectPersona = viewModel::selectPersona,
                 onUpdateSettings = viewModel::updateSettings,
+                onToggleIncognito = viewModel::toggleIncognitoMode,
                 onRunCompatibilityChecks = viewModel::runCompatibilityChecks,
                 onNewChat = viewModel::startNewChat,
                 onSelectChat = viewModel::loadChatIntoView,
@@ -461,6 +462,7 @@ internal fun MainScreenContent(
     onThinkHarder: (String) -> Unit = {},
     onSelectPersona: (AgentPersona) -> Unit = {},
     onUpdateSettings: (AgentSettings) -> Unit = {},
+    onToggleIncognito: () -> Unit = {},
     onRunCompatibilityChecks: () -> Unit = {},
     onNewChat: () -> Unit,
     onSelectChat: (ChatRecord) -> Unit,
@@ -496,6 +498,28 @@ internal fun MainScreenContent(
     var showSettingsSheet by remember { mutableStateOf(false) }
     var liveSheetFraction by remember { mutableStateOf(0f) }
     var sparkleTaps by remember { mutableStateOf(0) }
+    var pendingDeleteChat by remember { mutableStateOf<ChatRecord?>(null) }
+
+    pendingDeleteChat?.let { chatToDelete ->
+        androidx.compose.material3.AlertDialog(
+            onDismissRequest = { pendingDeleteChat = null },
+            containerColor = GeminiDrawerBg,
+            titleContentColor = GeminiTextPrimary,
+            textContentColor = GeminiTextSecondary,
+            icon = { Icon(Icons.Default.DeleteOutline, contentDescription = null, tint = Color(0xFFF28B82)) },
+            title = { Text("Delete chat?", fontWeight = FontWeight.SemiBold) },
+            text = { Text("Remove \"${chatToDelete.prompt.take(60)}\" from your local chat history? This cannot be undone.") },
+            confirmButton = {
+                Button(onClick = {
+                    onDeleteChat(chatToDelete.id)
+                    pendingDeleteChat = null
+                }) { Text("Delete") }
+            },
+            dismissButton = {
+                TextButton(onClick = { pendingDeleteChat = null }) { Text("Cancel", color = GeminiTextSecondary) }
+            }
+        )
+    }
 
     state.pendingToolConfirmation?.let { pending ->
         androidx.compose.material3.AlertDialog(
@@ -707,7 +731,7 @@ internal fun MainScreenContent(
                                             )
                                         }
                                     }
-                                    IconButton(onClick = { onDeleteChat(chat.id) }, modifier = Modifier.size(32.dp)) {
+                                    IconButton(onClick = { pendingDeleteChat = chat }, modifier = Modifier.size(32.dp)) {
                                         Icon(Icons.Default.DeleteOutline, contentDescription = "Delete chat", tint = GeminiTextSecondary, modifier = Modifier.size(16.dp))
                                     }
                                 }
@@ -1570,8 +1594,13 @@ internal fun MainScreenContent(
                                         Text(rel.title, color = GeminiAccentBlue, style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.SemiBold)
                                         Text(rel.publishedDate, color = GeminiTextSecondary, style = MaterialTheme.typography.labelSmall)
                                     }
-                                    if (rel.body.isNotBlank()) {
-                                        RichResponseText(text = rel.body, textColor = GeminiTextPrimary)
+                                    val bodyToRender = if (selectedVersionFilter != null) {
+                                        extractVersionSection(rel.body, selectedVersionFilter!!)
+                                    } else {
+                                        rel.body
+                                    }
+                                    if (bodyToRender.isNotBlank()) {
+                                        RichResponseText(text = bodyToRender, textColor = GeminiTextPrimary)
                                     }
                                     if (rel.apkUrl != null) {
                                         TextButton(onClick = { onOpenUrl(rel.apkUrl) }) {
@@ -1785,6 +1814,13 @@ internal fun MainScreenContent(
                     "Setup animations & One UI widget core inspired by Twidget (credit: thatjoshguy67).",
                     style = MaterialTheme.typography.labelSmall,
                     color = GeminiTextSecondary
+                )
+
+                SetupSwitchRow(
+                    title = "Incognito Context",
+                    subtitle = "Do not save this session to local chat history",
+                    checked = state.incognitoMode,
+                    onCheckedChange = { onToggleIncognito() }
                 )
 
                 Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -2141,6 +2177,18 @@ private fun ConversationTurnItem(
                     }
                 }
 
+                if (turn.responseImage != null) {
+                    Image(
+                        bitmap = turn.responseImage.asImageBitmap(),
+                        contentDescription = "Attached image from Kairo",
+                        contentScale = ContentScale.Crop,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .heightIn(max = 260.dp)
+                            .clip(RoundedCornerShape(16.dp))
+                    )
+                }
+
                 if (!turn.isStreaming && turn.response.isNotEmpty()) {
                     Row(horizontalArrangement = Arrangement.spacedBy(2.dp), verticalAlignment = Alignment.CenterVertically) {
                         IconButton(
@@ -2196,6 +2244,20 @@ private fun openDefaultAssistantSettings(context: Context) {
 }
 
 @Preview(showBackground = true, showSystemUi = true)
+private fun extractVersionSection(body: String, tagName: String): String {
+    val normalizedTag = tagName.trim().removePrefix("v")
+    val lines = body.lines()
+    val startIdx = lines.indexOfFirst { line ->
+        val t = line.trim()
+        t.startsWith("## ") && (t.contains("v$normalizedTag", ignoreCase = true) || t.contains(normalizedTag, ignoreCase = true))
+    }
+    if (startIdx == -1) return body
+    val endIdx = ((startIdx + 1) until lines.size).firstOrNull { idx ->
+        lines[idx].trim().startsWith("## ")
+    } ?: lines.size
+    return lines.subList(startIdx, endIdx).joinToString("\n").trim()
+}
+
 @Composable
 fun MainScreenPreview() {
     GemmATheme(darkTheme = true) {

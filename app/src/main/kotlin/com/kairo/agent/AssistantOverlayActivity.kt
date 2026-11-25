@@ -163,16 +163,24 @@ class AssistantOverlayActivity : ComponentActivity() {
                     },
                     onToggleTts = { voiceController.setTtsEnabled(!voiceState.ttsEnabled) },
                     onOpenFullscreen = {
-                        startActivity(
-                            Intent(this, MainActivity::class.java).apply {
+                        runCatching {
+                            val launchIntent = Intent(this, MainActivity::class.java).apply {
                                 addFlags(
                                     Intent.FLAG_ACTIVITY_NEW_TASK or
-                                        Intent.FLAG_ACTIVITY_REORDER_TO_FRONT or
-                                        Intent.FLAG_ACTIVITY_RESET_TASK_IF_NEEDED
+                                        Intent.FLAG_ACTIVITY_CLEAR_TOP or
+                                        Intent.FLAG_ACTIVITY_SINGLE_TOP
                                 )
                             }
-                        )
-                        window.decorView.postDelayed({ finish() }, 180L)
+                            startActivity(launchIntent)
+                        }.onFailure {
+                            packageManager.getLaunchIntentForPackage(packageName)?.let { fallback ->
+                                fallback.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                                runCatching { startActivity(fallback) }
+                            }
+                        }
+                        android.os.Handler(android.os.Looper.getMainLooper()).postDelayed({
+                            if (!isFinishing && !isDestroyed) finish()
+                        }, 180L)
                     },
                     onDismiss = { finish() }
                 )

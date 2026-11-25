@@ -20,7 +20,8 @@ sealed interface AgentStreamEvent {
         val finalText: String,
         val actionSummary: String?,
         val actionSuccess: Boolean,
-        val stats: NerdStats
+        val stats: NerdStats,
+        val attachedImage: Bitmap? = null
     ) : AgentStreamEvent
 }
 
@@ -191,7 +192,8 @@ class AgentRunner(
                 finalText = finalClean,
                 actionSummary = summary,
                 actionSuccess = actionResult.success,
-                stats = computeStats(startMs, firstTokenMs, chunkCount)
+                stats = computeStats(startMs, firstTokenMs, chunkCount),
+                attachedImage = actionResult.attachedBitmap
             )
         )
     }
