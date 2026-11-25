@@ -1,5 +1,13 @@
 # Changelog
 
+## v1.1.0 (2026-11-25)
+### Added & Fixed
+- **Isolated Floating Overlay Task**: Separated `LaunchOverlayActivity` and `AssistantOverlayActivity` into their own `com.kairo.agent.overlay` `taskAffinity` (`singleInstance`, `excludeFromRecents`) so launching the overlay opens only the floating popup without bringing the full Kairo app behind it.
+- **Location Permission & `get_current_location`**: Added optional foreground location support (`ACCESS_FINE_LOCATION` / `ACCESS_COARSE_LOCATION`) so Kairo can answer local weather, nearby places, and current city/address queries 100% on-device.
+- **Animated On-Device Privacy & Prominent Disclosures**: Added an animated `OnDevicePrivacyBanner` in Setup plus prominent in-app disclosure dialogs before requesting Microphone, Location, or Contacts.
+- **Rebranded Repository Links**: Updated update checker, in-app source links, and documentation to `https://github.com/DaDevMikey/Kairo`.
+- **Google Play Branch (`google-play`)**: Added a dedicated Play-Store-compliant branch with `ACTION_DIAL` (no `CALL_PHONE`), no Health Connect, no `WRITE_SETTINGS`, and no shell/root power mode.
+
 ## v1.0.9 (2026-11-24)
 ### Added & Improved
 - **Home Screen & Cover-Screen Widgets**: Added `Kairo Quick Ask` (4×1 resizable home widget with Ask, Voice, and Chat actions) and `Kairo Cover Screen` (compact 2×1 foldable cover-screen & lock-screen widget with direct Voice/Ask overlay launch).

@@ -3,7 +3,7 @@
 An on-device Android AI agent created by **DaManMikey** ([damanmikey.me](https://damanmikey.me/)), powered by **Gemma 4** via **Android AICore** (`com.google.mlkit:genai-prompt`).
 
 - **Website:** https://damanmikey.me/
-- **Source Code:** https://github.com/DaDevMikey/GemmA-gent-
+- **Source Code:** https://github.com/DaDevMikey/Kairo
 - **Privacy Policy:** [PRIVACY_POLICY.md](PRIVACY_POLICY.md)
 - **Terms of Service:** [TERMS_OF_SERVICE.md](TERMS_OF_SERVICE.md)
 

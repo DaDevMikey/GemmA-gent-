@@ -9,6 +9,9 @@ import android.content.pm.PackageManager
 import android.graphics.Bitmap
 import android.hardware.camera2.CameraCharacteristics
 import android.hardware.camera2.CameraManager
+import android.location.Geocoder
+import android.location.Location
+import android.location.LocationManager
 import android.media.AudioManager
 import android.net.ConnectivityManager
 import android.net.NetworkCapabilities
@@ -114,6 +117,7 @@ class AndroidAgentTools(
         appendLine("""<tool_call>{"tool":"TOOL_NAME","args":{...}}</tool_call>""")
         appendLine("Available tools:")
         appendLine("""- get_device_status: {}""")
+        appendLine("""- get_current_location: {} (reads current GPS/network location & city/address locally)""")
         appendLine("""- get_health_summary: {}""")
         appendLine("""- get_notifications: {} (reads recent unread notifications for catch-up)""")
         appendLine("""- call_person: {"target": "contact name or phone number"}""")
@@ -291,6 +295,7 @@ class AndroidAgentTools(
     ): AgentActionResult {
         val result = when (tool) {
             "get_device_status" -> getDeviceStatus()
+            "get_current_location" -> getCurrentLocation()
             "get_health_summary" -> getHealthSummary()
             "get_notifications" -> getNotifications()
             "call_person" -> callPerson(args.optString("target").ifBlank { args.optString("phone_number") })
@@ -493,6 +498,55 @@ class AndroidAgentTools(
         }.getOrElse { e ->
             AgentActionResult(executed = true, summary = "Shell error", resultData = e.localizedMessage ?: "Failed", success = false)
         }
+    }
+
+    @Suppress("DEPRECATION")
+    private fun getCurrentLocation(): AgentActionResult {
+        val fineGranted = ContextCompat.checkSelfPermission(context, Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED
+        val coarseGranted = ContextCompat.checkSelfPermission(context, Manifest.permission.ACCESS_COARSE_LOCATION) == PackageManager.PERMISSION_GRANTED
+        if (!fineGranted && !coarseGranted) {
+            return AgentActionResult(
+                executed = true,
+                summary = "Location permission required",
+                resultData = "Location permission is not granted yet. Ask the user to allow Location in Kairo's Connections & Permissions.",
+                success = false
+            )
+        }
+        val lm = context.getSystemService(Context.LOCATION_SERVICE) as? LocationManager
+            ?: return AgentActionResult(executed = true, summary = "Location service unavailable", resultData = "LocationManager unavailable", success = false)
+
+        val providers = listOf(LocationManager.GPS_PROVIDER, LocationManager.NETWORK_PROVIDER, LocationManager.PASSIVE_PROVIDER)
+        var best: Location? = null
+        for (p in providers) {
+            val loc = runCatching { lm.getLastKnownLocation(p) }.getOrNull() ?: continue
+            if (best == null || loc.time > best.time) best = loc
+        }
+        if (best == null) {
+            return AgentActionResult(
+                executed = true,
+                summary = "Location unavailable",
+                resultData = "No recent location fix found. Make sure device Location/GPS is turned on.",
+                success = false
+            )
+        }
+        val addressLine = runCatching {
+            val geocoder = Geocoder(context, Locale.getDefault())
+            val list = geocoder.getFromLocation(best.latitude, best.longitude, 1)
+            val addr = list?.firstOrNull()
+            listOfNotNull(addr?.thoroughfare, addr?.locality, addr?.adminArea, addr?.countryName)
+                .distinct()
+                .joinToString(", ")
+                .takeIf { it.isNotBlank() }
+        }.getOrNull()
+
+        val coords = "%.5f, %.5f".format(Locale.US, best.latitude, best.longitude)
+        val result = if (addressLine != null) "$addressLine ($coords)" else coords
+        return AgentActionResult(
+            executed = true,
+            summary = addressLine ?: "Located ($coords)",
+            resultData = "Current device location: $result",
+            success = true
+        )
     }
 
     private suspend fun getHealthSummary(): AgentActionResult {

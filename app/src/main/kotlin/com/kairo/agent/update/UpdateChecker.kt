@@ -161,8 +161,8 @@ class UpdateChecker(private val context: Context) {
             .map { it.toIntOrNull() ?: 0 }
 
     companion object {
-        const val LATEST_RELEASE_API = "https://api.github.com/repos/DaDevMikey/GemmA-gent-/releases/latest"
-        const val RELEASES_LIST_API = "https://api.github.com/repos/DaDevMikey/GemmA-gent-/releases?per_page=8"
-        const val RELEASES_PAGE_URL = "https://github.com/DaDevMikey/GemmA-gent-/releases"
+        const val LATEST_RELEASE_API = "https://api.github.com/repos/DaDevMikey/Kairo/releases/latest"
+        const val RELEASES_LIST_API = "https://api.github.com/repos/DaDevMikey/Kairo/releases?per_page=8"
+        const val RELEASES_PAGE_URL = "https://github.com/DaDevMikey/Kairo/releases"
     }
 }

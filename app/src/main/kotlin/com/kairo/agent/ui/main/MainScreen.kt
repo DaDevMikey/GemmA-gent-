@@ -269,6 +269,11 @@ fun MainScreen(
     val callPermissionLauncher = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) {
         viewModel.runCompatibilityChecks()
     }
+    val locationPermissionLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.RequestMultiplePermissions()
+    ) {
+        viewModel.runCompatibilityChecks()
+    }
     val healthPermissionLauncher = rememberLauncherForActivityResult(
         PermissionController.createRequestPermissionResultContract()
     ) {
@@ -312,6 +317,14 @@ fun MainScreen(
                 onDownloadModel = viewModel::downloadModel,
                 onUpdateSettings = viewModel::updateSettings,
                 onGrantMic = { micPermissionLauncher.launch(Manifest.permission.RECORD_AUDIO) },
+                onGrantLocation = {
+                    locationPermissionLauncher.launch(
+                        arrayOf(
+                            Manifest.permission.ACCESS_FINE_LOCATION,
+                            Manifest.permission.ACCESS_COARSE_LOCATION
+                        )
+                    )
+                },
                 onGrantContacts = { contactsPermissionLauncher.launch(Manifest.permission.READ_CONTACTS) },
                 onGrantCall = { callPermissionLauncher.launch(Manifest.permission.CALL_PHONE) },
                 onGrantHealthConnect = {
@@ -389,6 +402,14 @@ fun MainScreen(
                     voiceController.speakIfEnabled(text)
                 },
                 onGrantContacts = { contactsPermissionLauncher.launch(Manifest.permission.READ_CONTACTS) },
+                onGrantLocation = {
+                    locationPermissionLauncher.launch(
+                        arrayOf(
+                            Manifest.permission.ACCESS_FINE_LOCATION,
+                            Manifest.permission.ACCESS_COARSE_LOCATION
+                        )
+                    )
+                },
                 onGrantCall = { callPermissionLauncher.launch(Manifest.permission.CALL_PHONE) },
                 onGrantHealthConnect = {
                     if (HealthConnectClient.getSdkStatus(context) == HealthConnectClient.SDK_AVAILABLE) {
@@ -449,6 +470,7 @@ internal fun MainScreenContent(
     onMicClick: () -> Unit,
     onSpeakResponse: (String) -> Unit = {},
     onGrantContacts: () -> Unit = {},
+    onGrantLocation: () -> Unit = {},
     onGrantCall: () -> Unit = {},
     onGrantHealthConnect: () -> Unit = {},
     onOpenNotificationAccess: () -> Unit = {},
@@ -1306,6 +1328,8 @@ internal fun MainScreenContent(
         val ctx = LocalContext.current
         val micGranted = ContextCompat.checkSelfPermission(ctx, Manifest.permission.RECORD_AUDIO) == PackageManager.PERMISSION_GRANTED
         val contactsGranted = ContextCompat.checkSelfPermission(ctx, Manifest.permission.READ_CONTACTS) == PackageManager.PERMISSION_GRANTED
+        val locationGranted = ContextCompat.checkSelfPermission(ctx, Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED ||
+            ContextCompat.checkSelfPermission(ctx, Manifest.permission.ACCESS_COARSE_LOCATION) == PackageManager.PERMISSION_GRANTED
         val callGranted = ContextCompat.checkSelfPermission(ctx, Manifest.permission.CALL_PHONE) == PackageManager.PERMISSION_GRANTED
         val notifGranted = com.kairo.agent.service.NotificationCatchUpStore.isAccessGranted(ctx)
         val writeSettingsGranted = Settings.System.canWrite(ctx)
@@ -1319,6 +1343,7 @@ internal fun MainScreenContent(
                 Text("Manage optional Android permissions and power features.", style = MaterialTheme.typography.bodySmall, color = GeminiTextSecondary)
 
                 ConnectionPermRow("Microphone", "Voice prompts & wake word", micGranted, onMicClick)
+                ConnectionPermRow("Location", "Local weather, nearby places & GPS context", locationGranted, onGrantLocation)
                 ConnectionPermRow("Contacts", "Call & text people by name", contactsGranted, onGrantContacts)
                 ConnectionPermRow("Direct Calling", "Place calls directly", callGranted, onGrantCall)
                 ConnectionPermRow("Notification Catch-Up", "Summarize unread messages", notifGranted, onOpenNotificationAccess)
@@ -1496,7 +1521,7 @@ internal fun MainScreenContent(
                 Text("Created by DaManMikey • Powered by on-device Gemma 4.", style = MaterialTheme.typography.bodySmall, color = GeminiTextSecondary)
                 Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     OutlinedButton(onClick = { onOpenUrl("https://damanmikey.me/") }, modifier = Modifier.weight(1f)) { Text("damanmikey.me") }
-                    OutlinedButton(onClick = { onOpenUrl("https://github.com/DaDevMikey/GemmA-gent-") }, modifier = Modifier.weight(1f)) { Text("Source Code") }
+                    OutlinedButton(onClick = { onOpenUrl("https://github.com/DaDevMikey/Kairo") }, modifier = Modifier.weight(1f)) { Text("Source Code") }
                 }
                 Spacer(Modifier.height(12.dp))
             }

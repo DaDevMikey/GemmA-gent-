@@ -49,6 +49,8 @@ class CompatibilityChecker(private val context: Context) {
         val localReachable = probeLocalEndpoint(localEndpointUrl)
         val aiCoreOk = aiCoreAvailability == ModelAvailability.AVAILABLE
         val micOk = ContextCompat.checkSelfPermission(context, Manifest.permission.RECORD_AUDIO) == PackageManager.PERMISSION_GRANTED
+        val locationOk = ContextCompat.checkSelfPermission(context, Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED ||
+            ContextCompat.checkSelfPermission(context, Manifest.permission.ACCESS_COARSE_LOCATION) == PackageManager.PERMISSION_GRANTED
         val contactsOk = ContextCompat.checkSelfPermission(context, Manifest.permission.READ_CONTACTS) == PackageManager.PERMISSION_GRANTED
         val notifOk = NotificationCatchUpStore.isAccessGranted(context)
         val rootOk = isRootAvailable()
@@ -79,6 +81,11 @@ class CompatibilityChecker(private val context: Context) {
                 label = "Voice & Mic Permission",
                 detail = if (micOk) "Granted" else "Not granted",
                 passed = micOk
+            ),
+            CompatibilityCheckItem(
+                label = "Location (Local Context)",
+                detail = if (locationOk) "Granted" else "Not granted",
+                passed = locationOk
             ),
             CompatibilityCheckItem(
                 label = "Contacts (Call / Text)",

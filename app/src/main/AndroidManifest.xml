@@ -4,6 +4,8 @@
 
     <uses-permission android:name="android.permission.INTERNET" />
     <uses-permission android:name="android.permission.RECORD_AUDIO" />
+    <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
+    <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
     <uses-permission android:name="android.permission.READ_CONTACTS" />
     <uses-permission android:name="android.permission.CALL_PHONE" />
     <uses-permission android:name="android.permission.WRITE_SETTINGS" tools:ignore="ProtectedPermissions" />
@@ -73,8 +75,11 @@
 
         <activity
             android:name=".LaunchOverlayActivity"
+            android:excludeFromRecents="true"
             android:exported="true"
             android:label="Kairo Overlay"
+            android:noHistory="true"
+            android:taskAffinity="com.kairo.agent.overlay"
             android:theme="@style/Theme.GemmA.Translucent">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
@@ -84,8 +89,10 @@
 
         <activity
             android:name=".AssistantOverlayActivity"
+            android:excludeFromRecents="true"
             android:exported="true"
-            android:launchMode="singleTask"
+            android:launchMode="singleInstance"
+            android:taskAffinity="com.kairo.agent.overlay"
             android:windowSoftInputMode="adjustNothing"
             android:theme="@style/Theme.GemmA.Translucent">
             <intent-filter>

@@ -3,8 +3,13 @@ package com.kairo.agent.ui.onboarding
 import android.Manifest
 import android.content.pm.PackageManager
 import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.core.FastOutSlowInEasing
+import androidx.compose.animation.core.RepeatMode
 import androidx.compose.animation.core.Spring
+import androidx.compose.animation.core.animateFloat
 import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.infiniteRepeatable
+import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
@@ -31,6 +36,10 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Download
 import androidx.compose.material.icons.filled.ErrorOutline
+import androidx.compose.material.icons.filled.Lock
+import androidx.compose.material.icons.filled.Memory
+import androidx.compose.material.icons.filled.Security
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.FilledTonalButton
@@ -54,6 +63,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
+import androidx.compose.ui.draw.scale
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
@@ -91,6 +101,7 @@ fun OnboardingScreen(
     onDownloadModel: () -> Unit,
     onUpdateSettings: (AgentSettings) -> Unit,
     onGrantMic: () -> Unit,
+    onGrantLocation: () -> Unit = {},
     onGrantContacts: () -> Unit,
     onGrantCall: () -> Unit,
     onGrantHealthConnect: () -> Unit,
@@ -100,7 +111,29 @@ fun OnboardingScreen(
 ) {
     var step by remember { mutableIntStateOf(0) }
     var userName by remember { mutableStateOf("") }
+    var pendingDisclosure by remember { mutableStateOf<Triple<String, String, () -> Unit>?>(null) }
     val context = LocalContext.current
+
+    pendingDisclosure?.let { (title, body, proceed) ->
+        AlertDialog(
+            onDismissRequest = { pendingDisclosure = null },
+            containerColor = Color(0xFF1A1D24),
+            titleContentColor = TextPrimary,
+            textContentColor = TextSecondary,
+            icon = { Icon(Icons.Default.Security, contentDescription = null, tint = AccentBlue) },
+            title = { Text(title, fontWeight = FontWeight.SemiBold) },
+            text = { Text(body) },
+            confirmButton = {
+                Button(onClick = {
+                    pendingDisclosure = null
+                    proceed()
+                }) { Text("Continue") }
+            },
+            dismissButton = {
+                TextButton(onClick = { pendingDisclosure = null }) { Text("Not now", color = TextSecondary) }
+            }
+        )
+    }
 
     LaunchedEffect(step) {
         if (step == 2) onRunChecks()
@@ -154,6 +187,7 @@ fun OnboardingScreen(
                                     style = MaterialTheme.typography.bodyLarge,
                                     textAlign = TextAlign.Center
                                 )
+                                OnDevicePrivacyBanner()
                             }
                             Button(
                                 onClick = { step = 1 },
@@ -328,6 +362,8 @@ fun OnboardingScreen(
 
                     3 -> {
                         val micGranted = ContextCompat.checkSelfPermission(context, Manifest.permission.RECORD_AUDIO) == PackageManager.PERMISSION_GRANTED
+                        val locationGranted = ContextCompat.checkSelfPermission(context, Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED ||
+                            ContextCompat.checkSelfPermission(context, Manifest.permission.ACCESS_COARSE_LOCATION) == PackageManager.PERMISSION_GRANTED
                         val contactsGranted = ContextCompat.checkSelfPermission(context, Manifest.permission.READ_CONTACTS) == PackageManager.PERMISSION_GRANTED
                         val callGranted = ContextCompat.checkSelfPermission(context, Manifest.permission.CALL_PHONE) == PackageManager.PERMISSION_GRANTED
                         val notifGranted = NotificationCatchUpStore.isAccessGranted(context)
@@ -341,19 +377,44 @@ fun OnboardingScreen(
                                 verticalArrangement = Arrangement.spacedBy(10.dp)
                             ) {
                                 AnimatedHeadline("Permissions & Connections")
+                                OnDevicePrivacyBanner(compact = true)
                                 Text("Every permission is optional and processed 100% on-device. Here is what each one enables:", color = TextSecondary, style = MaterialTheme.typography.bodyMedium)
 
                                 PermissionCard(
                                     title = "Microphone",
                                     subtitle = "Enables voice prompts, hands-free dictation, and wake word detection. Audio is transcribed locally and never sent off-device.",
                                     granted = micGranted,
-                                    onAction = onGrantMic
+                                    onAction = {
+                                        pendingDisclosure = Triple(
+                                            "Microphone Access",
+                                            "Kairo uses your microphone strictly when you tap the mic or enable optional 'Hey Kairo' wake word detection. Audio is processed locally on your device and never uploaded.",
+                                            onGrantMic
+                                        )
+                                    }
+                                )
+                                PermissionCard(
+                                    title = "Location",
+                                    subtitle = "Used locally when you ask for nearby places, local weather, or your current city/address. Coordinates never leave your device.",
+                                    granted = locationGranted,
+                                    onAction = {
+                                        pendingDisclosure = Triple(
+                                            "Location Access",
+                                            "Kairo only reads your device's foreground location when you ask location-based questions (like nearby places or weather). Your coordinates stay 100% on-device.",
+                                            onGrantLocation
+                                        )
+                                    }
                                 )
                                 PermissionCard(
                                     title = "Contacts",
                                     subtitle = "Lets Kairo look up people by name when you say \"Call Mom\" or \"Text Alex on WhatsApp\" without needing phone numbers.",
                                     granted = contactsGranted,
-                                    onAction = onGrantContacts
+                                    onAction = {
+                                        pendingDisclosure = Triple(
+                                            "Contacts Access",
+                                            "Kairo reads your contacts locally on-device solely to match a spoken or typed name to a phone number or email. Contact data is never shared or uploaded.",
+                                            onGrantContacts
+                                        )
+                                    }
                                 )
                                 PermissionCard(
                                     title = "Direct Calling",
@@ -494,6 +555,62 @@ private fun PermissionCard(
                 }
             } else {
                 FilledTonalButton(onClick = onAction) { Text(actionLabel) }
+            }
+        }
+    }
+}
+
+@Composable
+private fun OnDevicePrivacyBanner(compact: Boolean = false) {
+    val infinite = rememberInfiniteTransition(label = "privacy_pulse")
+    val pulseScale by infinite.animateFloat(
+        initialValue = 0.94f,
+        targetValue = 1.08f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(1600, easing = FastOutSlowInEasing),
+            repeatMode = RepeatMode.Reverse
+        ),
+        label = "privacy_icon_scale"
+    )
+    Surface(
+        color = Color(0x9913221A),
+        shape = RoundedCornerShape(16.dp),
+        modifier = Modifier
+            .fillMaxWidth()
+            .border(1.dp, Color(0x4481C995), RoundedCornerShape(16.dp))
+    ) {
+        Row(
+            modifier = Modifier.padding(horizontal = 14.dp, vertical = if (compact) 10.dp else 14.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(12.dp)
+        ) {
+            Row(
+                horizontalArrangement = Arrangement.spacedBy(4.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                modifier = Modifier.scale(pulseScale)
+            ) {
+                Icon(Icons.Default.Security, contentDescription = null, tint = SuccessGreen, modifier = Modifier.size(20.dp))
+                Icon(Icons.Default.Memory, contentDescription = null, tint = AccentBlue, modifier = Modifier.size(18.dp))
+                if (!compact) {
+                    Icon(Icons.Default.Lock, contentDescription = null, tint = SuccessGreen, modifier = Modifier.size(16.dp))
+                }
+            }
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    text = "100% On-Device • Zero Cloud Uploads",
+                    color = SuccessGreen,
+                    style = MaterialTheme.typography.labelLarge,
+                    fontWeight = FontWeight.SemiBold
+                )
+                Text(
+                    text = if (compact) {
+                        "Everything—voice, location, contacts, and memories—stays strictly on your phone."
+                    } else {
+                        "Your chats, memories, voice, photos, location, and screen context are processed locally on your silicon. No analytics, no tracking, no servers."
+                    },
+                    color = TextSecondary,
+                    style = MaterialTheme.typography.labelSmall
+                )
             }
         }
     }

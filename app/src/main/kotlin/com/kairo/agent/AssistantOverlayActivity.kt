@@ -90,16 +90,10 @@ class AssistantOverlayActivity : ComponentActivity() {
         )
         val settings = settingsStore.load()
         miniMode = settings.miniModeOverlay
-        applyInitialExtras(intent)
-
         voiceController = VoiceController(this) { spokenPrompt ->
             submitPrompt(spokenPrompt)
         }
-
-        if (intent?.getBooleanExtra("start_voice", false) == true) {
-            miniMode = false
-            handleMicClick()
-        }
+        applyInitialExtras(intent)
 
         lifecycleScope.launch {
             if (!settings.bypassCompatibility) {
@@ -194,7 +188,10 @@ class AssistantOverlayActivity : ComponentActivity() {
         if (intent?.getBooleanExtra(EXTRA_FROM_ASSIST_SESSION, false) == true) {
             attachCapturedScreen()
         }
-        if (intent?.getBooleanExtra(EXTRA_AUTO_LISTEN, false) == true) {
+        if (intent?.getBooleanExtra(EXTRA_AUTO_LISTEN, false) == true ||
+            intent?.getBooleanExtra("start_voice", false) == true
+        ) {
+            miniMode = false
             handleMicClick()
         }
     }
