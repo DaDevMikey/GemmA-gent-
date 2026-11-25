@@ -42,7 +42,8 @@ class AgentRunner(
         conversationHistory: List<Pair<String, String>> = emptyList(),
         persona: AgentPersona = AgentPersona.DEFAULT,
         thinkHarder: Boolean = false,
-        settings: AgentSettings = AgentSettings()
+        settings: AgentSettings = AgentSettings(),
+        confirmDangerousTool: (suspend (toolName: String, detail: String) -> Boolean)? = null
     ): Flow<AgentStreamEvent> = flow {
         val startMs = System.currentTimeMillis()
         var firstTokenMs = 0L
@@ -94,6 +95,20 @@ class AgentRunner(
         }
 
         val detectedTool = tools.extractToolName(rawOutput) ?: "action"
+        if (detectedTool in DANGEROUS_TOOLS && confirmDangerousTool != null) {
+            val allowed = confirmDangerousTool(detectedTool, rawOutput.take(240))
+            if (!allowed) {
+                emit(
+                    AgentStreamEvent.Finished(
+                        finalText = "Cancelled `$detectedTool` before execution.",
+                        actionSummary = "Cancelled: $detectedTool",
+                        actionSuccess = false,
+                        stats = computeStats(startMs, firstTokenMs, chunkCount)
+                    )
+                )
+                return@flow
+            }
+        }
         emit(AgentStreamEvent.RunningTool(detectedTool))
 
         val actionResult = tools.executeFromModelOutput(
@@ -154,6 +169,14 @@ class AgentRunner(
             tokensPerSec = tokens / elapsedSec,
             ttftMs = ttft,
             ramUsedMb = ramMb
+        )
+    }
+
+    private companion object {
+        val DANGEROUS_TOOLS = setOf(
+            "call_person", "dial_phone", "text_person", "send_sms",
+            "send_whatsapp", "send_email", "run_shell_command",
+            "set_ringer_mode", "forget_memory"
         )
     }
 }

@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string-array name="widget_support_cell_sizes">
+        <item>2x1</item>
+        <item>3x1</item>
+        <item>4x1</item>
+        <item>2x2</item>
+        <item>4x2</item>
+    </string-array>
+</resources>

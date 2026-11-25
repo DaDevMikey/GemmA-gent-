@@ -31,6 +31,10 @@
         android:windowSoftInputMode="adjustNothing"
         android:theme="@style/Theme.GemmA">
 
+        <meta-data
+            android:name="theming-meta"
+            android:value="meta_998_sesl_app" />
+
         <provider
             android:name="androidx.core.content.FileProvider"
             android:authorities="com.kairo.agent.lite.fileprovider"
@@ -121,6 +125,9 @@
             <meta-data
                 android:name="android.appwidget.provider"
                 android:resource="@xml/kairo_widget_info" />
+            <meta-data
+                android:name="com.sec.android.appwidget.widgetinfo"
+                android:resource="@xml/widget_supported_cell_size_info" />
         </receiver>
 
         <receiver
@@ -133,6 +140,9 @@
             <meta-data
                 android:name="android.appwidget.provider"
                 android:resource="@xml/kairo_cover_widget_info" />
+            <meta-data
+                android:name="com.sec.android.appwidget.widgetinfo"
+                android:resource="@xml/widget_supported_cell_size_info" />
         </receiver>
 
     </application>

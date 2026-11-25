@@ -1,10 +1,13 @@
 package com.kairo.agent.ui.components
 
 import androidx.compose.animation.core.Animatable
+import androidx.compose.animation.core.CubicBezierEasing
 import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.LinearEasing
 import androidx.compose.animation.core.RepeatMode
+import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.animation.core.animateFloat
+import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.infiniteRepeatable
 import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.tween
@@ -24,10 +27,13 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
+import androidx.compose.ui.draw.blur
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
@@ -306,5 +312,49 @@ fun ResponseShineSweep(
                 )
             )
         }
+    }
+}
+
+/**
+ * Twidget / One UI 8.5 inspired blur-into-sharp text reveal with gentle upward settle.
+ */
+@Composable
+fun BlurIntoText(
+    key: Any? = Unit,
+    delayMs: Long = 60L,
+    modifier: Modifier = Modifier,
+    content: @Composable () -> Unit
+) {
+    var revealed by remember(key) { mutableStateOf(false) }
+    LaunchedEffect(key) {
+        revealed = false
+        kotlinx.coroutines.delay(delayMs)
+        revealed = true
+    }
+    val easing = remember { CubicBezierEasing(0.117f, 0.126f, 0.312f, 1f) }
+    val blurRadius by animateDpAsState(
+        targetValue = if (revealed) 0.dp else 14.dp,
+        animationSpec = tween(durationMillis = 560, easing = easing),
+        label = "blur_into_text_dp"
+    )
+    val alpha by animateFloatAsState(
+        targetValue = if (revealed) 1f else 0f,
+        animationSpec = tween(durationMillis = 520, easing = easing),
+        label = "blur_into_text_alpha"
+    )
+    val risePx by animateFloatAsState(
+        targetValue = if (revealed) 0f else 28f,
+        animationSpec = tween(durationMillis = 580, easing = easing),
+        label = "blur_into_text_rise"
+    )
+    Box(
+        modifier = modifier
+            .blur(blurRadius)
+            .graphicsLayer {
+                this.alpha = alpha
+                translationY = risePx
+            }
+    ) {
+        content()
     }
 }
