@@ -1,5 +1,13 @@
 # Changelog
 
+## v1.1.8
+- Fixed fullscreen button crash in floating overlay (`AssistantOverlayActivity`)
+- Added `find_local_image` tool so Kairo can find local photos/screenshots and attach them directly in chat
+- Added confirmation dialog before deleting chats
+- Fixed Release Notes version filter to show only the selected version's notes (excluding older versions)
+- Added **Incognito Context** mode in Settings (skips saving session to local chat history)
+- Wired `search_ephemeral_memory` tool to the 7-day rolling local clipboard & screen memory
+
 ## v1.1.7
 - Full Markdown rendering in Release Notes & chat (`#`/`##`/`###` headings, bullet lists, inline code, bold)
 - Added **Micro-Agent Router** (intent splitting) and **Self-Healing Retry Loop** in `AgentRunner`

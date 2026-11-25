@@ -73,7 +73,8 @@ data class AgentActionResult(
     val toolName: String? = null,
     val summary: String? = null,
     val resultData: String? = null,
-    val success: Boolean = true
+    val success: Boolean = true,
+    val attachedBitmap: Bitmap? = null
 )
 
 /**
@@ -171,6 +172,8 @@ class AndroidAgentTools(
         appendLine("""- open_clock: {} (opens alarms, timers, and stopwatch)""")
         appendLine("""- create_note: {"title": "string", "content": "string"} (saves or shares a quick note)""")
         appendLine("""- copy_to_clipboard: {"text": "string"}""")
+        appendLine("""- find_local_image: {"query": "filename, folder, or 'latest'"} (finds a local photo/screenshot on-device and attaches it directly in chat)""")
+        appendLine("""- search_ephemeral_memory: {"query": "string"} (searches your 7-day rolling local clipboard & screen memory)""")
         appendLine("""- save_memory: {"fact": "string"}""")
         appendLine("""- forget_memory: {"query": "string"}""")
         val mcpServers = McpClientManager.parseServerUrls(
@@ -368,6 +371,8 @@ class AndroidAgentTools(
             "open_clock" -> launchIntentOrFail(Intent(AlarmClock.ACTION_SHOW_ALARMS).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK), "Opened Clock & Alarms")
             "create_note" -> shareText("${args.optString("title")}\n\n${args.optString("content")}".trim())
             "copy_to_clipboard" -> copyToClipboard(args.optString("text"))
+            "find_local_image" -> findLocalImage(args.optString("query", "latest"))
+            "search_ephemeral_memory" -> searchEphemeralMemory(args.optString("query", ""))
             "save_memory" -> saveMemory(args.optString("fact"))
             "forget_memory" -> forgetMemory(args.optString("query"))
             "run_shell_command" -> runShellCommand(args.optString("command"), rootPowerMode)
@@ -848,6 +853,77 @@ class AndroidAgentTools(
             AgentActionResult(executed = true, summary = "Ringer set to $mode", resultData = "Set ringer mode to $mode.", success = true)
         }.getOrElse {
             launchIntentOrFail(Intent(Settings.ACTION_SOUND_SETTINGS).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK), "Opened Sound Settings (DND access needed for silent)")
+        }
+    }
+
+    private fun searchEphemeralMemory(query: String): AgentActionResult {
+        val matches = com.kairo.agent.data.EphemeralMemoryStore(context).search(query)
+        return if (matches.isEmpty()) {
+            AgentActionResult(true, "search_ephemeral_memory", "No matching local clipboard/screen memory", "No ephemeral entries matched '$query'.", false)
+        } else {
+            val formatted = matches.joinToString("\n") { "- [${it.source}] ${it.text}" }
+            AgentActionResult(true, "search_ephemeral_memory", "Found ${matches.size} local memory match(es)", formatted, true)
+        }
+    }
+
+    private fun findLocalImage(query: String): AgentActionResult {
+        return runCatching {
+            val projection = arrayOf(
+                android.provider.MediaStore.Images.Media._ID,
+                android.provider.MediaStore.Images.Media.DISPLAY_NAME,
+                android.provider.MediaStore.Images.Media.RELATIVE_PATH
+            )
+            val sortOrder = "${android.provider.MediaStore.Images.Media.DATE_ADDED} DESC"
+            val qLower = query.trim().lowercase()
+            var foundUri: Uri? = null
+            var foundName = ""
+            context.contentResolver.query(
+                android.provider.MediaStore.Images.Media.EXTERNAL_CONTENT_URI,
+                projection,
+                null,
+                null,
+                sortOrder
+            )?.use { cursor ->
+                val idCol = cursor.getColumnIndexOrThrow(android.provider.MediaStore.Images.Media._ID)
+                val nameCol = cursor.getColumnIndexOrThrow(android.provider.MediaStore.Images.Media.DISPLAY_NAME)
+                val pathCol = cursor.getColumnIndex(android.provider.MediaStore.Images.Media.RELATIVE_PATH)
+                while (cursor.moveToNext()) {
+                    val id = cursor.getLong(idCol)
+                    val name = cursor.getString(nameCol).orEmpty()
+                    val relPath = if (pathCol >= 0) cursor.getString(pathCol).orEmpty() else ""
+                    val matches = qLower.isBlank() || qLower == "latest" || qLower == "recent" ||
+                        name.lowercase().contains(qLower) || relPath.lowercase().contains(qLower)
+                    if (matches) {
+                        foundUri = android.content.ContentUris.withAppendedId(
+                            android.provider.MediaStore.Images.Media.EXTERNAL_CONTENT_URI,
+                            id
+                        )
+                        foundName = name
+                        break
+                    }
+                }
+            }
+            val uri = foundUri ?: return AgentActionResult(
+                true, "find_local_image", "No matching local image found",
+                "Could not find any local image matching '$query' (ensure Photos/Media permission is granted).", false
+            )
+            val raw = context.contentResolver.openInputStream(uri)?.use { android.graphics.BitmapFactory.decodeStream(it) }
+                ?: return AgentActionResult(true, "find_local_image", "Failed to decode image", "Found $foundName but could not decode it.", false)
+            val maxDim = 1024
+            val scaled = if (raw.width > maxDim || raw.height > maxDim) {
+                val ratio = minOf(maxDim.toFloat() / raw.width, maxDim.toFloat() / raw.height)
+                Bitmap.createScaledBitmap(raw, (raw.width * ratio).toInt().coerceAtLeast(1), (raw.height * ratio).toInt().coerceAtLeast(1), true)
+            } else raw
+            AgentActionResult(
+                executed = true,
+                toolName = "find_local_image",
+                summary = "Attached $foundName",
+                resultData = "Found and attached local image: $foundName",
+                success = true,
+                attachedBitmap = scaled
+            )
+        }.getOrElse { err ->
+            AgentActionResult(true, "find_local_image", "Image search failed", err.localizedMessage ?: "Permission denied or unavailable", false)
         }
     }
 
