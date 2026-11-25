@@ -26,13 +26,6 @@ import android.provider.Settings
 import android.view.KeyEvent
 import androidx.core.content.ContextCompat
 import androidx.core.content.FileProvider
-import androidx.health.connect.client.HealthConnectClient
-import androidx.health.connect.client.permission.HealthPermission
-import androidx.health.connect.client.records.HeartRateRecord
-import androidx.health.connect.client.records.StepsRecord
-import androidx.health.connect.client.request.AggregateRequest
-import androidx.health.connect.client.request.ReadRecordsRequest
-import androidx.health.connect.client.time.TimeRangeFilter
 import com.kairo.agent.data.MemoryStore
 import com.kairo.agent.service.NotificationCatchUpStore
 import kotlinx.coroutines.Dispatchers
@@ -118,7 +111,6 @@ class AndroidAgentTools(
         appendLine("Available tools:")
         appendLine("""- get_device_status: {}""")
         appendLine("""- get_current_location: {} (reads current GPS/network location & city/address locally)""")
-        appendLine("""- get_health_summary: {}""")
         appendLine("""- get_notifications: {} (reads recent unread notifications for catch-up)""")
         appendLine("""- call_person: {"target": "contact name or phone number"}""")
         appendLine("""- text_person: {"target": "contact name or phone number", "message": "string"}""")
@@ -154,9 +146,6 @@ class AndroidAgentTools(
         appendLine("""- copy_to_clipboard: {"text": "string"}""")
         appendLine("""- save_memory: {"fact": "string"}""")
         appendLine("""- forget_memory: {"query": "string"}""")
-        if (rootPowerMode) {
-            appendLine("""- run_shell_command: {"command": "string"} (executes a shell/root command on device)""")
-        }
         appendLine()
         append("User: ")
         append(userMessage)
@@ -296,7 +285,6 @@ class AndroidAgentTools(
         val result = when (tool) {
             "get_device_status" -> getDeviceStatus()
             "get_current_location" -> getCurrentLocation()
-            "get_health_summary" -> getHealthSummary()
             "get_notifications" -> getNotifications()
             "call_person" -> callPerson(args.optString("target").ifBlank { args.optString("phone_number") })
             "text_person" -> textPerson(
@@ -337,7 +325,6 @@ class AndroidAgentTools(
             "copy_to_clipboard" -> copyToClipboard(args.optString("text"))
             "save_memory" -> saveMemory(args.optString("fact"))
             "forget_memory" -> forgetMemory(args.optString("query"))
-            "run_shell_command" -> runShellCommand(args.optString("command"), rootPowerMode)
             else -> AgentActionResult(executed = true, summary = "Unknown tool: $tool", resultData = "Unknown tool: $tool", success = false)
         }
         return result.copy(toolName = tool)
@@ -396,11 +383,8 @@ class AndroidAgentTools(
                 success = false
             )
         val (display, number) = resolved
-        val hasCallPerm = ContextCompat.checkSelfPermission(context, Manifest.permission.CALL_PHONE) == PackageManager.PERMISSION_GRANTED
-        val action = if (hasCallPerm) Intent.ACTION_CALL else Intent.ACTION_DIAL
-        val intent = Intent(action, Uri.parse("tel:${Uri.encode(number)}")).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-        val verb = if (hasCallPerm) "Calling" else "Opened dialer for"
-        return launchIntentOrFail(intent, "$verb $display ($number)")
+        val intent = Intent(Intent.ACTION_DIAL, Uri.parse("tel:${Uri.encode(number)}")).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+        return launchIntentOrFail(intent, "Opened dialer for $display ($number)")
     }
 
     private fun textPerson(target: String, message: String): AgentActionResult {
@@ -452,22 +436,8 @@ class AndroidAgentTools(
     }
 
     private fun setBrightness(percent: Int): AgentActionResult {
-        val clamped = percent.coerceIn(5, 100)
-        if (!Settings.System.canWrite(context)) {
-            val intent = Intent(Settings.ACTION_MANAGE_WRITE_SETTINGS, Uri.parse("package:${context.packageName}"))
-                .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-            context.startActivity(intent)
-            return AgentActionResult(
-                executed = true,
-                summary = "Modify System Settings permission needed",
-                resultData = "Opened system settings so you can allow Kairo to adjust screen brightness.",
-                success = false
-            )
-        }
-        val value = (clamped * 255) / 100
-        Settings.System.putInt(context.contentResolver, Settings.System.SCREEN_BRIGHTNESS_MODE, Settings.System.SCREEN_BRIGHTNESS_MODE_MANUAL)
-        Settings.System.putInt(context.contentResolver, Settings.System.SCREEN_BRIGHTNESS, value)
-        return AgentActionResult(executed = true, summary = "Set brightness to $clamped%", resultData = "Screen brightness set to $clamped%.", success = true)
+        val intent = Intent(Settings.ACTION_DISPLAY_SETTINGS).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+        return launchIntentOrFail(intent, "Opened Display Settings to adjust brightness ($percent%)")
     }
 
     private suspend fun runShellCommand(command: String, rootPowerMode: Boolean): AgentActionResult = withContext(Dispatchers.IO) {
@@ -547,39 +517,6 @@ class AndroidAgentTools(
             resultData = "Current device location: $result",
             success = true
         )
-    }
-
-    private suspend fun getHealthSummary(): AgentActionResult {
-        val sdkStatus = HealthConnectClient.getSdkStatus(context)
-        if (sdkStatus != HealthConnectClient.SDK_AVAILABLE) {
-            val msg = "Health Connect is not installed or unavailable on this device."
-            return AgentActionResult(executed = true, summary = msg, resultData = msg, success = false)
-        }
-        val client = HealthConnectClient.getOrCreate(context)
-        val granted = runCatching { client.permissionController.getGrantedPermissions() }.getOrElse { emptySet() }
-        val stepsPerm = HealthPermission.getReadPermission(StepsRecord::class)
-        val hrPerm = HealthPermission.getReadPermission(HeartRateRecord::class)
-        if (stepsPerm !in granted && hrPerm !in granted) {
-            val msg = "Health Connect permissions are not granted yet. Open Kairo's drawer → Connections to grant Health Connect access."
-            return AgentActionResult(executed = true, summary = "Health Connect permission needed", resultData = msg, success = false)
-        }
-        val startOfDay = LocalDate.now().atStartOfDay(ZoneId.systemDefault()).toInstant()
-        val now = Instant.now()
-        val parts = mutableListOf<String>()
-        if (stepsPerm in granted) {
-            runCatching {
-                val agg = client.aggregate(AggregateRequest(metrics = setOf(StepsRecord.COUNT_TOTAL), timeRangeFilter = TimeRangeFilter.between(startOfDay, now)))
-                parts.add("Steps today: ${agg[StepsRecord.COUNT_TOTAL] ?: 0L}")
-            }
-        }
-        if (hrPerm in granted) {
-            runCatching {
-                val hrResp = client.readRecords(ReadRecordsRequest(recordType = HeartRateRecord::class, timeRangeFilter = TimeRangeFilter.between(startOfDay, now)))
-                hrResp.records.lastOrNull()?.samples?.lastOrNull()?.beatsPerMinute?.let { parts.add("Latest heart rate: $it bpm") }
-            }
-        }
-        val result = if (parts.isEmpty()) "No Health Connect records found for today yet." else parts.joinToString("; ")
-        return AgentActionResult(executed = true, summary = "Read Health Connect data", resultData = result, success = true)
     }
 
     private fun findContact(name: String): AgentActionResult {
@@ -826,7 +763,6 @@ class AndroidAgentTools(
             "sound", "audio", "volume" -> Settings.ACTION_SOUND_SETTINGS
             "battery" -> Settings.ACTION_BATTERY_SAVER_SETTINGS
             "location" -> Settings.ACTION_LOCATION_SOURCE_SETTINGS
-            "health" -> HealthConnectClient.ACTION_HEALTH_CONNECT_SETTINGS
             "notifications" -> Settings.ACTION_NOTIFICATION_LISTENER_SETTINGS
             else -> Settings.ACTION_SETTINGS
         }

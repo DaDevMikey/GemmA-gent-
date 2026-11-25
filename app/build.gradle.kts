@@ -64,9 +64,8 @@ dependencies {
   implementation(libs.androidx.compose.material3)
   implementation(libs.androidx.compose.material.icons.extended)
 
-  // On-Device GenAI (AICore / Gemma 4) & Health Connect
+  // On-Device GenAI (AICore / Gemma 4)
   implementation(libs.google.mlkit.genai.prompt)
-  implementation(libs.androidx.health.connect)
   // Tooling
   debugImplementation(libs.androidx.compose.ui.tooling)
   // Instrumented tests

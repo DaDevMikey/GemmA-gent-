@@ -6,10 +6,6 @@ import android.content.Context
 import android.content.pm.PackageManager
 import android.os.Build
 import androidx.core.content.ContextCompat
-import androidx.health.connect.client.HealthConnectClient
-import androidx.health.connect.client.permission.HealthPermission
-import androidx.health.connect.client.records.HeartRateRecord
-import androidx.health.connect.client.records.StepsRecord
 import com.kairo.agent.service.NotificationCatchUpStore
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -53,8 +49,6 @@ class CompatibilityChecker(private val context: Context) {
             ContextCompat.checkSelfPermission(context, Manifest.permission.ACCESS_COARSE_LOCATION) == PackageManager.PERMISSION_GRANTED
         val contactsOk = ContextCompat.checkSelfPermission(context, Manifest.permission.READ_CONTACTS) == PackageManager.PERMISSION_GRANTED
         val notifOk = NotificationCatchUpStore.isAccessGranted(context)
-        val rootOk = isRootAvailable()
-        val healthOk = checkHealthConnectGranted()
 
         val items = listOf(
             CompatibilityCheckItem(
@@ -96,11 +90,6 @@ class CompatibilityChecker(private val context: Context) {
                 label = "Notification Catch-Up",
                 detail = if (notifOk) "Enabled" else "Not enabled",
                 passed = notifOk
-            ),
-            CompatibilityCheckItem(
-                label = "Root / Shell Power Mode",
-                detail = if (rootOk) "su binary detected" else "Standard non-root shell",
-                passed = rootOk
             )
         )
 
@@ -108,18 +97,8 @@ class CompatibilityChecker(private val context: Context) {
             items = items,
             aiCoreReady = aiCoreOk,
             localServerReady = localReachable,
-            healthConnectGranted = healthOk
+            healthConnectGranted = false
         )
-    }
-
-    private suspend fun checkHealthConnectGranted(): Boolean {
-        if (HealthConnectClient.getSdkStatus(context) != HealthConnectClient.SDK_AVAILABLE) return false
-        return runCatching {
-            val client = HealthConnectClient.getOrCreate(context)
-            val granted = client.permissionController.getGrantedPermissions()
-            HealthPermission.getReadPermission(StepsRecord::class) in granted ||
-                HealthPermission.getReadPermission(HeartRateRecord::class) in granted
-        }.getOrDefault(false)
     }
 
     private fun probeLocalEndpoint(endpointUrl: String): Boolean {
@@ -134,10 +113,5 @@ class CompatibilityChecker(private val context: Context) {
             conn.disconnect()
             code in 200..499
         }.getOrDefault(false)
-    }
-
-    private fun isRootAvailable(): Boolean {
-        val paths = arrayOf("/system/bin/su", "/system/xbin/su", "/sbin/su", "/su/bin/su")
-        return paths.any { java.io.File(it).exists() }
     }
 }

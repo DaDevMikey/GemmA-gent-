@@ -365,7 +365,6 @@ fun OnboardingScreen(
                         val locationGranted = ContextCompat.checkSelfPermission(context, Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED ||
                             ContextCompat.checkSelfPermission(context, Manifest.permission.ACCESS_COARSE_LOCATION) == PackageManager.PERMISSION_GRANTED
                         val contactsGranted = ContextCompat.checkSelfPermission(context, Manifest.permission.READ_CONTACTS) == PackageManager.PERMISSION_GRANTED
-                        val callGranted = ContextCompat.checkSelfPermission(context, Manifest.permission.CALL_PHONE) == PackageManager.PERMISSION_GRANTED
                         val notifGranted = NotificationCatchUpStore.isAccessGranted(context)
 
                         Column(
@@ -417,22 +416,10 @@ fun OnboardingScreen(
                                     }
                                 )
                                 PermissionCard(
-                                    title = "Direct Calling",
-                                    subtitle = "Allows Kairo to start phone calls immediately when asked, instead of only opening the dialer.",
-                                    granted = callGranted,
-                                    onAction = onGrantCall
-                                )
-                                PermissionCard(
                                     title = "Notification Catch-Up",
                                     subtitle = "Reads unread notifications locally (WhatsApp, Telegram, Discord, SMS) so Kairo can summarize what you missed.",
                                     granted = notifGranted,
                                     onAction = onOpenNotificationAccess
-                                )
-                                PermissionCard(
-                                    title = "Health Connect",
-                                    subtitle = "Reads today's step count and heart rate from Health Connect for private on-device wellness summaries.",
-                                    granted = healthConnectGranted,
-                                    onAction = onGrantHealthConnect
                                 )
                                 PermissionCard(
                                     title = "Default Digital Assistant",

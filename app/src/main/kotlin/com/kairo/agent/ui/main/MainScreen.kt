@@ -153,11 +153,6 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.core.content.ContextCompat
-import androidx.health.connect.client.HealthConnectClient
-import androidx.health.connect.client.PermissionController
-import androidx.health.connect.client.permission.HealthPermission
-import androidx.health.connect.client.records.HeartRateRecord
-import androidx.health.connect.client.records.StepsRecord
 import androidx.lifecycle.compose.LifecycleResumeEffect
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
@@ -256,26 +251,11 @@ fun MainScreen(
         if (micOk) WakeWordService.start(context)
     }
 
-    val healthPermissions = remember {
-        setOf(
-            HealthPermission.getReadPermission(StepsRecord::class),
-            HealthPermission.getReadPermission(HeartRateRecord::class)
-        )
-    }
-
     val contactsPermissionLauncher = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) {
-        viewModel.runCompatibilityChecks()
-    }
-    val callPermissionLauncher = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) {
         viewModel.runCompatibilityChecks()
     }
     val locationPermissionLauncher = rememberLauncherForActivityResult(
         ActivityResultContracts.RequestMultiplePermissions()
-    ) {
-        viewModel.runCompatibilityChecks()
-    }
-    val healthPermissionLauncher = rememberLauncherForActivityResult(
-        PermissionController.createRequestPermissionResultContract()
     ) {
         viewModel.runCompatibilityChecks()
     }
@@ -326,14 +306,8 @@ fun MainScreen(
                     )
                 },
                 onGrantContacts = { contactsPermissionLauncher.launch(Manifest.permission.READ_CONTACTS) },
-                onGrantCall = { callPermissionLauncher.launch(Manifest.permission.CALL_PHONE) },
-                onGrantHealthConnect = {
-                    if (HealthConnectClient.getSdkStatus(context) == HealthConnectClient.SDK_AVAILABLE) {
-                        healthPermissionLauncher.launch(healthPermissions)
-                    } else {
-                        context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse("https://play.google.com/store/apps/details?id=com.google.android.apps.healthdata")))
-                    }
-                },
+                onGrantCall = {},
+                onGrantHealthConnect = {},
                 onOpenNotificationAccess = { context.startActivity(Intent(Settings.ACTION_NOTIFICATION_LISTENER_SETTINGS)) },
                 onOpenAssistantSettings = { openDefaultAssistantSettings(context) },
                 onComplete = viewModel::completeOnboarding
@@ -410,14 +384,8 @@ fun MainScreen(
                         )
                     )
                 },
-                onGrantCall = { callPermissionLauncher.launch(Manifest.permission.CALL_PHONE) },
-                onGrantHealthConnect = {
-                    if (HealthConnectClient.getSdkStatus(context) == HealthConnectClient.SDK_AVAILABLE) {
-                        healthPermissionLauncher.launch(healthPermissions)
-                    } else {
-                        context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse("https://play.google.com/store/apps/details?id=com.google.android.apps.healthdata")))
-                    }
-                },
+                onGrantCall = {},
+                onGrantHealthConnect = {},
                 onOpenNotificationAccess = {
                     context.startActivity(Intent(Settings.ACTION_NOTIFICATION_LISTENER_SETTINGS))
                 },
@@ -1330,9 +1298,7 @@ internal fun MainScreenContent(
         val contactsGranted = ContextCompat.checkSelfPermission(ctx, Manifest.permission.READ_CONTACTS) == PackageManager.PERMISSION_GRANTED
         val locationGranted = ContextCompat.checkSelfPermission(ctx, Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED ||
             ContextCompat.checkSelfPermission(ctx, Manifest.permission.ACCESS_COARSE_LOCATION) == PackageManager.PERMISSION_GRANTED
-        val callGranted = ContextCompat.checkSelfPermission(ctx, Manifest.permission.CALL_PHONE) == PackageManager.PERMISSION_GRANTED
         val notifGranted = com.kairo.agent.service.NotificationCatchUpStore.isAccessGranted(ctx)
-        val writeSettingsGranted = Settings.System.canWrite(ctx)
 
         ModalBottomSheet(onDismissRequest = { showConnectionsSheet = false }, containerColor = GeminiDrawerBg, contentColor = GeminiTextPrimary) {
             Column(
@@ -1340,29 +1306,15 @@ internal fun MainScreenContent(
                 verticalArrangement = Arrangement.spacedBy(10.dp)
             ) {
                 Text("Connections & Permissions", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
-                Text("Manage optional Android permissions and power features.", style = MaterialTheme.typography.bodySmall, color = GeminiTextSecondary)
+                Text("Manage optional Android permissions and features. Everything stays 100% on-device.", style = MaterialTheme.typography.bodySmall, color = GeminiTextSecondary)
 
                 ConnectionPermRow("Microphone", "Voice prompts & wake word", micGranted, onMicClick)
                 ConnectionPermRow("Location", "Local weather, nearby places & GPS context", locationGranted, onGrantLocation)
                 ConnectionPermRow("Contacts", "Call & text people by name", contactsGranted, onGrantContacts)
-                ConnectionPermRow("Direct Calling", "Place calls directly", callGranted, onGrantCall)
                 ConnectionPermRow("Notification Catch-Up", "Summarize unread messages", notifGranted, onOpenNotificationAccess)
-                ConnectionPermRow("Health Connect", "Read steps & heart rate", state.healthConnectGranted, onGrantHealthConnect)
-                ConnectionPermRow("System Brightness", "Adjust screen brightness", writeSettingsGranted) {
-                    val pkgIntent = Intent(Settings.ACTION_MANAGE_WRITE_SETTINGS, Uri.parse("package:${ctx.packageName}"))
-                    val fallbackIntent = Intent(Settings.ACTION_MANAGE_WRITE_SETTINGS)
-                    val target = if (pkgIntent.resolveActivity(ctx.packageManager) != null) pkgIntent else fallbackIntent
-                    ctx.startActivity(target)
-                }
 
                 HorizontalDivider(color = Color(0xFF232528), modifier = Modifier.padding(vertical = 4.dp))
 
-                SetupSwitchRow(
-                    title = "Root / Shell Power Mode",
-                    subtitle = "Allow shell / root commands when requested",
-                    checked = state.settings.rootPowerMode,
-                    onCheckedChange = { onUpdateSettings(state.settings.copy(rootPowerMode = it)) }
-                )
                 SetupSwitchRow(
                     title = "Live Nerd Stats (tok/s, RAM)",
                     subtitle = "Show inference speed & memory usage",
