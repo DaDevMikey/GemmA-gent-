@@ -169,9 +169,16 @@ class AndroidAgentTools(
         appendLine("""- copy_to_clipboard: {"text": "string"}""")
         appendLine("""- save_memory: {"fact": "string"}""")
         appendLine("""- forget_memory: {"query": "string"}""")
+        val mcpServers = McpClientManager.parseServerUrls(
+            com.kairo.agent.data.AgentSettingsStore(context).load().mcpServerUrls
+        )
+        if (mcpServers.isNotEmpty()) {
+            appendLine("""- call_mcp_tool: {"server": "url", "tool": "name", "args": {...}} (configured MCP servers: ${mcpServers.joinToString(", ")})""")
+        }
         if (rootPowerMode) {
             appendLine("""- run_shell_command: {"command": "string"} (executes a shell/root command on device)""")
         }
+        appendLine("IMPORTANT: Never say you lack a capability if a matching tool is listed above. Emit <tool_call>...</tool_call> directly.")
         appendLine()
         append("User: ")
         append(userMessage)
@@ -341,7 +348,8 @@ class AndroidAgentTools(
             "open_camera" -> openCamera()
             "open_url" -> openUrl(args.optString("url"))
             "share_text" -> shareText(args.optString("text"))
-            "web_search" -> webSearch(args.optString("query"))
+            "web_search" -> webSearch(args.optString("query"), args.optBoolean("open_browser", false))
+            "call_mcp_tool" -> callMcpTool(args.optString("server"), args.optString("tool"), args.optJSONObject("args") ?: JSONObject())
             "dial_phone" -> callPerson(args.optString("phone_number"))
             "send_sms" -> textPerson(args.optString("phone_number"), args.optString("message"))
             "send_email" -> sendEmail(args.optString("to"), args.optString("subject", ""), args.optString("body", ""))
@@ -1111,10 +1119,87 @@ class AndroidAgentTools(
         return AgentActionResult(executed = true, summary = "Opened share sheet", resultData = "Opened share sheet.", success = true)
     }
 
-    private fun webSearch(query: String): AgentActionResult {
+    private suspend fun webSearch(query: String, openBrowser: Boolean = false): AgentActionResult = withContext(Dispatchers.IO) {
         val clean = query.trim()
-        if (clean.isEmpty()) return AgentActionResult(executed = true, summary = "Empty search query", resultData = "Empty search query", success = false)
-        return launchIntentOrFail(Intent(Intent.ACTION_VIEW, Uri.parse("https://www.google.com/search?q=${Uri.encode(clean)}")).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK), "Searched for \"$clean\"")
+        if (clean.isEmpty()) return@withContext AgentActionResult(executed = true, summary = "Empty search query", resultData = "Empty search query", success = false)
+
+        if (!openBrowser) {
+            val snippets = mutableListOf<String>()
+            runCatching {
+                val ddgUrl = "https://api.duckduckgo.com/?q=${Uri.encode(clean)}&format=json&no_html=1&skip_disambig=1"
+                val conn = (URL(ddgUrl).openConnection() as HttpURLConnection).apply {
+                    connectTimeout = 4500
+                    readTimeout = 4500
+                    setRequestProperty("User-Agent", "Kairo-Android/1.1")
+                }
+                val json = JSONObject(conn.inputStream.bufferedReader().use { it.readText() })
+                val abstractText = json.optString("AbstractText").trim()
+                val abstractUrl = json.optString("AbstractURL").trim()
+                if (abstractText.isNotEmpty()) {
+                    snippets.add(if (abstractUrl.isNotEmpty()) "$abstractText (Source: $abstractUrl)" else abstractText)
+                }
+                val related = json.optJSONArray("RelatedTopics")
+                if (related != null) {
+                    for (i in 0 until minOf(3, related.length())) {
+                        val item = related.optJSONObject(i) ?: continue
+                        val t = item.optString("Text").trim()
+                        if (t.isNotEmpty()) snippets.add("• $t")
+                    }
+                }
+            }
+
+            if (snippets.isEmpty()) {
+                runCatching {
+                    val wikiUrl = "https://en.wikipedia.org/api/rest_v1/page/summary/${Uri.encode(clean.replace(' ', '_'))}"
+                    val conn = (URL(wikiUrl).openConnection() as HttpURLConnection).apply {
+                        connectTimeout = 4500
+                        readTimeout = 4500
+                        setRequestProperty("User-Agent", "Kairo-Android/1.1")
+                    }
+                    if (conn.responseCode in 200..299) {
+                        val wJson = JSONObject(conn.inputStream.bufferedReader().use { it.readText() })
+                        val extract = wJson.optString("extract").trim()
+                        val pageUrl = wJson.optJSONObject("content_urls")?.optJSONObject("desktop")?.optString("page").orEmpty()
+                        if (extract.isNotEmpty()) {
+                            snippets.add(if (pageUrl.isNotEmpty()) "$extract (Source: $pageUrl)" else extract)
+                        }
+                    }
+                }
+            }
+
+            if (snippets.isNotEmpty()) {
+                return@withContext AgentActionResult(
+                    executed = true,
+                    summary = "Searched in-app: \"$clean\"",
+                    resultData = "In-app search results for \"$clean\":\n" + snippets.joinToString("\n"),
+                    success = true
+                )
+            }
+        }
+
+        launchIntentOrFail(
+            Intent(Intent.ACTION_VIEW, Uri.parse("https://www.google.com/search?q=${Uri.encode(clean)}")).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK),
+            "Opened browser search for \"$clean\""
+        )
+    }
+
+    private suspend fun callMcpTool(server: String, toolName: String, arguments: JSONObject): AgentActionResult {
+        val servers = McpClientManager.parseServerUrls(
+            com.kairo.agent.data.AgentSettingsStore(context).load().mcpServerUrls
+        )
+        val targetServer = server.trim().ifBlank { servers.firstOrNull().orEmpty() }
+        if (targetServer.isBlank()) {
+            return AgentActionResult(executed = true, summary = "No MCP server configured", resultData = "Add an MCP server URL in Connections & Permissions first.", success = false)
+        }
+        val cleanTool = toolName.trim()
+        if (cleanTool.isBlank()) {
+            return AgentActionResult(executed = true, summary = "No MCP tool name", resultData = "Specify an MCP tool name.", success = false)
+        }
+        val res = McpClientManager.callTool(targetServer, cleanTool, arguments)
+        return res.fold(
+            onSuccess = { out -> AgentActionResult(executed = true, summary = "MCP: $cleanTool", resultData = out, success = true) },
+            onFailure = { err -> AgentActionResult(executed = true, summary = "MCP error", resultData = err.localizedMessage ?: "MCP call failed", success = false) }
+        )
     }
 
     private fun createCalendarEvent(title: String, description: String): AgentActionResult {

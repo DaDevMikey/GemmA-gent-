@@ -298,7 +298,7 @@ fun OnboardingScreen(
 
                                 Text("Backend Mode", color = AccentBlue, style = MaterialTheme.typography.labelLarge)
                                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                                    EngineBackendMode.entries.forEach { mode ->
+                                    listOf(EngineBackendMode.AUTO, EngineBackendMode.AICORE, EngineBackendMode.LOCAL_HTTP).forEach { mode ->
                                         FilterChip(
                                             selected = settings.backendMode == mode,
                                             onClick = { onUpdateSettings(settings.copy(backendMode = mode)) },
