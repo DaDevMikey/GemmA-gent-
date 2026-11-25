@@ -415,16 +415,52 @@ fun OnboardingScreen(
                                     }
                                 )
                                 PermissionCard(
+                                    title = "Direct Calling",
+                                    subtitle = "Allows Kairo to start phone calls immediately when asked, instead of only opening the dialer.",
+                                    granted = callGranted,
+                                    onAction = {
+                                        pendingDisclosure = Triple(
+                                            "Direct Calling Access",
+                                            "Kairo only places a call when you explicitly ask it to call someone. Call actions happen locally on your device.",
+                                            onGrantCall
+                                        )
+                                    }
+                                )
+                                PermissionCard(
                                     title = "Notification Catch-Up",
                                     subtitle = "Reads unread notifications locally (WhatsApp, Telegram, Discord, SMS) so Kairo can summarize what you missed.",
                                     granted = notifGranted,
-                                    onAction = onOpenNotificationAccess
+                                    onAction = {
+                                        pendingDisclosure = Triple(
+                                            "Notification Catch-Up Access",
+                                            "Kairo reads recent notifications strictly in local device memory when you ask to catch up. Nothing is logged to external servers.",
+                                            onOpenNotificationAccess
+                                        )
+                                    }
+                                )
+                                PermissionCard(
+                                    title = "Health Connect",
+                                    subtitle = "Reads today's steps, heart rate, sleep, distance, calories, and workouts from Health Connect for private on-device wellness summaries.",
+                                    granted = healthConnectGranted,
+                                    onAction = {
+                                        pendingDisclosure = Triple(
+                                            "Health Connect Access",
+                                            "Kairo reads your local Health Connect metrics (steps, heart rate, sleep, distance, calories, workouts) solely to summarize your day on-device.",
+                                            onGrantHealthConnect
+                                        )
+                                    }
                                 )
                                 PermissionCard(
                                     title = "Default Digital Assistant",
                                     subtitle = "Bind Kairo to your power button or corner swipe to open the floating overlay over any app and ask about your screen.",
                                     granted = false,
-                                    onAction = onOpenAssistantSettings,
+                                    onAction = {
+                                        pendingDisclosure = Triple(
+                                            "Default Digital Assistant",
+                                            "Setting Kairo as your Digital Assistant lets it capture transient screen text or screenshots only when you trigger 'Ask about screen'. Nothing is stored or uploaded.",
+                                            onOpenAssistantSettings
+                                        )
+                                    },
                                     actionLabel = "Set Up"
                                 )
                             }

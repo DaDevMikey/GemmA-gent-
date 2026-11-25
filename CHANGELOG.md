@@ -1,5 +1,13 @@
 # Changelog
 
+## v1.1.1 (2026-11-25)
+### Added & Improved
+- **Star/Dust Typing Particles & Response Shine Sweep**: Added `StarDustParticles` drifting while Kairo streams and a diagonal `ResponseShineSweep` light effect when a response finishes.
+- **Floating Overlay Blur & Edge-to-Edge Fullscreen**: Added Android 12+ background blur (`blurBehindRadius`) behind the overlay plus smooth bezel-to-bezel fullscreen expansion with animated glowing border.
+- **In-App Live Weather & New Tools**: `get_weather` now fetches live temperature, humidity, wind, and conditions in-app via Open-Meteo (with GPS or city lookup), alongside `calculate_or_convert`, `get_storage_and_memory`, `translate_text`, and `set_ringer_mode`.
+- **Expanded Health Connect Insights**: Added Sleep, Distance, Total Calories Burned, Average Heart Rate, and Exercise Sessions (in the GitHub full edition).
+- **Prominent Permission Disclosures**: Added clear disclosure popups before every permission request in both Setup and Connections.
+
 ## v1.1.0 (2026-11-25)
 ### Added & Fixed
 - **Isolated Floating Overlay Task**: Separated `LaunchOverlayActivity` and `AssistantOverlayActivity` into their own `com.kairo.agent.overlay` `taskAffinity` (`singleInstance`, `excludeFromRecents`) so launching the overlay opens only the floating popup without bringing the full Kairo app behind it.

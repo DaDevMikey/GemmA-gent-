@@ -88,6 +88,12 @@ class AssistantOverlayActivity : ComponentActivity() {
             statusBarStyle = SystemBarStyle.dark(android.graphics.Color.TRANSPARENT),
             navigationBarStyle = SystemBarStyle.dark(android.graphics.Color.TRANSPARENT)
         )
+        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.S) {
+            window.addFlags(android.view.WindowManager.LayoutParams.FLAG_BLUR_BEHIND)
+            window.attributes = window.attributes.apply {
+                blurBehindRadius = 52
+            }
+        }
         val settings = settingsStore.load()
         miniMode = settings.miniModeOverlay
         voiceController = VoiceController(this) { spokenPrompt ->
