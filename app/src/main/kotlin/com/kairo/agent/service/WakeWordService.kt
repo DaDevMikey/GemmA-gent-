@@ -170,7 +170,13 @@ class WakeWordService : Service() {
         private const val NOTIFICATION_ID = 4201
         private const val ACTION_STOP = "com.kairo.agent.action.STOP_WAKE_WORD"
         private const val COOLDOWN_MS = 3500L
-        private val WAKE_PHRASES = listOf("hey kairo", "ok kairo", "kairo", "hey gemma", "ok gemma")
+        // Recognizes "Kairo" (/kaj/roo/) and common speech-to-text phonetic matches
+        private val WAKE_PHRASES = listOf(
+            "hey kairo", "ok kairo", "hi kairo", "kairo",
+            "hey cairo", "ok cairo", "cairo",
+            "hey kyro", "ok kyro", "kyro",
+            "kai roo", "ky roo", "kairoo", "kaiju", "karo"
+        )
 
         private val _isRunning = MutableStateFlow(false)
         val isRunning: StateFlow<Boolean> = _isRunning.asStateFlow()

@@ -17,6 +17,7 @@ import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.ExperimentalSharedTransitionApi
 import androidx.compose.animation.SharedTransitionLayout
 import androidx.compose.animation.animateContentSize
+import androidx.compose.animation.core.CubicBezierEasing
 import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.RepeatMode
 import androidx.compose.animation.core.Spring
@@ -73,6 +74,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.VolumeUp
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.AddPhotoAlternate
+import androidx.compose.material.icons.filled.AutoAwesome
 import androidx.compose.material.icons.filled.ArrowUpward
 import androidx.compose.material.icons.filled.Build
 import androidx.compose.material.icons.filled.CheckCircle
@@ -140,6 +142,7 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.graphics.asImageBitmap
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalClipboardManager
 import androidx.compose.ui.platform.LocalContext
@@ -485,9 +488,14 @@ internal fun MainScreenContent(
                 Column(
                     modifier = Modifier
                         .fillMaxSize()
-                        .verticalScroll(rememberScrollState())
                         .padding(horizontal = 16.dp, vertical = 14.dp)
                 ) {
+                    Column(
+                        modifier = Modifier
+                            .weight(1f)
+                            .fillMaxWidth()
+                            .verticalScroll(rememberScrollState())
+                    ) {
                     Row(
                         modifier = Modifier.fillMaxWidth(),
                         verticalAlignment = Alignment.CenterVertically,
@@ -662,6 +670,7 @@ internal fun MainScreenContent(
                             }
                         }
                     }
+                    } // end scrollable drawer content
 
                     HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp), color = Color(0xFF232528))
                     Row(
@@ -750,7 +759,7 @@ internal fun MainScreenContent(
                                 }
                             ) {
                                 Text(
-                                    text = "Cloud AI • Tap to Off",
+                                    text = "Disable Cloud AI",
                                     color = Color(0xFFF28B82),
                                     style = MaterialTheme.typography.labelSmall,
                                     fontWeight = FontWeight.SemiBold,
@@ -780,14 +789,31 @@ internal fun MainScreenContent(
                 SharedTransitionLayout(
                     modifier = Modifier.weight(1f).fillMaxWidth()
                 ) {
+                    val oneUiEase = remember { CubicBezierEasing(0.117f, 0.126f, 0.312f, 1f) }
                     AnimatedContent(
                         targetState = state.activeTurns.isEmpty(),
                         transitionSpec = {
-                            fadeIn(tween(320)) togetherWith fadeOut(tween(220))
+                            fadeIn(tween(380, easing = oneUiEase)) togetherWith fadeOut(tween(240))
                         },
                         label = "sparkle_shared_transition"
                     ) { isEmpty ->
                         if (isEmpty) {
+                            var homeEntered by remember(greetingSeed) { mutableStateOf(false) }
+                            LaunchedEffect(greetingSeed) {
+                                homeEntered = false
+                                kotlinx.coroutines.delay(50L)
+                                homeEntered = true
+                            }
+                            val homeAlpha by animateFloatAsState(
+                                targetValue = if (homeEntered) 1f else 0f,
+                                animationSpec = tween(560, easing = oneUiEase),
+                                label = "home_welcome_alpha"
+                            )
+                            val homeRise by animateFloatAsState(
+                                targetValue = if (homeEntered) 0f else 36f,
+                                animationSpec = tween(620, easing = oneUiEase),
+                                label = "home_welcome_rise"
+                            )
                             Box(
                                 modifier = Modifier.fillMaxSize(),
                                 contentAlignment = Alignment.Center
@@ -795,7 +821,12 @@ internal fun MainScreenContent(
                                 Column(
                                     horizontalAlignment = Alignment.CenterHorizontally,
                                     verticalArrangement = Arrangement.spacedBy(18.dp),
-                                    modifier = Modifier.padding(horizontal = 24.dp)
+                                    modifier = Modifier
+                                        .padding(horizontal = 24.dp)
+                                        .graphicsLayer {
+                                            alpha = homeAlpha
+                                            translationY = homeRise
+                                        }
                                 ) {
                                     Box(
                                         modifier = Modifier
@@ -903,53 +934,53 @@ internal fun MainScreenContent(
                     }
                 }
 
-                // Instant Persona Chips row
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .horizontalScroll(rememberScrollState())
-                        .padding(horizontal = 14.dp, vertical = 4.dp),
-                    horizontalArrangement = Arrangement.spacedBy(6.dp)
-                ) {
-                    AgentPersona.entries.forEach { persona ->
-                        FilterChip(
-                            selected = state.selectedPersona == persona,
-                            onClick = { onSelectPersona(persona) },
-                            label = { Text(persona.label, style = MaterialTheme.typography.labelSmall) },
-                            colors = FilterChipDefaults.filterChipColors(
-                                containerColor = GeminiPillBg,
-                                selectedContainerColor = GeminiAccentBlue.copy(alpha = 0.22f),
-                                labelColor = GeminiTextSecondary,
-                                selectedLabelColor = GeminiAccentBlue
-                            ),
-                            border = null
-                        )
-                    }
-                }
-
                 AnimatedVisibility(
                     visible = showQuickActions,
-                    enter = expandVertically(spring(dampingRatio = Spring.DampingRatioMediumBouncy)) + fadeIn(),
-                    exit = shrinkVertically() + fadeOut()
+                    enter = expandVertically(spring(dampingRatio = Spring.DampingRatioNoBouncy, stiffness = Spring.StiffnessMediumLow)) + fadeIn(tween(220)),
+                    exit = shrinkVertically() + fadeOut(tween(160))
                 ) {
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .horizontalScroll(rememberScrollState())
-                            .padding(horizontal = 16.dp, vertical = 4.dp),
-                        horizontalArrangement = Arrangement.spacedBy(8.dp)
-                    ) {
-                        AgentQuickActions.forEach { (label, promptText) ->
-                            AssistChip(
-                                onClick = {
-                                    showQuickActions = false
-                                    if (promptText.endsWith(" ")) draft = promptText
-                                    else onSendPrompt(promptText)
-                                },
-                                label = { Text(label, color = GeminiTextPrimary) },
-                                colors = AssistChipDefaults.assistChipColors(containerColor = GeminiChipBg),
-                                border = null
-                            )
+                    Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .horizontalScroll(rememberScrollState())
+                                .padding(horizontal = 16.dp, vertical = 2.dp),
+                            horizontalArrangement = Arrangement.spacedBy(6.dp)
+                        ) {
+                            AgentPersona.entries.forEach { persona ->
+                                FilterChip(
+                                    selected = state.selectedPersona == persona,
+                                    onClick = { onSelectPersona(persona) },
+                                    label = { Text(persona.label, style = MaterialTheme.typography.labelSmall) },
+                                    colors = FilterChipDefaults.filterChipColors(
+                                        containerColor = GeminiPillBg,
+                                        selectedContainerColor = GeminiAccentBlue.copy(alpha = 0.22f),
+                                        labelColor = GeminiTextSecondary,
+                                        selectedLabelColor = GeminiAccentBlue
+                                    ),
+                                    border = null
+                                )
+                            }
+                        }
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .horizontalScroll(rememberScrollState())
+                                .padding(horizontal = 16.dp, vertical = 2.dp),
+                            horizontalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
+                            AgentQuickActions.forEach { (label, promptText) ->
+                                AssistChip(
+                                    onClick = {
+                                        showQuickActions = false
+                                        if (promptText.endsWith(" ")) draft = promptText
+                                        else onSendPrompt(promptText)
+                                    },
+                                    label = { Text(label, color = GeminiTextPrimary) },
+                                    colors = AssistChipDefaults.assistChipColors(containerColor = GeminiChipBg),
+                                    border = null
+                                )
+                            }
                         }
                     }
                 }
@@ -997,7 +1028,11 @@ internal fun MainScreenContent(
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         IconButton(onClick = { showQuickActions = !showQuickActions }) {
-                            Icon(Icons.Default.Add, contentDescription = "Agent tools", tint = GeminiTextPrimary)
+                            Icon(
+                                imageVector = Icons.Default.AutoAwesome,
+                                contentDescription = "Modes & suggestions",
+                                tint = if (showQuickActions || state.selectedPersona != AgentPersona.DEFAULT) GeminiAccentBlue else GeminiTextPrimary
+                            )
                         }
                         IconButton(onClick = onPickImage) {
                             Icon(Icons.Default.AddPhotoAlternate, contentDescription = "Upload image", tint = GeminiAccentBlue)
@@ -1467,7 +1502,7 @@ internal fun MainScreenContent(
                 Text("Kairo is open-source software provided under the MIT License without warranty. Always verify AI-generated responses and device actions.", style = MaterialTheme.typography.bodySmall, color = GeminiTextSecondary)
                 HorizontalDivider(color = Color(0xFF232528))
                 Text("Credits & Source Code", style = MaterialTheme.typography.labelLarge, color = GeminiAccentBlue)
-                Text("Created by DaManMikey • Powered by on-device Gemma 4.", style = MaterialTheme.typography.bodySmall, color = GeminiTextSecondary)
+                Text("Kairo (/kaj/roo/) • Created by DaManMikey • Powered by on-device Gemma 4.", style = MaterialTheme.typography.bodySmall, color = GeminiTextSecondary)
                 Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     OutlinedButton(onClick = { onOpenUrl("https://damanmikey.me/") }, modifier = Modifier.weight(1f)) { Text("damanmikey.me") }
                     OutlinedButton(onClick = { onOpenUrl("https://github.com/DaDevMikey/Kairo") }, modifier = Modifier.weight(1f)) { Text("Source Code") }
@@ -1585,7 +1620,7 @@ internal fun MainScreenContent(
                             Button(
                                 onClick = { onUpdateSettings(state.settings.copy(backendMode = EngineBackendMode.AUTO)) },
                                 modifier = Modifier.fillMaxWidth()
-                            ) { Text("Turn Off Cloud AI (Return to On-Device)") }
+                            ) { Text("Disable Cloud AI") }
                         }
                     }
                     OutlinedTextField(

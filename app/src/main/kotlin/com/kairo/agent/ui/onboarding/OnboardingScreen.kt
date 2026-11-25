@@ -3,6 +3,7 @@ package com.kairo.agent.ui.onboarding
 import android.Manifest
 import android.content.pm.PackageManager
 import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.core.CubicBezierEasing
 import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.RepeatMode
 import androidx.compose.animation.core.Spring
@@ -64,6 +65,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -180,6 +182,11 @@ fun OnboardingScreen(
                             ) {
                                 GemmASparkleIcon(size = 68.dp, isAnimating = true)
                                 AnimatedHeadline("Meet Kairo")
+                                Text(
+                                    text = "Pronounced /kaj/roo/",
+                                    color = AccentBlue,
+                                    style = MaterialTheme.typography.labelLarge
+                                )
                                 Text(
                                     text = "A 100% private, on-device AI agent powered by Gemma 4. Prompts, voice, images, and screen context never leave your device.",
                                     color = TextSecondary,
@@ -450,10 +457,23 @@ fun OnboardingScreen(
 
                     else -> {
                         val welcomeTitle = if (userName.isNotBlank()) "Welcome, ${userName.trim()}" else "Welcome"
+                        var subVisible by remember { mutableStateOf(false) }
                         LaunchedEffect(Unit) {
-                            delay(1700L)
+                            delay(240L)
+                            subVisible = true
+                            delay(3200L)
                             onComplete(userName)
                         }
+                        val subAlpha by animateFloatAsState(
+                            targetValue = if (subVisible) 1f else 0f,
+                            animationSpec = tween(600, easing = CubicBezierEasing(0.117f, 0.126f, 0.312f, 1f)),
+                            label = "welcome_sub_alpha"
+                        )
+                        val subRise by animateFloatAsState(
+                            targetValue = if (subVisible) 0f else 36f,
+                            animationSpec = tween(650, easing = CubicBezierEasing(0.117f, 0.126f, 0.312f, 1f)),
+                            label = "welcome_sub_rise"
+                        )
                         Box(
                             modifier = Modifier.fillMaxSize(),
                             contentAlignment = Alignment.Center
@@ -468,10 +488,17 @@ fun OnboardingScreen(
                                     text = "Let's get started",
                                     color = TextSecondary,
                                     fontSize = 20.sp,
-                                    fontWeight = FontWeight.Normal
+                                    fontWeight = FontWeight.Normal,
+                                    modifier = Modifier.graphicsLayer {
+                                        alpha = subAlpha
+                                        translationY = subRise
+                                    }
                                 )
                                 Spacer(Modifier.height(12.dp))
-                                TextButton(onClick = { onComplete(userName) }) {
+                                TextButton(
+                                    onClick = { onComplete(userName) },
+                                    modifier = Modifier.graphicsLayer { alpha = subAlpha }
+                                ) {
                                     Text("Enter Kairo →", color = AccentBlue)
                                 }
                             }
@@ -490,17 +517,26 @@ private fun AnimatedHeadline(text: String) {
         delay(60)
         visible = true
     }
+    val oneUi = remember { CubicBezierEasing(0.117f, 0.126f, 0.312f, 1f) }
     val alpha by animateFloatAsState(
         targetValue = if (visible) 1f else 0f,
-        animationSpec = tween(450),
+        animationSpec = tween(520, easing = oneUi),
         label = "headline_alpha"
+    )
+    val rise by animateFloatAsState(
+        targetValue = if (visible) 0f else 42f,
+        animationSpec = tween(560, easing = oneUi),
+        label = "headline_rise"
     )
     Text(
         text = text,
         color = TextPrimary,
         fontSize = 28.sp,
         fontWeight = FontWeight.SemiBold,
-        modifier = Modifier.alpha(alpha)
+        modifier = Modifier.graphicsLayer {
+            this.alpha = alpha
+            translationY = rise
+        }
     )
 }
 

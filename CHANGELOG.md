@@ -1,5 +1,15 @@
 # Changelog
 
+## v1.1.4 (2026-11-25)
+### Added & Improved
+- **One UI-Inspired Intro & Home Welcome Animations**: Added smooth staggered rise + fade-in animations (`CubicBezierEasing(0.117, 0.126, 0.312, 1.0)`), extended the final Setup Welcome screen to 3.4s, and refined the shared-element sparkle transition when returning to New Chat.
+- **Cleaner Input Bar (Star Icon)**: Replaced `+` with a Star (`AutoAwesome`) icon that toggles both Modes (`Default`, `Roast`, `TL;DR`, `Dev Mode`, `Grammar / Reply`) and Quick Suggestions.
+- **Kairo Pronunciation (`/kaj/roo/`) & Wake-Word**: Updated `WakeWordService` to recognize `/kaj/roo/` phonetic variants (`cairo`, `kyro`, `kai roo`, etc.) and documented pronunciation in Setup & Credits.
+- **In-App-Only `web_search` & Empty-Response Fallbacks**: `web_search` never leaves the app to open a browser, and `AgentRunner` synthesizes clean fallbacks if the model returns empty output.
+- **Memory Deduplication & Pinned Drawer Footer**: Normalized memory matching prevents duplicate facts, and `Kairo • by DaManMikey` stays pinned at the bottom of the drawer.
+- **Expanded Health Connect Insights**: Added Active Calories, Hydration, Floors Climbed, and Resting Heart Rate (`main` edition).
+- **Disable Cloud AI Label & GitHub Pages Site (`docs/`)**: Renamed the Cloud AI off-button to **"Disable Cloud AI"** and added a full GitHub Pages website (`docs/index.html`, `docs/privacy.html`, `docs/terms.html`, screenshots).
+
 ## v1.1.3 (2026-11-25)
 ### Added & Fixed
 - **Fixed Chat Output Letter Clipping**: Moved rounded clipping onto the shine/stardust overlay layer so letters never get cut off at corners.

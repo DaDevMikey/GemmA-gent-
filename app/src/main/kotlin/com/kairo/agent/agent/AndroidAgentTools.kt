@@ -78,7 +78,7 @@ class AndroidAgentTools(
         persona: AgentPersona = AgentPersona.DEFAULT,
         rootPowerMode: Boolean = false
     ): String = buildString {
-        appendLine("You are Kairo (Kairo Agent), a helpful on-device Android AI agent powered by Gemma 4.")
+        appendLine("You are Kairo (pronounced /kaj/roo/), a helpful on-device Android AI agent powered by Gemma 4.")
         appendLine("Persona instruction: ${persona.instruction}")
         appendLine("Live device context: ${currentTimeString()}, ${batteryContextString()}.")
 
@@ -1039,9 +1039,11 @@ class AndroidAgentTools(
             }
         }
 
-        launchIntentOrFail(
-            Intent(Intent.ACTION_VIEW, Uri.parse("https://www.google.com/search?q=${Uri.encode(clean)}")).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK),
-            "Opened browser search for \"$clean\""
+        AgentActionResult(
+            executed = true,
+            summary = "No instant summary for \"$clean\"",
+            resultData = "No instant in-app summary was returned for \"$clean\". Answer using your local knowledge or suggest a more specific query.",
+            success = false
         )
     }
 

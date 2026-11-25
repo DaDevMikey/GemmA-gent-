@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Privacy Policy — Kairo</title>
+  <style>
+    body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background: #07080d; color: #e8eaed; max-width: 780px; margin: 40px auto; padding: 0 24px; line-height: 1.7; }
+    h1, h2 { color: #a8c7fa; margin-top: 28px; }
+    p, li { color: #bdc1c6; }
+    a { color: #a8c7fa; }
+  </style>
+</head>
+<body>
+  <p><a href="index.html">← Back to Kairo</a></p>
+  <h1>Privacy Policy for Kairo</h1>
+  <p><strong>Effective Date:</strong> November 25, 2026 • <strong>Developer:</strong> DaManMikey (<a href="https://damanmikey.me/">damanmikey.me</a>)</p>
+
+  <h2>1. 100% On-Device Processing by Default</h2>
+  <p>Kairo (<code>com.kairo.agent</code> / <code>com.kairo.agent.lite</code>) is designed to run locally on your device using Android AICore (Gemma 4) or your own local model endpoint. Prompts, images, voice transcriptions, screen context, memories, and chats stay on your device by default.</p>
+  <p>We do <strong>not</strong> operate analytics SDKs, ad networks, or user-tracking servers.</p>
+
+  <h2>2. Optional Permissions</h2>
+  <ul>
+    <li><strong>Microphone (<code>RECORD_AUDIO</code>) &amp; Foreground Microphone Service:</strong> Used only when you tap the mic or enable optional "Hey Kairo" wake-word detection. Audio is transcribed locally.</li>
+    <li><strong>Location (<code>ACCESS_FINE_LOCATION</code> / <code>ACCESS_COARSE_LOCATION</code>):</strong> Used only in the foreground when you ask location-based questions (e.g. local weather or nearby places). Coordinates are never stored or sold.</li>
+    <li><strong>Contacts (<code>READ_CONTACTS</code>):</strong> Used locally to match a spoken or typed name to a phone number or email when you ask Kairo to call, text, or email someone.</li>
+    <li><strong>Notification Listener:</strong> Used locally in memory only when you ask Kairo to summarize unread notifications.</li>
+    <li><strong>Health Connect (GitHub Full Edition only):</strong> Reads fitness, heart rate, sleep, and hydration metrics locally solely for on-device summaries. Not included in the Google Play Lite edition.</li>
+  </ul>
+
+  <h2>3. Optional External Services (User-Initiated)</h2>
+  <ul>
+    <li><strong>Cloud AI (Opt-In with Double Confirmation):</strong> Disabled by default. If you explicitly configure an external API key and endpoint, prompts are sent to that provider under their privacy policy. You can disable Cloud AI in one tap at any time.</li>
+    <li><strong>In-App Weather &amp; Web Search:</strong> When you invoke <code>get_weather</code> or <code>web_search</code>, the query is sent to Open-Meteo / DuckDuckGo / Wikipedia to fetch live answers in-app.</li>
+    <li><strong>MCP Servers:</strong> Only contacted if you manually add an MCP server URL.</li>
+  </ul>
+
+  <h2>4. Contact</h2>
+  <p>Questions? Reach out via <a href="https://damanmikey.me/">damanmikey.me</a> or <a href="https://github.com/DaDevMikey/Kairo">github.com/DaDevMikey/Kairo</a>.</p>
+</body>
+</html>

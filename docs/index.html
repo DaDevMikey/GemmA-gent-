@@ -1,0 +1,200 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Kairo — On-Device AI Agent for Android</title>
+  <style>
+    :root {
+      --bg: #07080d;
+      --card: #12151f;
+      --border: rgba(168, 199, 250, 0.16);
+      --text: #e8eaed;
+      --muted: #9aa0a6;
+      --blue: #a8c7fa;
+      --purple: #9b72cb;
+      --green: #81c995;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      background: radial-gradient(circle at 20% 10%, rgba(66,133,244,0.16), transparent 45%),
+                  radial-gradient(circle at 80% 80%, rgba(155,114,203,0.16), transparent 45%),
+                  var(--bg);
+      color: var(--text);
+      line-height: 1.6;
+    }
+    header {
+      max-width: 1080px;
+      margin: 0 auto;
+      padding: 28px 24px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 16px;
+    }
+    .brand { font-size: 1.25rem; font-weight: 700; letter-spacing: -0.02em; }
+    .brand span { color: var(--blue); font-weight: 500; font-size: 0.9rem; margin-left: 8px; }
+    nav a {
+      color: var(--muted);
+      text-decoration: none;
+      margin-left: 20px;
+      font-size: 0.95rem;
+    }
+    nav a:hover { color: var(--blue); }
+    .hero {
+      max-width: 860px;
+      margin: 36px auto 56px;
+      padding: 0 24px;
+      text-align: center;
+    }
+    .pill {
+      display: inline-block;
+      padding: 6px 14px;
+      border-radius: 999px;
+      background: rgba(129, 201, 149, 0.14);
+      border: 1px solid rgba(129, 201, 149, 0.35);
+      color: var(--green);
+      font-size: 0.85rem;
+      font-weight: 600;
+      margin-bottom: 18px;
+    }
+    h1 { font-size: clamp(2.2rem, 5vw, 3.4rem); line-height: 1.15; margin-bottom: 16px; }
+    .hero p { color: var(--muted); font-size: 1.12rem; max-width: 660px; margin: 0 auto 28px; }
+    .cta-row { display: flex; justify-content: center; gap: 12px; flex-wrap: wrap; }
+    .btn {
+      padding: 12px 22px;
+      border-radius: 14px;
+      font-weight: 600;
+      text-decoration: none;
+      font-size: 0.95rem;
+    }
+    .btn-primary { background: var(--blue); color: #0a0d14; }
+    .btn-secondary { background: var(--card); color: var(--text); border: 1px solid var(--border); }
+    section { max-width: 1080px; margin: 0 auto 64px; padding: 0 24px; }
+    h2 { font-size: 1.6rem; margin-bottom: 20px; }
+    .shots {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
+      gap: 20px;
+    }
+    .shot-card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 20px;
+      padding: 16px;
+      text-align: center;
+    }
+    .shot-card img { width: 100%; max-width: 240px; height: auto; border-radius: 12px; }
+    .shot-card p { margin-top: 10px; color: var(--muted); font-size: 0.9rem; }
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+      gap: 16px;
+    }
+    .card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 18px;
+      padding: 20px;
+    }
+    .card h3 { font-size: 1.05rem; color: var(--blue); margin-bottom: 8px; }
+    .card p { color: var(--muted); font-size: 0.92rem; }
+    footer {
+      max-width: 1080px;
+      margin: 0 auto;
+      padding: 28px 24px 48px;
+      border-top: 1px solid var(--border);
+      color: var(--muted);
+      display: flex;
+      justify-content: space-between;
+      flex-wrap: wrap;
+      gap: 12px;
+      font-size: 0.9rem;
+    }
+    footer a { color: var(--blue); text-decoration: none; }
+  </style>
+</head>
+<body>
+  <header>
+    <div class="brand">✦ Kairo <span>/kaj/roo/</span></div>
+    <nav>
+      <a href="#screenshots">Screenshots</a>
+      <a href="#features">Features</a>
+      <a href="privacy.html">Privacy Policy</a>
+      <a href="terms.html">Terms</a>
+      <a href="https://github.com/DaDevMikey/Kairo">GitHub</a>
+    </nav>
+  </header>
+
+  <main>
+    <div class="hero">
+      <div class="pill">100% On-Device • Zero Cloud Uploads by Default</div>
+      <h1>Your Private Android AI Agent, Powered by Gemma 4</h1>
+      <p>Kairo runs locally on your phone using Android AICore (or your own local/MCP/cloud endpoint), with real Android actions, floating overlay, voice wake-up, and widgets.</p>
+      <div class="cta-row">
+        <a class="btn btn-primary" href="https://github.com/DaDevMikey/Kairo/releases">Download on GitHub</a>
+        <a class="btn btn-secondary" href="privacy.html">Read Privacy Policy</a>
+      </div>
+    </div>
+
+    <section id="screenshots">
+      <h2>Screenshots (Galaxy Z Flip7)</h2>
+      <div class="shots">
+        <div class="shot-card">
+          <img src="screenshots/kairo_home.png" alt="Kairo Home Screen" />
+          <p>Start Screen &amp; Quick Prompts</p>
+        </div>
+        <div class="shot-card">
+          <img src="screenshots/kairo_models.png" alt="AICore Model Selector" />
+          <p>AICore Stable &amp; Preview Models</p>
+        </div>
+        <div class="shot-card">
+          <img src="screenshots/kairo_overlay.png" alt="Floating Overlay and Widget" />
+          <p>Floating Overlay &amp; Home Widget</p>
+        </div>
+        <div class="shot-card">
+          <img src="screenshots/kairo_drawer.png" alt="Drawer and Recent Chats" />
+          <p>Drawer, Memory &amp; Recent Chats</p>
+        </div>
+      </div>
+    </section>
+
+    <section id="features">
+      <h2>Capabilities &amp; Docs</h2>
+      <div class="grid">
+        <div class="card">
+          <h3>On-Device Gemma 4 &amp; AICore</h3>
+          <p>Supports Stable &amp; Preview (Fast / Full) AICore models, Local HTTP endpoints (llama.cpp / Ollama), and optional Cloud AI with double confirmation.</p>
+        </div>
+        <div class="card">
+          <h3>Real Device Actions</h3>
+          <p>Split-screen multitasking, Spotify &amp; media controls, WhatsApp/SMS, Maps navigation, live in-app weather &amp; web search, alarms, timers, and local Python calculation scripts.</p>
+        </div>
+        <div class="card">
+          <h3>Floating Overlay &amp; Widgets</h3>
+          <p>System Digital Assistant integration with "Ask about screen", blurred floating sheet, edge-to-edge fullscreen, plus Home &amp; Cover-Screen widgets.</p>
+        </div>
+        <div class="card">
+          <h3>MCP (Model Context Protocol)</h3>
+          <p>Connect Kairo to your own MCP HTTP servers to discover and run custom tools right from chat.</p>
+        </div>
+        <div class="card">
+          <h3>GitHub vs. Google Play Lite</h3>
+          <p>The <code>main</code> branch includes Health Connect insights, Direct Calling, System Brightness, and Root/Shell mode. The <code>google-play</code> branch (<code>com.kairo.agent.lite</code>) complies strictly with Play Store policies.</p>
+        </div>
+        <div class="card">
+          <h3>Voice Wake-Up (/kaj/roo/)</h3>
+          <p>Optional on-device <code>SpeechRecognizer</code> wake-word listener tuned for "Hey Kairo" (/kaj/roo/) and offline text-to-speech replies.</p>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <footer>
+    <div>Built by <a href="https://damanmikey.me/">DaManMikey</a> • MIT License</div>
+    <div><a href="privacy.html">Privacy Policy</a> • <a href="terms.html">Terms of Service</a></div>
+  </footer>
+</body>
+</html>

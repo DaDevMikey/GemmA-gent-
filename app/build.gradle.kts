@@ -11,8 +11,8 @@ android {
     applicationId = "com.kairo.agent.lite"
     minSdk = 26
     targetSdk = 36
-    versionCode = 14
-    versionName = "1.1.3"
+    versionCode = 15
+    versionName = "1.1.4"
   }
 
   buildTypes {
