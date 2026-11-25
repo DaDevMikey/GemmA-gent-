@@ -64,6 +64,7 @@
         <activity
             android:name=".MainActivity"
             android:exported="true"
+            android:launchMode="singleTask"
             android:windowSoftInputMode="adjustNothing">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
@@ -92,12 +93,7 @@
             android:label="Kairo Overlay"
             android:noHistory="true"
             android:taskAffinity="com.kairo.agent.overlay"
-            android:theme="@style/Theme.GemmA.Translucent">
-            <intent-filter>
-                <action android:name="android.intent.action.MAIN" />
-                <category android:name="android.intent.category.LAUNCHER" />
-            </intent-filter>
-        </activity>
+            android:theme="@style/Theme.GemmA.Translucent" />
 
         <activity
             android:name=".AssistantOverlayActivity"

@@ -1,5 +1,15 @@
 # Changelog
 
+## v1.1.6
+- Fixed dual launcher icon by removing `LAUNCHER` intent-filter from `LaunchOverlayActivity` and setting `singleTask` on `MainActivity`
+- Added Snapdragon 8 Elite+ & Tensor G5+ SoC allowlist check in Setup with explicit "Bypass & Continue Anyway" option for incompatible devices
+- Added required Privacy Policy agreement on the first Setup screen
+- Added per-letter Twidget-style `StaggeredBlurText` animation on Setup welcome
+- Added version filter chips to Release Notes (rendered in Markdown)
+- Added live drag-progress blur and smooth scrolling across all `ModalBottomSheet` menus
+- Added `BackHandler` in active chats to start a new chat
+- Added "Support Project (PayPal)" button in Settings and credited `thatjoshguy67` for Twidget/One UI widget inspiration
+
 ## v1.1.5 (2026-11-25)
 ### Added & Fixed
 - **Fixed Chat-to-Home Shared Sparkle Transition**: Preserved exiting turn bounds during `AnimatedContent` transition so the sparkle icon smoothly glides back to the center on New Chat.

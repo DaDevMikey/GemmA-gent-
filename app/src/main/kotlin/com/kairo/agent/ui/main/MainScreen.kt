@@ -9,6 +9,7 @@ import android.net.Uri
 import android.os.Build
 import android.provider.Settings
 import android.text.format.DateUtils
+import androidx.activity.compose.BackHandler
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.PickVisualMediaRequest
 import androidx.activity.result.contract.ActivityResultContracts
@@ -793,6 +794,9 @@ internal fun MainScreenContent(
             (1f + (drawerOffset / drawerWidthPx)).coerceIn(0f, 1f)
         }
         val anySheetOpen = showModelSheet || showMemorySheet || showPrivacySheet || showConnectionsSheet || showReleaseNotesSheet || showSettingsSheet
+        BackHandler(enabled = state.activeTurns.isNotEmpty() && !anySheetOpen && !drawerState.isOpen) {
+            onNewChat()
+        }
         LaunchedEffect(anySheetOpen) {
             if (!anySheetOpen) liveSheetFraction = 0f
         }
@@ -1211,7 +1215,7 @@ internal fun MainScreenContent(
     }
 
     if (showModelSheet) {
-        val modelSheetState = rememberModalBottomSheetState(skipPartiallyExpanded = false)
+        val modelSheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
         val travelPx = with(LocalDensity.current) { 420.dp.toPx() }
         LaunchedEffect(modelSheetState) {
             androidx.compose.runtime.snapshotFlow {
@@ -1234,6 +1238,7 @@ internal fun MainScreenContent(
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
+                    .heightIn(max = 540.dp)
                     .verticalScroll(rememberScrollState())
                     .padding(horizontal = 20.dp, vertical = 12.dp),
                 verticalArrangement = Arrangement.spacedBy(12.dp)
@@ -1526,7 +1531,18 @@ internal fun MainScreenContent(
             )
         }
 
-        ModalBottomSheet(onDismissRequest = { showConnectionsSheet = false }, containerColor = GeminiDrawerBg, contentColor = GeminiTextPrimary) {
+        val connSheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
+        val connTravelPx = with(LocalDensity.current) { 420.dp.toPx() }
+        LaunchedEffect(connSheetState) {
+            androidx.compose.runtime.snapshotFlow {
+                runCatching { connSheetState.requireOffset() }.getOrNull()
+            }.collect { offset ->
+                if (offset != null && connTravelPx > 0f) {
+                    liveSheetFraction = (1f - (offset / connTravelPx)).coerceIn(0f, 1f)
+                }
+            }
+        }
+        ModalBottomSheet(sheetState = connSheetState, onDismissRequest = { liveSheetFraction = 0f; showConnectionsSheet = false }, containerColor = GeminiDrawerBg, contentColor = GeminiTextPrimary) {
             Column(
                 modifier = Modifier.fillMaxWidth().padding(horizontal = 20.dp, vertical = 12.dp).verticalScroll(rememberScrollState()),
                 verticalArrangement = Arrangement.spacedBy(10.dp)
@@ -1600,7 +1616,27 @@ internal fun MainScreenContent(
     }
 
     if (showReleaseNotesSheet) {
-        ModalBottomSheet(onDismissRequest = { showReleaseNotesSheet = false }, containerColor = GeminiDrawerBg, contentColor = GeminiTextPrimary) {
+        var selectedVersionFilter by remember { mutableStateOf<String?>(null) }
+        val releaseSheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
+        val releaseTravelPx = with(LocalDensity.current) { 420.dp.toPx() }
+        LaunchedEffect(releaseSheetState) {
+            androidx.compose.runtime.snapshotFlow {
+                runCatching { releaseSheetState.requireOffset() }.getOrNull()
+            }.collect { offset ->
+                if (offset != null && releaseTravelPx > 0f) {
+                    liveSheetFraction = (1f - (offset / releaseTravelPx)).coerceIn(0f, 1f)
+                }
+            }
+        }
+        ModalBottomSheet(
+            sheetState = releaseSheetState,
+            onDismissRequest = {
+                liveSheetFraction = 0f
+                showReleaseNotesSheet = false
+            },
+            containerColor = GeminiDrawerBg,
+            contentColor = GeminiTextPrimary
+        ) {
             Column(
                 modifier = Modifier.fillMaxWidth().padding(horizontal = 20.dp, vertical = 12.dp),
                 verticalArrangement = Arrangement.spacedBy(12.dp)
@@ -1609,6 +1645,26 @@ internal fun MainScreenContent(
                     Text("Release Notes", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
                     TextButton(onClick = onFetchReleaseNotes, enabled = !state.isLoadingReleaseNotes) {
                         Text(if (state.isLoadingReleaseNotes) "Loading..." else "Refresh", color = GeminiAccentBlue)
+                    }
+                }
+
+                if (state.releaseNotes.isNotEmpty()) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        FilterChip(
+                            selected = selectedVersionFilter == null,
+                            onClick = { selectedVersionFilter = null },
+                            label = { Text("All") }
+                        )
+                        state.releaseNotes.forEach { rel ->
+                            FilterChip(
+                                selected = selectedVersionFilter == rel.tagName,
+                                onClick = { selectedVersionFilter = rel.tagName },
+                                label = { Text(rel.tagName) }
+                            )
+                        }
                     }
                 }
 
@@ -1625,11 +1681,13 @@ internal fun MainScreenContent(
                 } else if (state.releaseNotes.isEmpty()) {
                     Text("No releases loaded yet.", style = MaterialTheme.typography.bodySmall, color = GeminiTextSecondary)
                 } else {
+                    val filteredNotes = if (selectedVersionFilter == null) state.releaseNotes
+                    else state.releaseNotes.filter { it.tagName == selectedVersionFilter }
                     LazyColumn(
                         modifier = Modifier.fillMaxWidth().heightIn(max = 380.dp),
                         verticalArrangement = Arrangement.spacedBy(10.dp)
                     ) {
-                        items(state.releaseNotes, key = { it.tagName }) { rel ->
+                        items(filteredNotes, key = { it.tagName }) { rel ->
                             Surface(color = GeminiPillBg, shape = RoundedCornerShape(14.dp)) {
                                 Column(modifier = Modifier.fillMaxWidth().padding(14.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
                                     Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
@@ -1658,7 +1716,18 @@ internal fun MainScreenContent(
 
     if (showMemorySheet) {
         var newMemoryText by remember { mutableStateOf("") }
-        ModalBottomSheet(onDismissRequest = { showMemorySheet = false }, containerColor = GeminiDrawerBg, contentColor = GeminiTextPrimary) {
+        val memSheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
+        val memTravelPx = with(LocalDensity.current) { 420.dp.toPx() }
+        LaunchedEffect(memSheetState) {
+            androidx.compose.runtime.snapshotFlow {
+                runCatching { memSheetState.requireOffset() }.getOrNull()
+            }.collect { offset ->
+                if (offset != null && memTravelPx > 0f) {
+                    liveSheetFraction = (1f - (offset / memTravelPx)).coerceIn(0f, 1f)
+                }
+            }
+        }
+        ModalBottomSheet(sheetState = memSheetState, onDismissRequest = { liveSheetFraction = 0f; showMemorySheet = false }, containerColor = GeminiDrawerBg, contentColor = GeminiTextPrimary) {
             Column(modifier = Modifier.fillMaxWidth().padding(horizontal = 20.dp, vertical = 12.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
                 Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
                     Text("Kairo Memory", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
@@ -1709,7 +1778,18 @@ internal fun MainScreenContent(
     }
 
     if (showPrivacySheet) {
-        ModalBottomSheet(onDismissRequest = { showPrivacySheet = false }, containerColor = GeminiDrawerBg, contentColor = GeminiTextPrimary) {
+        val privSheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
+        val privTravelPx = with(LocalDensity.current) { 420.dp.toPx() }
+        LaunchedEffect(privSheetState) {
+            androidx.compose.runtime.snapshotFlow {
+                runCatching { privSheetState.requireOffset() }.getOrNull()
+            }.collect { offset ->
+                if (offset != null && privTravelPx > 0f) {
+                    liveSheetFraction = (1f - (offset / privTravelPx)).coerceIn(0f, 1f)
+                }
+            }
+        }
+        ModalBottomSheet(sheetState = privSheetState, onDismissRequest = { liveSheetFraction = 0f; showPrivacySheet = false }, containerColor = GeminiDrawerBg, contentColor = GeminiTextPrimary) {
             Column(
                 modifier = Modifier.fillMaxWidth().verticalScroll(rememberScrollState()).padding(horizontal = 20.dp, vertical = 12.dp),
                 verticalArrangement = Arrangement.spacedBy(12.dp)
@@ -1790,12 +1870,46 @@ internal fun MainScreenContent(
             )
         }
 
-        ModalBottomSheet(onDismissRequest = { showSettingsSheet = false }, containerColor = GeminiDrawerBg, contentColor = GeminiTextPrimary) {
+        val settingsSheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
+        val settingsTravelPx = with(LocalDensity.current) { 420.dp.toPx() }
+        LaunchedEffect(settingsSheetState) {
+            androidx.compose.runtime.snapshotFlow {
+                runCatching { settingsSheetState.requireOffset() }.getOrNull()
+            }.collect { offset ->
+                if (offset != null && settingsTravelPx > 0f) {
+                    liveSheetFraction = (1f - (offset / settingsTravelPx)).coerceIn(0f, 1f)
+                }
+            }
+        }
+        ModalBottomSheet(
+            sheetState = settingsSheetState,
+            onDismissRequest = {
+                liveSheetFraction = 0f
+                showSettingsSheet = false
+            },
+            containerColor = GeminiDrawerBg,
+            contentColor = GeminiTextPrimary
+        ) {
             Column(
-                modifier = Modifier.fillMaxWidth().padding(horizontal = 20.dp, vertical = 12.dp).verticalScroll(rememberScrollState()),
+                modifier = Modifier.fillMaxWidth().heightIn(max = 560.dp).padding(horizontal = 20.dp, vertical = 12.dp).verticalScroll(rememberScrollState()),
                 verticalArrangement = Arrangement.spacedBy(12.dp)
             ) {
                 Text("Settings & Preferences", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
+
+                OutlinedButton(
+                    onClick = { onOpenUrl("https://paypal.me/damanmikey") },
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Icon(Icons.Default.FavoriteBorder, contentDescription = null, modifier = Modifier.size(18.dp), tint = GeminiAccentBlue)
+                    Spacer(Modifier.width(8.dp))
+                    Text("Support Project (PayPal)", color = GeminiAccentBlue)
+                }
+
+                Text(
+                    "Setup animations & One UI widget core inspired by Twidget (credit: thatjoshguy67).",
+                    style = MaterialTheme.typography.labelSmall,
+                    color = GeminiTextSecondary
+                )
 
                 Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     FilledTonalButton(
