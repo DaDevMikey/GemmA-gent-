@@ -121,12 +121,8 @@ class MainScreenViewModel(
     }
 
     fun checkForUpdates() {
-        val checker = updateChecker ?: return
-        viewModelScope.launch {
-            _state.update { it.copy(isCheckingUpdates = true) }
-            val result = checker.checkForUpdates()
-            _state.update { it.copy(isCheckingUpdates = false, updateStatus = result) }
-        }
+        // Updates are managed by Google Play in the Play Store edition.
+        _state.update { it.copy(isCheckingUpdates = false, updateStatus = null) }
     }
 
     fun fetchReleaseNotes() {

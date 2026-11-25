@@ -28,17 +28,6 @@ import android.provider.Settings
 import android.view.KeyEvent
 import androidx.core.content.ContextCompat
 import androidx.core.content.FileProvider
-import androidx.health.connect.client.HealthConnectClient
-import androidx.health.connect.client.permission.HealthPermission
-import androidx.health.connect.client.records.DistanceRecord
-import androidx.health.connect.client.records.ExerciseSessionRecord
-import androidx.health.connect.client.records.HeartRateRecord
-import androidx.health.connect.client.records.SleepSessionRecord
-import androidx.health.connect.client.records.StepsRecord
-import androidx.health.connect.client.records.TotalCaloriesBurnedRecord
-import androidx.health.connect.client.request.AggregateRequest
-import androidx.health.connect.client.request.ReadRecordsRequest
-import androidx.health.connect.client.time.TimeRangeFilter
 import com.kairo.agent.data.MemoryStore
 import com.kairo.agent.service.NotificationCatchUpStore
 import kotlinx.coroutines.Dispatchers
@@ -464,36 +453,6 @@ class AndroidAgentTools(
         return launchIntentOrFail(intent, "Opened Display Settings to adjust brightness ($percent%)")
     }
 
-    private suspend fun runShellCommand(command: String, rootPowerMode: Boolean): AgentActionResult = withContext(Dispatchers.IO) {
-        if (!rootPowerMode) {
-            return@withContext AgentActionResult(
-                executed = true,
-                summary = "Power Mode is disabled",
-                resultData = "Enable Root / Shell Power Mode in Kairo's Setup & Compatibility sheet to run shell commands.",
-                success = false
-            )
-        }
-        val clean = command.trim()
-        if (clean.isEmpty()) {
-            return@withContext AgentActionResult(executed = true, summary = "Empty shell command", resultData = "No command provided.", success = false)
-        }
-        runCatching {
-            val useSu = arrayOf("/system/bin/su", "/system/xbin/su", "/sbin/su", "/su/bin/su").any { File(it).exists() }
-            val cmdArray = if (useSu) arrayOf("su", "-c", clean) else arrayOf("sh", "-c", clean)
-            val proc = ProcessBuilder(*cmdArray).redirectErrorStream(true).start()
-            val output = proc.inputStream.bufferedReader().use { it.readText() }.take(2000)
-            val exit = proc.waitFor()
-            AgentActionResult(
-                executed = true,
-                summary = "Ran shell command (exit $exit)",
-                resultData = "Exit $exit:\n$output",
-                success = exit == 0
-            )
-        }.getOrElse { e ->
-            AgentActionResult(executed = true, summary = "Shell error", resultData = e.localizedMessage ?: "Failed", success = false)
-        }
-    }
-
     @Suppress("DEPRECATION")
     private fun getCurrentLocation(): AgentActionResult {
         val fineGranted = ContextCompat.checkSelfPermission(context, Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED
@@ -541,79 +500,6 @@ class AndroidAgentTools(
             resultData = "Current device location: $result",
             success = true
         )
-    }
-
-    private suspend fun getHealthSummary(): AgentActionResult {
-        val sdkStatus = HealthConnectClient.getSdkStatus(context)
-        if (sdkStatus != HealthConnectClient.SDK_AVAILABLE) {
-            val msg = "Health Connect is not installed or unavailable on this device."
-            return AgentActionResult(executed = true, summary = msg, resultData = msg, success = false)
-        }
-        val client = HealthConnectClient.getOrCreate(context)
-        val granted = runCatching { client.permissionController.getGrantedPermissions() }.getOrElse { emptySet() }
-        val stepsPerm = HealthPermission.getReadPermission(StepsRecord::class)
-        val hrPerm = HealthPermission.getReadPermission(HeartRateRecord::class)
-        val sleepPerm = HealthPermission.getReadPermission(SleepSessionRecord::class)
-        val distPerm = HealthPermission.getReadPermission(DistanceRecord::class)
-        val calPerm = HealthPermission.getReadPermission(TotalCaloriesBurnedRecord::class)
-        val exPerm = HealthPermission.getReadPermission(ExerciseSessionRecord::class)
-        val anyGranted = listOf(stepsPerm, hrPerm, sleepPerm, distPerm, calPerm, exPerm).any { it in granted }
-        if (!anyGranted) {
-            val msg = "Health Connect permissions are not granted yet. Open Kairo's drawer → Connections to grant Health Connect access."
-            return AgentActionResult(executed = true, summary = "Health Connect permission needed", resultData = msg, success = false)
-        }
-        val startOfDay = LocalDate.now().atStartOfDay(ZoneId.systemDefault()).toInstant()
-        val last24h = Instant.now().minus(Duration.ofHours(24))
-        val now = Instant.now()
-        val parts = mutableListOf<String>()
-        if (stepsPerm in granted) {
-            runCatching {
-                val agg = client.aggregate(AggregateRequest(metrics = setOf(StepsRecord.COUNT_TOTAL), timeRangeFilter = TimeRangeFilter.between(startOfDay, now)))
-                parts.add("Steps today: ${agg[StepsRecord.COUNT_TOTAL] ?: 0L}")
-            }
-        }
-        if (distPerm in granted) {
-            runCatching {
-                val agg = client.aggregate(AggregateRequest(metrics = setOf(DistanceRecord.DISTANCE_TOTAL), timeRangeFilter = TimeRangeFilter.between(startOfDay, now)))
-                val meters = agg[DistanceRecord.DISTANCE_TOTAL]?.inMeters ?: 0.0
-                if (meters > 0) parts.add("Distance today: ${"%.2f".format(Locale.US, meters / 1000.0)} km")
-            }
-        }
-        if (calPerm in granted) {
-            runCatching {
-                val agg = client.aggregate(AggregateRequest(metrics = setOf(TotalCaloriesBurnedRecord.ENERGY_TOTAL), timeRangeFilter = TimeRangeFilter.between(startOfDay, now)))
-                val kcal = agg[TotalCaloriesBurnedRecord.ENERGY_TOTAL]?.inKilocalories ?: 0.0
-                if (kcal > 0) parts.add("Calories burned: ${kcal.toInt()} kcal")
-            }
-        }
-        if (hrPerm in granted) {
-            runCatching {
-                val hrResp = client.readRecords(ReadRecordsRequest(recordType = HeartRateRecord::class, timeRangeFilter = TimeRangeFilter.between(startOfDay, now)))
-                val allBpm = hrResp.records.flatMap { it.samples }.map { it.beatsPerMinute }
-                if (allBpm.isNotEmpty()) {
-                    parts.add("Heart rate: latest ${allBpm.last()} bpm (avg ${allBpm.average().toInt()} bpm)")
-                }
-            }
-        }
-        if (sleepPerm in granted) {
-            runCatching {
-                val sleepResp = client.readRecords(ReadRecordsRequest(recordType = SleepSessionRecord::class, timeRangeFilter = TimeRangeFilter.between(last24h, now)))
-                val totalMins = sleepResp.records.sumOf { Duration.between(it.startTime, it.endTime).toMinutes() }
-                if (totalMins > 0) parts.add("Sleep (24h): ${totalMins / 60}h ${totalMins % 60}m")
-            }
-        }
-        if (exPerm in granted) {
-            runCatching {
-                val exResp = client.readRecords(ReadRecordsRequest(recordType = ExerciseSessionRecord::class, timeRangeFilter = TimeRangeFilter.between(startOfDay, now)))
-                exResp.records.lastOrNull()?.let { session ->
-                    val mins = Duration.between(session.startTime, session.endTime).toMinutes()
-                    val title = session.title?.takeIf { it.isNotBlank() } ?: "Workout"
-                    parts.add("Latest workout: $title ($mins min)")
-                }
-            }
-        }
-        val result = if (parts.isEmpty()) "No Health Connect records found for today yet." else parts.joinToString("; ")
-        return AgentActionResult(executed = true, summary = "Read Health Connect insights", resultData = result, success = true)
     }
 
     private suspend fun getWeather(locationQuery: String): AgentActionResult = withContext(Dispatchers.IO) {

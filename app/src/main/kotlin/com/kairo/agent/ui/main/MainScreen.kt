@@ -153,15 +153,6 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.core.content.ContextCompat
-import androidx.health.connect.client.HealthConnectClient
-import androidx.health.connect.client.PermissionController
-import androidx.health.connect.client.permission.HealthPermission
-import androidx.health.connect.client.records.DistanceRecord
-import androidx.health.connect.client.records.ExerciseSessionRecord
-import androidx.health.connect.client.records.HeartRateRecord
-import androidx.health.connect.client.records.SleepSessionRecord
-import androidx.health.connect.client.records.StepsRecord
-import androidx.health.connect.client.records.TotalCaloriesBurnedRecord
 import androidx.lifecycle.compose.LifecycleResumeEffect
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
@@ -260,17 +251,6 @@ fun MainScreen(
         val micOk = results[Manifest.permission.RECORD_AUDIO] == true ||
             ContextCompat.checkSelfPermission(context, Manifest.permission.RECORD_AUDIO) == PackageManager.PERMISSION_GRANTED
         if (micOk) WakeWordService.start(context)
-    }
-
-    val healthPermissions = remember {
-        setOf(
-            HealthPermission.getReadPermission(StepsRecord::class),
-            HealthPermission.getReadPermission(HeartRateRecord::class),
-            HealthPermission.getReadPermission(SleepSessionRecord::class),
-            HealthPermission.getReadPermission(DistanceRecord::class),
-            HealthPermission.getReadPermission(TotalCaloriesBurnedRecord::class),
-            HealthPermission.getReadPermission(ExerciseSessionRecord::class)
-        )
     }
 
     val contactsPermissionLauncher = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) {
@@ -1225,87 +1205,19 @@ internal fun MainScreenContent(
 
                 HorizontalDivider(color = Color(0xFF232528))
 
-                when (val update = state.updateStatus) {
-                    is UpdateCheckResult.UpdateAvailable -> {
-                        Surface(
-                            color = Color(0xFF151E34),
-                            shape = RoundedCornerShape(18.dp)
+                Surface(color = Color(0xFF151E34), shape = RoundedCornerShape(16.dp)) {
+                    Column(modifier = Modifier.fillMaxWidth().padding(14.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                        Text("Google Play Edition", color = GeminiAccentBlue, style = MaterialTheme.typography.labelLarge, fontWeight = FontWeight.SemiBold)
+                        Text(
+                            "App updates are managed by Google Play. A more feature-rich open-source edition (with Direct Calling, Health Connect, System Brightness, and Root/Shell mode) is available on GitHub.",
+                            color = GeminiTextSecondary,
+                            style = MaterialTheme.typography.bodySmall
+                        )
+                        OutlinedButton(
+                            onClick = { onOpenUrl("https://github.com/DaDevMikey/Kairo") },
+                            modifier = Modifier.fillMaxWidth()
                         ) {
-                            Column(
-                                modifier = Modifier.fillMaxWidth().padding(14.dp),
-                                verticalArrangement = Arrangement.spacedBy(10.dp)
-                            ) {
-                                Row(
-                                    modifier = Modifier.fillMaxWidth(),
-                                    horizontalArrangement = Arrangement.SpaceBetween,
-                                    verticalAlignment = Alignment.CenterVertically
-                                ) {
-                                    Surface(color = GeminiAccentBlue.copy(alpha = 0.2f), shape = RoundedCornerShape(50)) {
-                                        Text(
-                                            text = "NEW RELEASE",
-                                            color = GeminiAccentBlue,
-                                            style = MaterialTheme.typography.labelSmall,
-                                            fontWeight = FontWeight.Bold,
-                                            modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp)
-                                        )
-                                    }
-                                    Text(
-                                        text = "v${update.currentVersion} → ${update.latestVersion}",
-                                        color = ActionSuccessGreen,
-                                        style = MaterialTheme.typography.labelMedium,
-                                        fontWeight = FontWeight.SemiBold
-                                    )
-                                }
-                                if (update.releaseNotes.isNotBlank()) {
-                                    Text(
-                                        text = update.releaseNotes,
-                                        color = GeminiTextSecondary,
-                                        style = MaterialTheme.typography.bodySmall,
-                                        maxLines = 4,
-                                        overflow = TextOverflow.Ellipsis
-                                    )
-                                }
-                                Button(
-                                    onClick = { onOpenUrl(update.apkUrl ?: update.releaseUrl) },
-                                    modifier = Modifier.fillMaxWidth()
-                                ) {
-                                    Icon(Icons.Default.Download, contentDescription = null)
-                                    Spacer(Modifier.width(8.dp))
-                                    Text("Download & Install ${update.latestVersion}")
-                                }
-                            }
-                        }
-                    }
-                    is UpdateCheckResult.UpToDate -> {
-                        Surface(color = GeminiPillBg, shape = RoundedCornerShape(14.dp)) {
-                            Row(
-                                modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 8.dp),
-                                horizontalArrangement = Arrangement.SpaceBetween,
-                                verticalAlignment = Alignment.CenterVertically
-                            ) {
-                                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                                    Icon(Icons.Default.CheckCircle, contentDescription = null, tint = ActionSuccessGreen, modifier = Modifier.size(18.dp))
-                                    Text("Up to date (v${update.currentVersion})", style = MaterialTheme.typography.bodySmall, color = GeminiTextPrimary)
-                                }
-                                TextButton(onClick = onCheckUpdates, enabled = !state.isCheckingUpdates) {
-                                    Text(if (state.isCheckingUpdates) "Checking..." else "Check", color = GeminiAccentBlue)
-                                }
-                            }
-                        }
-                    }
-                    is UpdateCheckResult.Unavailable -> {
-                        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
-                            Text(update.reason, style = MaterialTheme.typography.bodySmall, color = GeminiTextSecondary, modifier = Modifier.weight(1f))
-                            TextButton(onClick = onCheckUpdates, enabled = !state.isCheckingUpdates) {
-                                Text(if (state.isCheckingUpdates) "Checking..." else "Retry", color = GeminiAccentBlue)
-                            }
-                        }
-                    }
-                    null -> {
-                        FilledTonalButton(onClick = onCheckUpdates, enabled = !state.isCheckingUpdates, modifier = Modifier.fillMaxWidth()) {
-                            Icon(Icons.Default.NewReleases, contentDescription = null)
-                            Spacer(Modifier.width(8.dp))
-                            Text(if (state.isCheckingUpdates) "Checking GitHub..." else "Check for Updates")
+                            Text("View Full Edition on GitHub")
                         }
                     }
                 }
@@ -1360,21 +1272,21 @@ internal fun MainScreenContent(
                 ConnectionPermRow("Contacts", "Call & text people by name", contactsGranted) {
                     pendingDisclosure = Triple("Contacts Access", "Used locally on-device solely to resolve spoken/typed contact names to phone numbers or emails.", onGrantContacts)
                 }
-                ConnectionPermRow("Direct Calling", "Place calls directly", callGranted) {
-                    pendingDisclosure = Triple("Direct Calling Access", "Allows Kairo to place calls directly when you ask instead of stopping at the dialer.", onGrantCall)
-                }
                 ConnectionPermRow("Notification Catch-Up", "Summarize unread messages", notifGranted) {
                     pendingDisclosure = Triple("Notification Catch-Up", "Reads unread notifications locally in memory so Kairo can summarize what you missed.", onOpenNotificationAccess)
                 }
-                ConnectionPermRow("Health Connect", "Steps, heart rate, sleep, distance, calories & workouts", state.healthConnectGranted) {
-                    pendingDisclosure = Triple("Health Connect Access", "Reads your local Health Connect fitness & sleep metrics solely for private on-device summaries.", onGrantHealthConnect)
-                }
-                ConnectionPermRow("System Brightness", "Adjust screen brightness", writeSettingsGranted) {
-                    pendingDisclosure = Triple("Modify System Settings", "Lets Kairo adjust screen brightness directly when you ask.") {
-                        val pkgIntent = Intent(Settings.ACTION_MANAGE_WRITE_SETTINGS, Uri.parse("package:${ctx.packageName}"))
-                        val fallbackIntent = Intent(Settings.ACTION_MANAGE_WRITE_SETTINGS)
-                        val target = if (pkgIntent.resolveActivity(ctx.packageManager) != null) pkgIntent else fallbackIntent
-                        ctx.startActivity(target)
+
+                Surface(color = Color(0xFF151E34), shape = RoundedCornerShape(14.dp)) {
+                    Column(modifier = Modifier.fillMaxWidth().padding(12.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                        Text("More features on GitHub", color = GeminiAccentBlue, style = MaterialTheme.typography.labelLarge, fontWeight = FontWeight.SemiBold)
+                        Text(
+                            "Direct Calling, Health Connect insights, System Brightness, and Root/Shell mode are removed in the Google Play edition to comply with Play Store policies. Get the full open-source edition on GitHub.",
+                            color = GeminiTextSecondary,
+                            style = MaterialTheme.typography.bodySmall
+                        )
+                        TextButton(onClick = { onOpenUrl("https://github.com/DaDevMikey/Kairo") }) {
+                            Text("Open GitHub Repository →", color = GeminiAccentBlue)
+                        }
                     }
                 }
 
