@@ -1,5 +1,14 @@
 # Changelog
 
+## v1.1.5 (2026-11-25)
+### Added & Fixed
+- **Fixed Chat-to-Home Shared Sparkle Transition**: Preserved exiting turn bounds during `AnimatedContent` transition so the sparkle icon smoothly glides back to the center on New Chat.
+- **Twidget-Style `BlurIntoText` & Full Setup Redesign**: Added blur-into-sharp text reveals across onboarding & home greetings, with a clean Twidget-inspired `"Welcome to Kairo"` + pill `"Get started"` welcome page.
+- **Official Samsung One UI Widget Hook**: Added `theming-meta` (`meta_998_sesl_app`) and `com.sec.android.appwidget.widgetinfo` (`widget_supported_cell_size_info.xml`) to Home and Cover-Screen widgets.
+- **Fixed Main App Microphone**: Reset `SpeechRecognizer` cleanly on errors, pause WakeWordService during mic taps, surface voice error toasts, and fall back to `RecognizerIntent` when needed.
+- **Live Drag-Progress Sheet Blur**: Bottom sheets (including `Kairo • Powered by Gemma 4`) now reduce background blur smoothly in real time as you drag them down.
+- **Settings Hub & Dangerous Tool Confirmation**: Moved Memory & Connections into Settings (accessible from the bottom-right drawer gear icon next to `Kairo • by DaManMikey`), updated Model Selector to reflect active Cloud AI, and added a 2nd confirmation dialog before dangerous tool calls (`call_person`, `send_whatsapp`, `send_email`, `run_shell_command`, etc.).
+
 ## v1.1.4 (2026-11-25)
 ### Added & Improved
 - **One UI-Inspired Intro & Home Welcome Animations**: Added smooth staggered rise + fade-in animations (`CubicBezierEasing(0.117, 0.126, 0.312, 1.0)`), extended the final Setup Welcome screen to 3.4s, and refined the shared-element sparkle transition when returning to New Chat.

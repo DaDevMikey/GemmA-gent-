@@ -123,6 +123,7 @@ import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.rememberDrawerState
+import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.material3.ripple
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
@@ -186,6 +187,7 @@ import com.kairo.agent.data.MemoryStore
 import com.kairo.agent.engine.CompatibilityChecker
 import com.kairo.agent.engine.ModelAvailability
 import com.kairo.agent.service.WakeWordService
+import com.kairo.agent.ui.components.BlurIntoText
 import com.kairo.agent.ui.components.GemmASparkleIcon
 import com.kairo.agent.ui.components.ResponseShineSweep
 import com.kairo.agent.ui.components.StarDustParticles
@@ -250,6 +252,25 @@ fun MainScreen(
         }
     }
     val voiceState by voiceController.state.collectAsStateWithLifecycle()
+
+    LaunchedEffect(voiceState.voiceError) {
+        voiceState.voiceError?.let { msg ->
+            android.widget.Toast.makeText(context, msg, android.widget.Toast.LENGTH_SHORT).show()
+        }
+    }
+
+    val speechIntentLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.StartActivityForResult()
+    ) { result ->
+        val spoken = result.data
+            ?.getStringArrayListExtra(android.speech.RecognizerIntent.EXTRA_RESULTS)
+            ?.firstOrNull()
+            ?.trim()
+            .orEmpty()
+        if (spoken.isNotEmpty()) {
+            viewModel.sendPrompt(spoken)
+        }
+    }
 
     DisposableEffect(voiceController) {
         onDispose { voiceController.release() }
@@ -415,8 +436,22 @@ fun MainScreen(
                 onOpenUrl = { url -> context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(url))) },
                 onMicClick = {
                     val granted = ContextCompat.checkSelfPermission(context, Manifest.permission.RECORD_AUDIO) == PackageManager.PERMISSION_GRANTED
-                    if (granted) voiceController.toggleListening()
-                    else micPermissionLauncher.launch(Manifest.permission.RECORD_AUDIO)
+                    if (!granted) {
+                        micPermissionLauncher.launch(Manifest.permission.RECORD_AUDIO)
+                    } else {
+                        if (wakeWordRunning) WakeWordService.stop(context)
+                        if (android.speech.SpeechRecognizer.isRecognitionAvailable(context)) {
+                            voiceController.toggleListening()
+                        } else {
+                            val speechIntent = Intent(android.speech.RecognizerIntent.ACTION_RECOGNIZE_SPEECH).apply {
+                                putExtra(android.speech.RecognizerIntent.EXTRA_LANGUAGE_MODEL, android.speech.RecognizerIntent.LANGUAGE_MODEL_FREE_FORM)
+                            }
+                            runCatching { speechIntentLauncher.launch(speechIntent) }
+                                .onFailure {
+                                    android.widget.Toast.makeText(context, "Speech recognition unavailable", android.widget.Toast.LENGTH_SHORT).show()
+                                }
+                        }
+                    }
                 },
                 onSpeakResponse = { text ->
                     voiceController.setTtsEnabled(true)
@@ -506,7 +541,27 @@ internal fun MainScreenContent(
     var showConnectionsSheet by remember { mutableStateOf(false) }
     var showReleaseNotesSheet by remember { mutableStateOf(false) }
     var showSettingsSheet by remember { mutableStateOf(false) }
+    var liveSheetFraction by remember { mutableStateOf(0f) }
     var sparkleTaps by remember { mutableStateOf(0) }
+
+    state.pendingToolConfirmation?.let { pending ->
+        androidx.compose.material3.AlertDialog(
+            onDismissRequest = { pending.onDecision(false) },
+            containerColor = GeminiDrawerBg,
+            titleContentColor = GeminiTextPrimary,
+            textContentColor = GeminiTextSecondary,
+            title = { Text("Confirm Action: ${pending.toolName}", fontWeight = FontWeight.SemiBold) },
+            text = {
+                Text("Kairo is about to execute `${pending.toolName}`:\n\n${pending.detail}\n\nAllow this action?")
+            },
+            confirmButton = {
+                Button(onClick = { pending.onDecision(true) }) { Text("Allow") }
+            },
+            dismissButton = {
+                TextButton(onClick = { pending.onDecision(false) }) { Text("Cancel", color = GeminiTextSecondary) }
+            }
+        )
+    }
     var showIdleEasterEgg by remember { mutableStateOf(false) }
     var greetingSeed by remember { mutableStateOf(0) }
     var showQuickActions by remember { mutableStateOf(false) }
@@ -608,18 +663,6 @@ internal fun MainScreenContent(
 
                     Spacer(Modifier.height(8.dp))
 
-                    DrawerMenuRow(Icons.Default.Psychology, "Memory (${state.memories.size})") {
-                        scope.launch { drawerState.close() }
-                        showMemorySheet = true
-                    }
-                    DrawerMenuRow(Icons.Default.Hub, "Connections & Permissions") {
-                        scope.launch { drawerState.close() }
-                        showConnectionsSheet = true
-                    }
-                    DrawerMenuRow(Icons.Default.Settings, "Settings & Nerd Stats") {
-                        scope.launch { drawerState.close() }
-                        showSettingsSheet = true
-                    }
                     DrawerMenuRow(Icons.Default.NewReleases, "Release Notes") {
                         scope.launch { drawerState.close() }
                         onFetchReleaseNotes()
@@ -732,9 +775,9 @@ internal fun MainScreenContent(
                         }
                         IconButton(onClick = {
                             scope.launch { drawerState.close() }
-                            onOpenAssistantSettings()
+                            showSettingsSheet = true
                         }) {
-                            Icon(Icons.Default.Settings, contentDescription = "Default Assistant Settings", tint = GeminiTextPrimary)
+                            Icon(Icons.Default.Settings, contentDescription = "Settings", tint = GeminiTextPrimary)
                         }
                     }
                 }
@@ -750,12 +793,16 @@ internal fun MainScreenContent(
             (1f + (drawerOffset / drawerWidthPx)).coerceIn(0f, 1f)
         }
         val anySheetOpen = showModelSheet || showMemorySheet || showPrivacySheet || showConnectionsSheet || showReleaseNotesSheet || showSettingsSheet
-        val sheetBlur by animateFloatAsState(
+        LaunchedEffect(anySheetOpen) {
+            if (!anySheetOpen) liveSheetFraction = 0f
+        }
+        val fallbackSheetBlur by animateFloatAsState(
             targetValue = if (anySheetOpen) 12f else 0f,
-            animationSpec = tween(durationMillis = 180, easing = FastOutSlowInEasing),
+            animationSpec = tween(durationMillis = 160, easing = FastOutSlowInEasing),
             label = "sheet_blur"
         )
-        val liveBlur = maxOf(sheetBlur, drawerProgress * 14f).dp
+        val effectiveSheetBlur = if (anySheetOpen && liveSheetFraction > 0f) liveSheetFraction * 12f else fallbackSheetBlur
+        val liveBlur = maxOf(effectiveSheetBlur, drawerProgress * 14f).dp
 
         Box(
             modifier = modifier
@@ -791,8 +838,13 @@ internal fun MainScreenContent(
                             verticalAlignment = Alignment.CenterVertically,
                             horizontalArrangement = Arrangement.spacedBy(6.dp)
                         ) {
+                            val modelSubtitle = when (state.settings.backendMode) {
+                                com.kairo.agent.data.EngineBackendMode.CLOUD_AI -> "Cloud • ${state.settings.cloudModelName}"
+                                com.kairo.agent.data.EngineBackendMode.LOCAL_HTTP -> state.settings.localModelName
+                                else -> "Gemma 4"
+                            }
                             Text("Kairo", color = GeminiTextPrimary, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Medium)
-                            Text("Gemma 4", color = GeminiTextSecondary, style = MaterialTheme.typography.titleMedium)
+                            Text(modelSubtitle, color = GeminiTextSecondary, style = MaterialTheme.typography.titleMedium, maxLines = 1, overflow = TextOverflow.Ellipsis)
                             Icon(Icons.Default.KeyboardArrowDown, contentDescription = "Model status", tint = GeminiTextSecondary, modifier = Modifier.size(18.dp))
                         }
                     }
@@ -831,6 +883,13 @@ internal fun MainScreenContent(
                         }) {
                             Icon(Icons.Default.Edit, contentDescription = "New chat", tint = GeminiTextPrimary, modifier = Modifier.size(21.dp))
                         }
+                    }
+                }
+
+                var lastNonEmptyTurns by remember { mutableStateOf<List<ConversationTurn>>(emptyList()) }
+                LaunchedEffect(state.activeTurns) {
+                    if (state.activeTurns.isNotEmpty()) {
+                        lastNonEmptyTurns = state.activeTurns
                     }
                 }
 
@@ -908,7 +967,9 @@ internal fun MainScreenContent(
                                         sparkleTaps >= 5 -> "All thoughts stay on-device ✦"
                                         else -> baseGreeting
                                     }
-                                    Text(greeting, color = GeminiTextPrimary, fontSize = 26.sp, fontWeight = FontWeight.Normal)
+                                    BlurIntoText(key = greeting) {
+                                        Text(greeting, color = GeminiTextPrimary, fontSize = 26.sp, fontWeight = FontWeight.Normal)
+                                    }
 
                                     AnimatedVisibility(visible = showIdleEasterEgg) {
                                         Surface(color = GeminiPillBg, shape = RoundedCornerShape(50)) {
@@ -951,14 +1012,15 @@ internal fun MainScreenContent(
                                 }
                             }
                         } else {
+                            val turnsToRender = if (state.activeTurns.isNotEmpty()) state.activeTurns else lastNonEmptyTurns
                             LazyColumn(
                                 state = listState,
                                 modifier = Modifier.fillMaxSize(),
                                 contentPadding = PaddingValues(horizontal = 16.dp, vertical = 12.dp),
                                 verticalArrangement = Arrangement.spacedBy(18.dp)
                             ) {
-                                items(state.activeTurns.size) { idx ->
-                                    val turn = state.activeTurns[idx]
+                                items(turnsToRender.size) { idx ->
+                                    val turn = turnsToRender[idx]
                                     val sparkleModifier = if (idx == 0) {
                                         Modifier.sharedElement(
                                             sharedContentState = rememberSharedContentState(key = "kairo_sparkle"),
@@ -1149,7 +1211,26 @@ internal fun MainScreenContent(
     }
 
     if (showModelSheet) {
-        ModalBottomSheet(onDismissRequest = { showModelSheet = false }, containerColor = GeminiDrawerBg, contentColor = GeminiTextPrimary) {
+        val modelSheetState = rememberModalBottomSheetState(skipPartiallyExpanded = false)
+        val travelPx = with(LocalDensity.current) { 420.dp.toPx() }
+        LaunchedEffect(modelSheetState) {
+            androidx.compose.runtime.snapshotFlow {
+                runCatching { modelSheetState.requireOffset() }.getOrNull()
+            }.collect { offset ->
+                if (offset != null && travelPx > 0f) {
+                    liveSheetFraction = (1f - (offset / travelPx)).coerceIn(0f, 1f)
+                }
+            }
+        }
+        ModalBottomSheet(
+            sheetState = modelSheetState,
+            onDismissRequest = {
+                liveSheetFraction = 0f
+                showModelSheet = false
+            },
+            containerColor = GeminiDrawerBg,
+            contentColor = GeminiTextPrimary
+        ) {
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -1158,17 +1239,37 @@ internal fun MainScreenContent(
                 verticalArrangement = Arrangement.spacedBy(12.dp)
             ) {
                 Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
-                    Text("Kairo • Powered by Gemma 4", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
+                    val headerTitle = when (state.settings.backendMode) {
+                        com.kairo.agent.data.EngineBackendMode.CLOUD_AI -> "Kairo • Cloud (${state.settings.cloudModelName})"
+                        com.kairo.agent.data.EngineBackendMode.LOCAL_HTTP -> "Kairo • ${state.settings.localModelName}"
+                        else -> "Kairo • Powered by Gemma 4"
+                    }
+                    Text(headerTitle, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold, modifier = Modifier.weight(1f))
                     TextButton(onClick = onRefreshStatus) { Text("Refresh", color = GeminiAccentBlue) }
                 }
 
+                if (state.settings.backendMode == com.kairo.agent.data.EngineBackendMode.CLOUD_AI) {
+                    Surface(color = Color(0xFF4A1E24), shape = RoundedCornerShape(14.dp)) {
+                        Column(modifier = Modifier.fillMaxWidth().padding(12.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                            Text("Cloud AI Active (${state.settings.cloudModelName})", color = Color(0xFFF28B82), style = MaterialTheme.typography.labelLarge, fontWeight = FontWeight.SemiBold)
+                            Text("Privacy is not guaranteed while Cloud AI is enabled.", color = GeminiTextSecondary, style = MaterialTheme.typography.bodySmall)
+                            Button(
+                                onClick = { onUpdateSettings(state.settings.copy(backendMode = com.kairo.agent.data.EngineBackendMode.AUTO)) },
+                                modifier = Modifier.fillMaxWidth()
+                            ) { Text("Disable Cloud AI") }
+                        }
+                    }
+                }
+
                 val statusText = when {
+                    state.settings.backendMode == com.kairo.agent.data.EngineBackendMode.CLOUD_AI -> "Using external Cloud AI (${state.settings.cloudEndpointUrl})"
+                    state.settings.backendMode == com.kairo.agent.data.EngineBackendMode.LOCAL_HTTP -> "Using Local HTTP (${state.settings.localEndpointUrl})"
                     state.settings.bypassCompatibility -> "Bypass Mode active (${state.settings.backendMode.name})"
                     state.availability == ModelAvailability.CHECKING -> "Checking AICore availability..."
                     state.availability == ModelAvailability.AVAILABLE -> "Gemma 4 is ready on-device"
                     state.availability == ModelAvailability.DOWNLOADABLE -> "Gemma 4 is ready to download"
                     state.availability == ModelAvailability.DOWNLOADING -> "Downloading Gemma 4..."
-                    else -> "AICore unavailable (tap Settings & Engine)"
+                    else -> "AICore unavailable (tap Settings)"
                 }
 
                 Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
@@ -1694,7 +1795,32 @@ internal fun MainScreenContent(
                 modifier = Modifier.fillMaxWidth().padding(horizontal = 20.dp, vertical = 12.dp).verticalScroll(rememberScrollState()),
                 verticalArrangement = Arrangement.spacedBy(12.dp)
             ) {
-                Text("Settings & Nerd Stats", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
+                Text("Settings & Preferences", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
+
+                Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    FilledTonalButton(
+                        onClick = {
+                            showSettingsSheet = false
+                            showMemorySheet = true
+                        },
+                        modifier = Modifier.weight(1f)
+                    ) {
+                        Icon(Icons.Default.Psychology, contentDescription = null, modifier = Modifier.size(18.dp))
+                        Spacer(Modifier.width(6.dp))
+                        Text("Memory (${state.memories.size})")
+                    }
+                    FilledTonalButton(
+                        onClick = {
+                            showSettingsSheet = false
+                            showConnectionsSheet = true
+                        },
+                        modifier = Modifier.weight(1f)
+                    ) {
+                        Icon(Icons.Default.Hub, contentDescription = null, modifier = Modifier.size(18.dp))
+                        Spacer(Modifier.width(6.dp))
+                        Text("Connections")
+                    }
+                }
 
                 SetupSwitchRow(
                     title = "Live Nerd Stats (tok/s, RAM)",

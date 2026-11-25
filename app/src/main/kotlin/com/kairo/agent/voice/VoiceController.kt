@@ -75,9 +75,10 @@ class VoiceController(
             return
         }
         stopSpeaking()
+        _state.update { it.copy(isListening = true, partialText = "", voiceError = null) }
 
         if (speechRecognizer == null) {
-            speechRecognizer = SpeechRecognizer.createSpeechRecognizer(context).apply {
+            speechRecognizer = SpeechRecognizer.createSpeechRecognizer(context.applicationContext).apply {
                 setRecognitionListener(object : RecognitionListener {
                     override fun onReadyForSpeech(params: Bundle?) {
                         _state.update { it.copy(isListening = true, partialText = "", voiceError = null) }
@@ -94,9 +95,12 @@ class VoiceController(
                     }
 
                     override fun onError(error: Int) {
+                        runCatching { speechRecognizer?.destroy() }
+                        speechRecognizer = null
                         _state.update {
                             it.copy(
                                 isListening = false,
+                                rmsDb = 0f,
                                 voiceError = if (error == SpeechRecognizer.ERROR_NO_MATCH ||
                                     error == SpeechRecognizer.ERROR_SPEECH_TIMEOUT
                                 ) null else "Voice error ($error)"

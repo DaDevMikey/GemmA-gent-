@@ -79,6 +79,7 @@ import com.kairo.agent.engine.AiCoreModelOption
 import com.kairo.agent.engine.CompatibilityReport
 import com.kairo.agent.engine.ModelAvailability
 import com.kairo.agent.service.NotificationCatchUpStore
+import com.kairo.agent.ui.components.BlurIntoText
 import com.kairo.agent.ui.components.GemmASparkleIcon
 import com.kairo.agent.ui.components.ReactiveAuroraBackground
 import kotlinx.coroutines.delay
@@ -181,26 +182,30 @@ fun OnboardingScreen(
                                 verticalArrangement = Arrangement.spacedBy(18.dp)
                             ) {
                                 GemmASparkleIcon(size = 68.dp, isAnimating = true)
-                                AnimatedHeadline("Meet Kairo")
-                                Text(
-                                    text = "Pronounced /kaj/roo/",
-                                    color = AccentBlue,
-                                    style = MaterialTheme.typography.labelLarge
-                                )
-                                Text(
-                                    text = "A 100% private, on-device AI agent powered by Gemma 4. Prompts, voice, images, and screen context never leave your device.",
-                                    color = TextSecondary,
-                                    style = MaterialTheme.typography.bodyLarge,
-                                    textAlign = TextAlign.Center
-                                )
+                                AnimatedHeadline("Welcome to Kairo")
+                                BlurIntoText(key = "sub_0", delayMs = 140L) {
+                                    Text(
+                                        text = "Pronounced /kaj/roo/ • 100% On-Device",
+                                        color = AccentBlue,
+                                        style = MaterialTheme.typography.labelLarge
+                                    )
+                                }
+                                BlurIntoText(key = "desc_0", delayMs = 240L) {
+                                    Text(
+                                        text = "Your private Android AI agent powered by Gemma 4. Prompts, voice, images, and screen context never leave your device.",
+                                        color = TextSecondary,
+                                        style = MaterialTheme.typography.bodyLarge,
+                                        textAlign = TextAlign.Center
+                                    )
+                                }
                                 OnDevicePrivacyBanner()
                             }
                             Button(
                                 onClick = { step = 1 },
-                                modifier = Modifier.fillMaxWidth().height(54.dp),
-                                shape = RoundedCornerShape(18.dp)
+                                modifier = Modifier.fillMaxWidth().height(56.dp),
+                                shape = RoundedCornerShape(50)
                             ) {
-                                Text("Get Started", fontSize = 16.sp)
+                                Text("Get started", fontSize = 16.sp, fontWeight = FontWeight.SemiBold)
                             }
                         }
                     }
@@ -537,32 +542,15 @@ fun OnboardingScreen(
 
 @Composable
 private fun AnimatedHeadline(text: String) {
-    var visible by remember(text) { mutableStateOf(false) }
-    LaunchedEffect(text) {
-        delay(60)
-        visible = true
+    BlurIntoText(key = text, delayMs = 60L) {
+        Text(
+            text = text,
+            color = TextPrimary,
+            fontSize = 28.sp,
+            fontWeight = FontWeight.SemiBold,
+            textAlign = TextAlign.Center
+        )
     }
-    val oneUi = remember { CubicBezierEasing(0.117f, 0.126f, 0.312f, 1f) }
-    val alpha by animateFloatAsState(
-        targetValue = if (visible) 1f else 0f,
-        animationSpec = tween(520, easing = oneUi),
-        label = "headline_alpha"
-    )
-    val rise by animateFloatAsState(
-        targetValue = if (visible) 0f else 42f,
-        animationSpec = tween(560, easing = oneUi),
-        label = "headline_rise"
-    )
-    Text(
-        text = text,
-        color = TextPrimary,
-        fontSize = 28.sp,
-        fontWeight = FontWeight.SemiBold,
-        modifier = Modifier.graphicsLayer {
-            this.alpha = alpha
-            translationY = rise
-        }
-    )
 }
 
 @Composable

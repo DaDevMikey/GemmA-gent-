@@ -23,6 +23,7 @@ import com.kairo.agent.engine.ModelAvailability
 import com.kairo.agent.update.GitHubReleaseNote
 import com.kairo.agent.update.UpdateCheckResult
 import com.kairo.agent.update.UpdateChecker
+import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -39,6 +40,12 @@ data class ConversationTurn(
     val actionSummary: String? = null,
     val actionSuccess: Boolean = true,
     val isStreaming: Boolean = false
+)
+
+data class PendingToolConfirmation(
+    val toolName: String,
+    val detail: String,
+    val onDecision: (Boolean) -> Unit
 )
 
 data class GemmAHomeState(
@@ -62,7 +69,8 @@ data class GemmAHomeState(
     val isCheckingUpdates: Boolean = false,
     val releaseNotes: List<GitHubReleaseNote> = emptyList(),
     val isLoadingReleaseNotes: Boolean = false,
-    val releaseNotesError: String? = null
+    val releaseNotesError: String? = null,
+    val pendingToolConfirmation: PendingToolConfirmation? = null
 )
 
 class MainScreenViewModel(
@@ -326,7 +334,23 @@ class MainScreenViewModel(
                 conversationHistory = historySnapshot,
                 persona = currentPersona,
                 thinkHarder = thinkHarder,
-                settings = currentSettings
+                settings = currentSettings,
+                confirmDangerousTool = { toolName, detail ->
+                    val deferred = CompletableDeferred<Boolean>()
+                    _state.update {
+                        it.copy(
+                            pendingToolConfirmation = PendingToolConfirmation(
+                                toolName = toolName,
+                                detail = detail,
+                                onDecision = { allowed ->
+                                    _state.update { s -> s.copy(pendingToolConfirmation = null) }
+                                    deferred.complete(allowed)
+                                }
+                            )
+                        )
+                    }
+                    deferred.await()
+                }
             )
                 .catch { error ->
                     _state.update { state ->
