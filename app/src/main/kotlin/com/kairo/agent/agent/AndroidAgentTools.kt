@@ -566,7 +566,7 @@ class AndroidAgentTools(
         val res = LocalPythonScriptRunner.run(
             script = script,
             cacheDir = context.cacheDir,
-            allowNativePython = true
+            allowNativePython = false
         )
         val runnerTag = if (res.usedNativePython) "python3" else "local Python"
         return AgentActionResult(
