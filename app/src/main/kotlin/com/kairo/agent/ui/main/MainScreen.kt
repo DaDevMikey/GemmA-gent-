@@ -149,6 +149,7 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalClipboardManager
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
@@ -162,6 +163,7 @@ import androidx.lifecycle.compose.LifecycleResumeEffect
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation3.runtime.NavKey
+import com.kairo.agent.R
 import com.kairo.agent.agent.AgentPersona
 import com.kairo.agent.agent.AndroidAgentTools
 import com.kairo.agent.agent.ScreenContextHolder
@@ -784,7 +786,7 @@ internal fun MainScreenContent(
                                 horizontalArrangement = Arrangement.spacedBy(10.dp)
                             ) {
                                 Icon(Icons.Default.Edit, contentDescription = null, tint = GeminiTextPrimary, modifier = Modifier.size(18.dp))
-                                Text("New chat", color = GeminiTextPrimary, style = MaterialTheme.typography.bodyLarge)
+                                Text(stringResource(R.string.new_chat), color = GeminiTextPrimary, style = MaterialTheme.typography.bodyLarge)
                             }
                         }
                         Surface(
@@ -806,7 +808,7 @@ internal fun MainScreenContent(
                                 horizontalArrangement = Arrangement.spacedBy(6.dp)
                             ) {
                                 Icon(Icons.Default.Policy, contentDescription = "Incognito chat", tint = GeminiAccentBlue, modifier = Modifier.size(18.dp))
-                                Text("Incognito", color = GeminiAccentBlue, style = MaterialTheme.typography.labelLarge)
+                                Text(stringResource(R.string.incognito_chat), color = GeminiAccentBlue, style = MaterialTheme.typography.labelLarge)
                             }
                         }
                     }
@@ -1248,6 +1250,38 @@ internal fun MainScreenContent(
                                         )
                                     }
                                 }
+                            }
+                        }
+                    }
+                }
+
+                if (state.incognitoMode) {
+                    Surface(
+                        color = Color(0xFF282235),
+                        shape = RoundedCornerShape(14.dp),
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 16.dp, vertical = 4.dp)
+                    ) {
+                        Row(
+                            modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 6.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.SpaceBetween
+                        ) {
+                            Row(
+                                modifier = Modifier.weight(1f),
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(8.dp)
+                            ) {
+                                Icon(Icons.Default.Policy, contentDescription = null, tint = GeminiAccentBlue, modifier = Modifier.size(16.dp))
+                                Text(
+                                    text = stringResource(R.string.incognito_banner),
+                                    color = GeminiAccentBlue,
+                                    style = MaterialTheme.typography.labelSmall
+                                )
+                            }
+                            TextButton(onClick = onNewChat, contentPadding = PaddingValues(horizontal = 8.dp, vertical = 0.dp)) {
+                                Text(stringResource(R.string.exit_incognito), color = GeminiTextPrimary, style = MaterialTheme.typography.labelSmall)
                             }
                         }
                     }
@@ -2545,9 +2579,13 @@ private fun ConversationTurnItem(
                                 }
                             }
                         }
-                        TextButton(onClick = onThinkHarder) {
-                            Icon(Icons.Default.Psychology, contentDescription = null, tint = GeminiAccentBlue, modifier = Modifier.size(15.dp))
-                            Text(" Think Harder", color = GeminiAccentBlue, style = MaterialTheme.typography.labelSmall)
+                        IconButton(onClick = onThinkHarder, modifier = Modifier.size(32.dp)) {
+                            Icon(
+                                Icons.Default.Psychology,
+                                contentDescription = stringResource(R.string.think_harder_cd),
+                                tint = GeminiAccentBlue,
+                                modifier = Modifier.size(18.dp)
+                            )
                         }
                     }
                 }

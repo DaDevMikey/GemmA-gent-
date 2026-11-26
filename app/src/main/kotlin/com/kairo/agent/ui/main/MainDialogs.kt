@@ -1,6 +1,5 @@
 package com.kairo.agent.ui.main
 
-import android.content.Context
 import androidx.appcompat.app.AppCompatDelegate
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
@@ -17,11 +16,17 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.core.os.LocaleListCompat
+import com.kairo.agent.R
 import com.kairo.agent.ui.components.RichResponseText
 
 val KairoLanguages = listOf(
@@ -42,8 +47,32 @@ fun AppLanguagePickerRow(
     onSelectLang: (String) -> Unit,
     accentColor: Color = Color(0xFFA8C7FA)
 ) {
+    var pendingModelLang by remember { mutableStateOf<Pair<String, String>?>(null) }
+
+    pendingModelLang?.let { (code, label) ->
+        AlertDialog(
+            onDismissRequest = { pendingModelLang = null },
+            containerColor = Color(0xFF17191C),
+            titleContentColor = Color(0xFFE3E3E3),
+            textContentColor = Color(0xFF9AA0A6),
+            title = { Text(stringResource(R.string.model_lang_prompt_title, label), fontWeight = FontWeight.SemiBold) },
+            text = { Text(stringResource(R.string.model_lang_prompt_body, label)) },
+            confirmButton = {
+                Button(onClick = {
+                    onSelectLang(code)
+                    pendingModelLang = null
+                }) { Text(stringResource(R.string.model_lang_yes, label)) }
+            },
+            dismissButton = {
+                TextButton(onClick = { pendingModelLang = null }) {
+                    Text(stringResource(R.string.model_lang_keep), color = Color(0xFF9AA0A6))
+                }
+            }
+        )
+    }
+
     Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
-        Text("Preferred Language", color = accentColor, style = MaterialTheme.typography.labelLarge)
+        Text(stringResource(R.string.preferred_language), color = accentColor, style = MaterialTheme.typography.labelLarge)
         Row(
             modifier = Modifier
                 .fillMaxWidth()
@@ -55,7 +84,9 @@ fun AppLanguagePickerRow(
                     selected = selectedLang == code,
                     onClick = {
                         applyAppLanguage(code)
-                        onSelectLang(code)
+                        if (code != selectedLang) {
+                            pendingModelLang = code to label
+                        }
                     },
                     label = { Text(label) }
                 )
@@ -75,7 +106,7 @@ fun WhatsNewChangelogDialog(
         containerColor = Color(0xFF17191C),
         titleContentColor = Color(0xFFE3E3E3),
         textContentColor = Color(0xFF9AA0A6),
-        title = { Text("What's New in v$versionName", fontWeight = FontWeight.SemiBold) },
+        title = { Text(stringResource(R.string.whats_new_title, versionName), fontWeight = FontWeight.SemiBold) },
         text = {
             Column(
                 modifier = Modifier
@@ -87,7 +118,7 @@ fun WhatsNewChangelogDialog(
             }
         },
         confirmButton = {
-            Button(onClick = onDismiss) { Text("Got it") }
+            Button(onClick = onDismiss) { Text(stringResource(R.string.got_it)) }
         }
     )
 }
