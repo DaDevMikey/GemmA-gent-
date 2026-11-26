@@ -1,6 +1,5 @@
 package com.kairo.agent.ui.main
 
-import androidx.appcompat.app.AppCompatDelegate
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -22,11 +21,12 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import androidx.core.os.LocaleListCompat
 import com.kairo.agent.R
+import com.kairo.agent.data.LocaleHelper
 import com.kairo.agent.ui.components.RichResponseText
 
 val KairoLanguages = listOf(
@@ -36,22 +36,19 @@ val KairoLanguages = listOf(
     "ru" to "Русский"
 )
 
-fun applyAppLanguage(langCode: String) {
-    val locales = LocaleListCompat.forLanguageTags(langCode)
-    AppCompatDelegate.setApplicationLocales(locales)
-}
-
 @Composable
 fun AppLanguagePickerRow(
-    selectedLang: String,
-    onSelectLang: (String) -> Unit,
+    selectedAppLang: String,
+    selectedModelLang: String,
+    onSelectAppAndModelLang: (appLang: String, modelLang: String) -> Unit,
     accentColor: Color = Color(0xFFA8C7FA)
 ) {
-    var pendingModelLang by remember { mutableStateOf<Pair<String, String>?>(null) }
+    val context = LocalContext.current
+    var pendingChoice by remember { mutableStateOf<Pair<String, String>?>(null) }
 
-    pendingModelLang?.let { (code, label) ->
+    pendingChoice?.let { (code, label) ->
         AlertDialog(
-            onDismissRequest = { pendingModelLang = null },
+            onDismissRequest = { pendingChoice = null },
             containerColor = Color(0xFF17191C),
             titleContentColor = Color(0xFFE3E3E3),
             textContentColor = Color(0xFF9AA0A6),
@@ -59,12 +56,17 @@ fun AppLanguagePickerRow(
             text = { Text(stringResource(R.string.model_lang_prompt_body, label)) },
             confirmButton = {
                 Button(onClick = {
-                    onSelectLang(code)
-                    pendingModelLang = null
+                    pendingChoice = null
+                    onSelectAppAndModelLang(code, code)
+                    LocaleHelper.applyAppLanguage(context, code, recreateActivity = true)
                 }) { Text(stringResource(R.string.model_lang_yes, label)) }
             },
             dismissButton = {
-                TextButton(onClick = { pendingModelLang = null }) {
+                TextButton(onClick = {
+                    pendingChoice = null
+                    onSelectAppAndModelLang(code, selectedModelLang)
+                    LocaleHelper.applyAppLanguage(context, code, recreateActivity = true)
+                }) {
                     Text(stringResource(R.string.model_lang_keep), color = Color(0xFF9AA0A6))
                 }
             }
@@ -81,13 +83,8 @@ fun AppLanguagePickerRow(
         ) {
             KairoLanguages.forEach { (code, label) ->
                 FilterChip(
-                    selected = selectedLang == code,
-                    onClick = {
-                        applyAppLanguage(code)
-                        if (code != selectedLang) {
-                            pendingModelLang = code to label
-                        }
-                    },
+                    selected = selectedAppLang == code,
+                    onClick = { pendingChoice = code to label },
                     label = { Text(label) }
                 )
             }

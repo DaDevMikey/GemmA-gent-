@@ -12,6 +12,10 @@ import androidx.compose.ui.graphics.Color
 import com.kairo.agent.ui.theme.GemmATheme
 
 class MainActivity : ComponentActivity() {
+    override fun attachBaseContext(newBase: android.content.Context) {
+        super.attachBaseContext(com.kairo.agent.data.LocaleHelper.wrapContext(newBase))
+    }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
