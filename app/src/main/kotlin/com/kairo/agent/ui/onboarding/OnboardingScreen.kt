@@ -548,13 +548,11 @@ fun OnboardingScreen(
                     }
 
                     else -> {
-                        val welcomeTitle = if (userName.isNotBlank()) "Welcome, ${userName.trim()}" else "Welcome"
+                        val welcomeTitle = if (userName.isNotBlank()) "Welcome, ${userName.trim()}" else "All Set, Ready?"
                         var subVisible by remember { mutableStateOf(false) }
                         LaunchedEffect(Unit) {
                             delay(240L)
                             subVisible = true
-                            delay(3200L)
-                            onComplete(userName)
                         }
                         val subAlpha by animateFloatAsState(
                             targetValue = if (subVisible) 1f else 0f,
@@ -574,24 +572,31 @@ fun OnboardingScreen(
                                 horizontalAlignment = Alignment.CenterHorizontally,
                                 verticalArrangement = Arrangement.spacedBy(18.dp)
                             ) {
-                                GemmASparkleIcon(size = 76.dp, isAnimating = true)
+                                GemmASparkleIcon(size = 86.dp, isAnimating = true)
                                 AnimatedHeadline(welcomeTitle)
                                 Text(
-                                    text = "Let's get started",
+                                    text = "Gemma 4 is configured locally on your NPU with zero cloud telemetry.",
                                     color = TextSecondary,
-                                    fontSize = 20.sp,
-                                    fontWeight = FontWeight.Normal,
+                                    fontSize = 15.sp,
+                                    textAlign = TextAlign.Center,
                                     modifier = Modifier.graphicsLayer {
                                         alpha = subAlpha
                                         translationY = subRise
                                     }
                                 )
-                                Spacer(Modifier.height(12.dp))
-                                TextButton(
+                                Spacer(Modifier.height(16.dp))
+                                Button(
                                     onClick = { onComplete(userName) },
-                                    modifier = Modifier.graphicsLayer { alpha = subAlpha }
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .height(54.dp)
+                                        .graphicsLayer {
+                                            alpha = subAlpha
+                                            translationY = subRise
+                                        },
+                                    shape = RoundedCornerShape(50)
                                 ) {
-                                    Text("Enter Kairo →", color = AccentBlue)
+                                    Text("Ready?", fontSize = 16.sp, fontWeight = FontWeight.SemiBold)
                                 }
                             }
                         }

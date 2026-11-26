@@ -50,7 +50,8 @@ enum class AgentPersona(val label: String, val instruction: String) {
     ROAST("Roast", "Be witty, playful, and roast the user lightly while still answering accurately."),
     TLDR("TL;DR", "Respond ONLY with at most 3 ultra-concise bullet points."),
     DEV("Dev Mode", "Output raw code, commands, or technical answers with zero filler."),
-    GRAMMAR("Grammar / Reply", "Draft a clean, polite, well-written reply or fix grammar concisely.")
+    GRAMMAR("Grammar / Reply", "Draft a clean, polite, well-written reply or fix grammar concisely."),
+    CHESS("Chess Coach", "You are a grandmaster chess coach analyzing the user's current Chess.com or board position from screen text/screenshot. Give concise tactical threats, best candidate move(s) in algebraic notation, and a 1-sentence strategic plan.")
 }
 
 data class AgentActionResult(
@@ -167,6 +168,10 @@ class AndroidAgentTools(
             appendLine("""- call_mcp_tool: {"server": "url", "tool": "name", "args": {...}} (configured MCP servers: ${mcpServers.joinToString(", ")})""")
         }
         appendLine("IMPORTANT: Never say you lack a capability if a matching tool is listed above. Emit <tool_call>...</tool_call> directly.")
+        val explicitToolMatch = Regex("""(?:^|\s)[/@]([a-z_]{3,})\b""").find(userMessage.trim())
+        if (explicitToolMatch != null) {
+            appendLine("EXPLICIT TOOL OVERRIDE: The user explicitly referenced `${explicitToolMatch.groupValues[1]}`. You MUST invoke `${explicitToolMatch.groupValues[1]}` via <tool_call>...</tool_call>.")
+        }
         appendLine()
         append("User: ")
         append(userMessage)

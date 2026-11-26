@@ -72,7 +72,10 @@ data class GemmAHomeState(
     val isLoadingReleaseNotes: Boolean = false,
     val releaseNotesError: String? = null,
     val pendingToolConfirmation: PendingToolConfirmation? = null,
-    val incognitoMode: Boolean = false
+    val incognitoMode: Boolean = false,
+    val deviceTempC: Float = 0f,
+    val thermalLabel: String = "Nominal",
+    val isThermallyThrottled: Boolean = false
 )
 
 class MainScreenViewModel(
@@ -91,6 +94,7 @@ class MainScreenViewModel(
     val state: StateFlow<GemmAHomeState> = _state.asStateFlow()
 
     private var activeJob: Job? = null
+    private var activeSessionId: String = java.util.UUID.randomUUID().toString()
 
     init {
         refreshStatus()
@@ -203,6 +207,7 @@ class MainScreenViewModel(
 
     fun startNewChat() {
         activeJob?.cancel()
+        activeSessionId = java.util.UUID.randomUUID().toString()
         _state.update {
             it.copy(
                 activeTurns = emptyList(),
@@ -215,17 +220,31 @@ class MainScreenViewModel(
 
     fun loadChatIntoView(record: ChatRecord) {
         activeJob?.cancel()
+        activeSessionId = record.id
+        val loadedTurns = if (record.turns.isNotEmpty()) {
+            record.turns.map { t ->
+                ConversationTurn(
+                    prompt = t.prompt,
+                    response = t.response,
+                    actionSummary = t.actionSummary,
+                    actionSuccess = true,
+                    isStreaming = false
+                )
+            }
+        } else {
+            listOf(
+                ConversationTurn(
+                    prompt = record.prompt,
+                    response = record.response,
+                    actionSummary = record.actionSummary,
+                    actionSuccess = true,
+                    isStreaming = false
+                )
+            )
+        }
         _state.update {
             it.copy(
-                activeTurns = listOf(
-                    ConversationTurn(
-                        prompt = record.prompt,
-                        response = record.response,
-                        actionSummary = record.actionSummary,
-                        actionSuccess = true,
-                        isStreaming = false
-                    )
-                ),
+                activeTurns = loadedTurns,
                 isGenerating = false,
                 statusDetail = null
             )
@@ -375,12 +394,19 @@ class MainScreenViewModel(
                 .collect { event ->
                     when (event) {
                         is AgentStreamEvent.PartialText -> {
+                            val hw = compatibilityChecker?.getHardwareState()
                             _state.update { state ->
                                 val updatedTurns = state.activeTurns.toMutableList()
                                 if (turnIndex in updatedTurns.indices) {
                                     updatedTurns[turnIndex] = updatedTurns[turnIndex].copy(response = event.text)
                                 }
-                                state.copy(activeTurns = updatedTurns, nerdStats = event.stats)
+                                state.copy(
+                                    activeTurns = updatedTurns,
+                                    nerdStats = event.stats,
+                                    deviceTempC = hw?.batteryTempC ?: state.deviceTempC,
+                                    thermalLabel = hw?.thermalLabel ?: state.thermalLabel,
+                                    isThermallyThrottled = hw?.isThermallyThrottled ?: state.isThermallyThrottled
+                                )
                             }
                         }
                         is AgentStreamEvent.RunningTool -> {
@@ -429,7 +455,8 @@ class MainScreenViewModel(
                                 chatHistoryStore?.saveChat(
                                     prompt = effectivePrompt,
                                     response = event.finalText,
-                                    actionSummary = event.actionSummary
+                                    actionSummary = event.actionSummary,
+                                    sessionId = activeSessionId
                                 )
                                 refreshChats()
                                 refreshMemories()
