@@ -39,6 +39,8 @@ data class CompatibilityReport(
  */
 class CompatibilityChecker(private val context: Context) {
 
+    fun getHardwareState(): HardwareState = HardwareGuard.getState(context)
+
     suspend fun runChecks(
         aiCoreAvailability: ModelAvailability,
         localEndpointUrl: String

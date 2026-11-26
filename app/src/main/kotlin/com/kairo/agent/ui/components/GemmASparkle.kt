@@ -72,6 +72,15 @@ fun GemmASparkleIcon(
         ),
         label = "sparkle_spin"
     )
+    val gradientPhase by transition.animateFloat(
+        initialValue = 0f,
+        targetValue = 1f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(durationMillis = 2200, easing = LinearEasing),
+            repeatMode = RepeatMode.Reverse
+        ),
+        label = "sparkle_grad"
+    )
 
     Canvas(
         modifier = modifier
@@ -97,15 +106,17 @@ fun GemmASparkleIcon(
             close()
         }
 
+        val shift = if (isAnimating) (gradientPhase - 0.5f) * w * 0.9f else 0f
         val brush = Brush.linearGradient(
             colors = listOf(
                 Color(0xFFEA4335),
                 Color(0xFFFBBC05),
                 Color(0xFF34A853),
-                Color(0xFF4285F4)
+                Color(0xFF4285F4),
+                Color(0xFFA8C7FA)
             ),
-            start = Offset(0f, 0f),
-            end = Offset(w, h)
+            start = Offset(shift, 0f),
+            end = Offset(w + shift, h)
         )
 
         drawPath(path = path, brush = brush)

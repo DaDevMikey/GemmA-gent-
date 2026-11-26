@@ -379,7 +379,11 @@ fun MainScreen(
                 },
                 onOpenNotificationAccess = { context.startActivity(Intent(Settings.ACTION_NOTIFICATION_LISTENER_SETTINGS)) },
                 onOpenAssistantSettings = { openDefaultAssistantSettings(context) },
-                onComplete = viewModel::completeOnboarding
+                onComplete = { name ->
+                    context.getSharedPreferences("kairo_ui_prefs", Context.MODE_PRIVATE)
+                        .edit().putBoolean("pending_intro_tour", true).apply()
+                    viewModel.completeOnboarding(name)
+                }
             )
         } else {
             MainScreenContent(
@@ -547,6 +551,111 @@ internal fun MainScreenContent(
     var liveSheetFraction by remember { mutableStateOf(0f) }
     var sparkleTaps by remember { mutableStateOf(0) }
     var pendingDeleteChat by remember { mutableStateOf<ChatRecord?>(null) }
+    var showClearAllConfirm by remember { mutableStateOf(false) }
+    val context = LocalContext.current
+    var draft by remember { mutableStateOf("") }
+    var showIntroTour by remember {
+        mutableStateOf(
+            context.getSharedPreferences("kairo_ui_prefs", Context.MODE_PRIVATE)
+                .getBoolean("pending_intro_tour", false)
+        )
+    }
+    var introTourStep by remember { mutableStateOf(0) }
+
+    if (showIntroTour) {
+        val tourSteps = listOf(
+            Triple(
+                "Welcome to Kairo",
+                "Kairo runs 100% on-device with Gemma 4. Type any question, or tap the star button for modes & quick prompts.",
+                "Try: \"What's my battery and storage status?\""
+            ),
+            Triple(
+                "Guarantee Tools with / or @",
+                "Prefix any tool with / or @ (like @weather, /python, or @find_local_image) to force Kairo to execute that exact tool.",
+                "Try: \"@weather current\""
+            ),
+            Triple(
+                "Chess Coach & Screen Context",
+                "Open Kairo's floating overlay over Chess.com or any app, switch to Chess Coach mode, and ask for next-move ideas or threats.",
+                "Try: \"Analyze this position and suggest the best move\""
+            ),
+            Triple(
+                "Privacy & Thermal Guard",
+                "Use Incognito Context in Settings for zero-history sessions. Kairo also monitors live device temperature while generating.",
+                "Ready? Try it yourself now!"
+            )
+        )
+        val (title, desc, example) = tourSteps[introTourStep]
+        val isLast = introTourStep == tourSteps.lastIndex
+        val dismissTour = {
+            context.getSharedPreferences("kairo_ui_prefs", Context.MODE_PRIVATE)
+                .edit().putBoolean("pending_intro_tour", false).apply()
+            showIntroTour = false
+            introTourStep = 0
+        }
+        androidx.compose.material3.AlertDialog(
+            onDismissRequest = dismissTour,
+            containerColor = GeminiDrawerBg,
+            titleContentColor = GeminiTextPrimary,
+            textContentColor = GeminiTextSecondary,
+            icon = { GemmASparkleIcon(size = 36.dp, isAnimating = true) },
+            title = { Text("$title (${introTourStep + 1}/${tourSteps.size})", fontWeight = FontWeight.SemiBold) },
+            text = {
+                Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                    Text(desc, style = MaterialTheme.typography.bodyMedium, color = GeminiTextPrimary)
+                    Surface(
+                        color = GeminiPillBg,
+                        shape = RoundedCornerShape(12.dp),
+                        modifier = Modifier.fillMaxWidth().clickable {
+                            val clean = example.removePrefix("Try: \"").removeSuffix("\"")
+                            if (!isLast) {
+                                draft = clean
+                                dismissTour()
+                            }
+                        }
+                    ) {
+                        Text(
+                            text = example,
+                            color = GeminiAccentBlue,
+                            style = MaterialTheme.typography.labelLarge,
+                            modifier = Modifier.padding(12.dp)
+                        )
+                    }
+                }
+            },
+            confirmButton = {
+                Button(onClick = {
+                    if (isLast) dismissTour() else introTourStep += 1
+                }) {
+                    Text(if (isLast) "Ready? Try it yourself now!" else "Next")
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = dismissTour) { Text("Skip", color = GeminiTextSecondary) }
+            }
+        )
+    }
+
+    if (showClearAllConfirm) {
+        androidx.compose.material3.AlertDialog(
+            onDismissRequest = { showClearAllConfirm = false },
+            containerColor = GeminiDrawerBg,
+            titleContentColor = GeminiTextPrimary,
+            textContentColor = GeminiTextSecondary,
+            icon = { Icon(Icons.Default.DeleteOutline, contentDescription = null, tint = Color(0xFFF28B82)) },
+            title = { Text("Clear all chats?", fontWeight = FontWeight.SemiBold) },
+            text = { Text("This will permanently delete all ${state.recentChats.size} saved conversations from your device.") },
+            confirmButton = {
+                Button(onClick = {
+                    onClearChats()
+                    showClearAllConfirm = false
+                }) { Text("Clear All") }
+            },
+            dismissButton = {
+                TextButton(onClick = { showClearAllConfirm = false }) { Text("Cancel", color = GeminiTextSecondary) }
+            }
+        )
+    }
 
     pendingDeleteChat?.let { chatToDelete ->
         androidx.compose.material3.AlertDialog(
@@ -592,7 +701,6 @@ internal fun MainScreenContent(
     var showQuickActions by remember { mutableStateOf(false) }
     var showDrawerSearch by remember { mutableStateOf(false) }
     var drawerSearchQuery by remember { mutableStateOf("") }
-    var draft by remember { mutableStateOf("") }
     val listState = rememberLazyListState()
     val localContext = LocalContext.current
 
@@ -649,7 +757,62 @@ internal fun MainScreenContent(
                         }
                     }
 
-                    AnimatedVisibility(visible = showDrawerSearch) {
+                    if (state.isGenerating || state.isThermallyThrottled) {
+                    val tempStr = if (state.deviceTempC > 0f) "${"%.1f".format(state.deviceTempC)}°C • " else ""
+                    Surface(
+                        color = if (state.isThermallyThrottled) Color(0xFF4A1E24) else GeminiPillBg,
+                        shape = RoundedCornerShape(50),
+                        modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp)
+                    ) {
+                        Text(
+                            text = if (state.isThermallyThrottled) "⚠ Thermal Guard: $tempStr${state.thermalLabel}" else "Device: $tempStr${state.thermalLabel}",
+                            color = if (state.isThermallyThrottled) Color(0xFFF28B82) else GeminiTextSecondary,
+                            style = MaterialTheme.typography.labelSmall,
+                            modifier = Modifier.padding(horizontal = 12.dp, vertical = 5.dp)
+                        )
+                    }
+                }
+
+                val slashOrAtQuery = remember(draft) {
+                    val m = Regex("""(?:^|\s)([/@])([a-z_]*)$""").find(draft)
+                    m?.let { it.groupValues[1] to it.groupValues[2] }
+                }
+                if (slashOrAtQuery != null) {
+                    val (sigil, prefix) = slashOrAtQuery
+                    val allTools = listOf(
+                        "get_weather" to "Live local weather",
+                        "get_current_time" to "Exact local time",
+                        "run_python_script" to "Run Python math/script",
+                        "find_local_image" to "Attach photo from device",
+                        "search_ephemeral_memory" to "7-day clipboard/screen memory",
+                        "web_search" to "In-app search",
+                        "get_health_summary" to "Health Connect insights",
+                        "call_person" to "Call contact",
+                        "send_whatsapp" to "Send WhatsApp message"
+                    ).filter { it.first.contains(prefix, ignoreCase = true) }
+                    if (allTools.isNotEmpty()) {
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .horizontalScroll(rememberScrollState())
+                                .padding(horizontal = 16.dp, vertical = 4.dp),
+                            horizontalArrangement = Arrangement.spacedBy(6.dp)
+                        ) {
+                            allTools.forEach { (toolName, desc) ->
+                                AssistChip(
+                                    onClick = {
+                                        draft = draft.replace(Regex("""([/@])[a-z_]*$"""), "$sigil$toolName ")
+                                    },
+                                    label = { Text("$sigil$toolName • $desc", color = GeminiAccentBlue, style = MaterialTheme.typography.labelSmall) },
+                                    colors = AssistChipDefaults.assistChipColors(containerColor = GeminiPillBg),
+                                    border = null
+                                )
+                            }
+                        }
+                    }
+                }
+
+                AnimatedVisibility(visible = showDrawerSearch) {
                         OutlinedTextField(
                             value = drawerSearchQuery,
                             onValueChange = { drawerSearchQuery = it },
@@ -728,7 +891,7 @@ internal fun MainScreenContent(
                     ) {
                         Text("Recent", style = MaterialTheme.typography.labelLarge, color = GeminiTextSecondary)
                         if (state.recentChats.isNotEmpty()) {
-                            TextButton(onClick = onClearChats) {
+                            TextButton(onClick = { showClearAllConfirm = true }) {
                                 Icon(Icons.Default.DeleteOutline, contentDescription = null, tint = GeminiTextSecondary, modifier = Modifier.size(16.dp))
                                 Spacer(Modifier.width(4.dp))
                                 Text("Clear", color = GeminiTextSecondary)
@@ -999,7 +1162,62 @@ internal fun MainScreenContent(
                                         Text(greeting, color = GeminiTextPrimary, fontSize = 26.sp, fontWeight = FontWeight.Normal)
                                     }
 
-                                    AnimatedVisibility(visible = showIdleEasterEgg) {
+                                    if (state.isGenerating || state.isThermallyThrottled) {
+                    val tempStr = if (state.deviceTempC > 0f) "${"%.1f".format(state.deviceTempC)}°C • " else ""
+                    Surface(
+                        color = if (state.isThermallyThrottled) Color(0xFF4A1E24) else GeminiPillBg,
+                        shape = RoundedCornerShape(50),
+                        modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp)
+                    ) {
+                        Text(
+                            text = if (state.isThermallyThrottled) "⚠ Thermal Guard: $tempStr${state.thermalLabel}" else "Device: $tempStr${state.thermalLabel}",
+                            color = if (state.isThermallyThrottled) Color(0xFFF28B82) else GeminiTextSecondary,
+                            style = MaterialTheme.typography.labelSmall,
+                            modifier = Modifier.padding(horizontal = 12.dp, vertical = 5.dp)
+                        )
+                    }
+                }
+
+                val slashOrAtQuery = remember(draft) {
+                    val m = Regex("""(?:^|\s)([/@])([a-z_]*)$""").find(draft)
+                    m?.let { it.groupValues[1] to it.groupValues[2] }
+                }
+                if (slashOrAtQuery != null) {
+                    val (sigil, prefix) = slashOrAtQuery
+                    val allTools = listOf(
+                        "get_weather" to "Live local weather",
+                        "get_current_time" to "Exact local time",
+                        "run_python_script" to "Run Python math/script",
+                        "find_local_image" to "Attach photo from device",
+                        "search_ephemeral_memory" to "7-day clipboard/screen memory",
+                        "web_search" to "In-app search",
+                        "get_health_summary" to "Health Connect insights",
+                        "call_person" to "Call contact",
+                        "send_whatsapp" to "Send WhatsApp message"
+                    ).filter { it.first.contains(prefix, ignoreCase = true) }
+                    if (allTools.isNotEmpty()) {
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .horizontalScroll(rememberScrollState())
+                                .padding(horizontal = 16.dp, vertical = 4.dp),
+                            horizontalArrangement = Arrangement.spacedBy(6.dp)
+                        ) {
+                            allTools.forEach { (toolName, desc) ->
+                                AssistChip(
+                                    onClick = {
+                                        draft = draft.replace(Regex("""([/@])[a-z_]*$"""), "$sigil$toolName ")
+                                    },
+                                    label = { Text("$sigil$toolName • $desc", color = GeminiAccentBlue, style = MaterialTheme.typography.labelSmall) },
+                                    colors = AssistChipDefaults.assistChipColors(containerColor = GeminiPillBg),
+                                    border = null
+                                )
+                            }
+                        }
+                    }
+                }
+
+                AnimatedVisibility(visible = showIdleEasterEgg) {
                                         Surface(color = GeminiPillBg, shape = RoundedCornerShape(50)) {
                                             Text(
                                                 text = "You still there? 👀",
@@ -1067,6 +1285,61 @@ internal fun MainScreenContent(
                                         )
                                     }
                                 }
+                            }
+                        }
+                    }
+                }
+
+                if (state.isGenerating || state.isThermallyThrottled) {
+                    val tempStr = if (state.deviceTempC > 0f) "${"%.1f".format(state.deviceTempC)}°C • " else ""
+                    Surface(
+                        color = if (state.isThermallyThrottled) Color(0xFF4A1E24) else GeminiPillBg,
+                        shape = RoundedCornerShape(50),
+                        modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp)
+                    ) {
+                        Text(
+                            text = if (state.isThermallyThrottled) "⚠ Thermal Guard: $tempStr${state.thermalLabel}" else "Device: $tempStr${state.thermalLabel}",
+                            color = if (state.isThermallyThrottled) Color(0xFFF28B82) else GeminiTextSecondary,
+                            style = MaterialTheme.typography.labelSmall,
+                            modifier = Modifier.padding(horizontal = 12.dp, vertical = 5.dp)
+                        )
+                    }
+                }
+
+                val slashOrAtQuery = remember(draft) {
+                    val m = Regex("""(?:^|\s)([/@])([a-z_]*)$""").find(draft)
+                    m?.let { it.groupValues[1] to it.groupValues[2] }
+                }
+                if (slashOrAtQuery != null) {
+                    val (sigil, prefix) = slashOrAtQuery
+                    val allTools = listOf(
+                        "get_weather" to "Live local weather",
+                        "get_current_time" to "Exact local time",
+                        "run_python_script" to "Run Python math/script",
+                        "find_local_image" to "Attach photo from device",
+                        "search_ephemeral_memory" to "7-day clipboard/screen memory",
+                        "web_search" to "In-app search",
+                        "get_health_summary" to "Health Connect insights",
+                        "call_person" to "Call contact",
+                        "send_whatsapp" to "Send WhatsApp message"
+                    ).filter { it.first.contains(prefix, ignoreCase = true) }
+                    if (allTools.isNotEmpty()) {
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .horizontalScroll(rememberScrollState())
+                                .padding(horizontal = 16.dp, vertical = 4.dp),
+                            horizontalArrangement = Arrangement.spacedBy(6.dp)
+                        ) {
+                            allTools.forEach { (toolName, desc) ->
+                                AssistChip(
+                                    onClick = {
+                                        draft = draft.replace(Regex("""([/@])[a-z_]*$"""), "$sigil$toolName ")
+                                    },
+                                    label = { Text("$sigil$toolName • $desc", color = GeminiAccentBlue, style = MaterialTheme.typography.labelSmall) },
+                                    colors = AssistChipDefaults.assistChipColors(containerColor = GeminiPillBg),
+                                    border = null
+                                )
                             }
                         }
                     }
@@ -1924,6 +2197,17 @@ internal fun MainScreenContent(
                 verticalArrangement = Arrangement.spacedBy(12.dp)
             ) {
                 Text("Settings & Preferences", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
+
+                OutlinedButton(
+                    onClick = {
+                        showSettingsSheet = false
+                        introTourStep = 0
+                        showIntroTour = true
+                    },
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Text("Replay Interactive App Tour", color = GeminiTextPrimary)
+                }
 
                 OutlinedButton(
                     onClick = { onOpenUrl("https://paypal.me/damanmikey") },

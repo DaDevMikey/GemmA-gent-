@@ -1,5 +1,13 @@
 # Changelog
 
+## v1.1.9
+- Added **Chess Coach** mode (`AgentPersona.CHESS`) for Chess.com screen/overlay analysis
+- Added **`/` and `@` tool autocomplete & forced tool override** in chat input (e.g., `@weather`, `/python`, `@find_local_image`)
+- Added **live device temperature & Thermal Guard** indicator while AI is running
+- Added confirmation dialog before **Clear All Chats**
+- Fixed multi-turn **session-based chat history** (`ChatHistoryStore` now appends turns to the active chat session instead of creating separate chats per message)
+- Upgraded Setup final screen with **moving gradient sparkle animation**, **"Ready?"** button, and a **multi-step Interactive App Tour** (with example prompts, Skip, and "Ready? Try it yourself now!")
+
 ## v1.1.8
 - Fixed fullscreen button crash in floating overlay (`AssistantOverlayActivity`)
 - Added `find_local_image` tool so Kairo can find local photos/screenshots and attach them directly in chat

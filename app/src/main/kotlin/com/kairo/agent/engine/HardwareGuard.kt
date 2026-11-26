@@ -9,6 +9,7 @@ import android.os.PowerManager
 
 data class HardwareState(
     val batteryPercent: Int,
+    val batteryTempC: Float,
     val isCharging: Boolean,
     val isThermallyThrottled: Boolean,
     val thermalLabel: String
@@ -25,6 +26,8 @@ object HardwareGuard {
         val pct = if (level >= 0 && scale > 0) (level * 100) / scale else 100
         val status = batteryIntent?.getIntExtra(BatteryManager.EXTRA_STATUS, -1) ?: -1
         val charging = status == BatteryManager.BATTERY_STATUS_CHARGING || status == BatteryManager.BATTERY_STATUS_FULL
+        val rawTemp = batteryIntent?.getIntExtra(BatteryManager.EXTRA_TEMPERATURE, 0) ?: 0
+        val tempC = rawTemp / 10f
 
         var throttled = false
         var thermalLabel = "Nominal"
@@ -45,9 +48,10 @@ object HardwareGuard {
         }
         return HardwareState(
             batteryPercent = pct,
+            batteryTempC = tempC,
             isCharging = charging,
-            isThermallyThrottled = throttled,
-            thermalLabel = thermalLabel
+            isThermallyThrottled = throttled || tempC >= 43f,
+            thermalLabel = if (tempC >= 43f && !throttled) "Hot (${"%.1f".format(tempC)}°C)" else thermalLabel
         )
     }
 }
