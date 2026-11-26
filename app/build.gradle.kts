@@ -1,3 +1,5 @@
+import java.util.Properties
+
 plugins {
   alias(libs.plugins.android.application)
   alias(libs.plugins.compose.compiler)
@@ -15,10 +17,24 @@ android {
     versionName = "1.2.3"
   }
 
+  signingConfigs {
+    create("release") {
+      val propsFile = rootProject.file("keystore.properties")
+      if (propsFile.exists()) {
+        val props = Properties().apply { propsFile.inputStream().use { load(it) } }
+        storeFile = rootProject.file(props.getProperty("storeFile"))
+        storePassword = props.getProperty("storePassword")
+        keyAlias = props.getProperty("keyAlias")
+        keyPassword = props.getProperty("keyPassword")
+      }
+    }
+  }
+
   buildTypes {
     release {
       isMinifyEnabled = false
-      signingConfig = signingConfigs.getByName("debug")
+      val hasReleaseKeystore = rootProject.file("keystore.properties").exists()
+      signingConfig = if (hasReleaseKeystore) signingConfigs.getByName("release") else signingConfigs.getByName("debug")
       proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro")
     }
   }

@@ -491,10 +491,9 @@ class AndroidAgentTools(
                 success = false
             )
         val (display, number) = resolved
-        val hasCallPerm = ContextCompat.checkSelfPermission(context, Manifest.permission.CALL_PHONE) == PackageManager.PERMISSION_GRANTED
-        val action = if (hasCallPerm) Intent.ACTION_CALL else Intent.ACTION_DIAL
+        val action = Intent.ACTION_DIAL
         val intent = Intent(action, Uri.parse("tel:${Uri.encode(number)}")).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-        val verb = if (hasCallPerm) "Calling" else "Opened dialer for"
+        val verb = "Opened dialer for"
         return launchIntentOrFail(intent, "$verb $display ($number)")
     }
 
