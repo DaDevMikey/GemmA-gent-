@@ -284,19 +284,19 @@ fun OnboardingScreen(
                                         OutlinedTextField(
                                             value = userName,
                                             onValueChange = { userName = it },
-                                            label = { Text("Your Name (saved to Memory)") },
+                                            label = { Text(stringResource(R.string.setup_name_hint)) },
                                             singleLine = true,
                                             modifier = Modifier.fillMaxWidth()
                                         )
                                         SetupToggle(
-                                            title = "Live Nerd Stats (tok/s, RAM)",
-                                            subtitle = "Show real-time on-device speed metrics",
+                                            title = stringResource(R.string.setting_nerd_stats_title),
+                                            subtitle = stringResource(R.string.setting_nerd_stats_sub),
                                             checked = settings.showNerdStats,
                                             onCheckedChange = { onUpdateSettings(settings.copy(showNerdStats = it)) }
                                         )
                                         SetupToggle(
-                                            title = "Cover-Screen Mini-Mode Overlay",
-                                            subtitle = "Compact pill overlay until a reply streams",
+                                            title = stringResource(R.string.setting_mini_mode_title),
+                                            subtitle = stringResource(R.string.setting_mini_mode_sub),
                                             checked = settings.miniModeOverlay,
                                             onCheckedChange = { onUpdateSettings(settings.copy(miniModeOverlay = it)) }
                                         )
@@ -328,8 +328,8 @@ fun OnboardingScreen(
                                 modifier = Modifier.weight(1f).verticalScroll(rememberScrollState()),
                                 verticalArrangement = Arrangement.spacedBy(12.dp)
                             ) {
-                                AnimatedHeadline("Compatibility & Engine")
-                                Text("Verify your on-device AI backend or configure a local model endpoint.", color = TextSecondary, style = MaterialTheme.typography.bodyMedium)
+                                AnimatedHeadline(stringResource(R.string.compat_title))
+                                Text(stringResource(R.string.compat_sub), color = TextSecondary, style = MaterialTheme.typography.bodyMedium)
 
                                 Surface(
                                     color = FrostedCardBg,

@@ -1,5 +1,11 @@
 # Changelog
 
+## v1.2.3
+- Converted Settings into its own full-screen `SettingsScreen` instead of a cluttered bottom-sheet popup
+- Decluttered the `Kairo • Powered by Gemma 4` sheet to focus on model/engine selection and Preferred Language (moving Updates & Release Notes to Settings)
+- Completed translations across Setup, Home, Quick Actions, Settings, and Dialogs (`en`, `nl`, `de`, `ru`)
+- Added Gemini-style spring+scale popup entrance animation and animated AI thinking/typing border on the chat input bar
+
 ## v1.2.2
 - Fixed App UI language switching (`LocaleHelper` + `attachBaseContext` + `LocaleManager` on `MainActivity` & `AssistantOverlayActivity` with automatic activity recreate)
 - Added confirmation popup when choosing an app language to sync it with the AI model's preferred response language
