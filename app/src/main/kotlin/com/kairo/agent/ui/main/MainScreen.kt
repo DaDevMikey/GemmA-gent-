@@ -190,6 +190,7 @@ import com.kairo.agent.data.MemoryStore
 import com.kairo.agent.engine.CompatibilityChecker
 import com.kairo.agent.engine.ModelAvailability
 import com.kairo.agent.service.WakeWordService
+import com.kairo.agent.ui.components.animatedAiBorder
 import com.kairo.agent.ui.components.BlurIntoText
 import com.kairo.agent.ui.components.GemmASparkleIcon
 import com.kairo.agent.ui.components.ResponseShineSweep
@@ -560,7 +561,7 @@ internal fun MainScreenContent(
     var showPrivacySheet by remember { mutableStateOf(false) }
     var showConnectionsSheet by remember { mutableStateOf(false) }
     var showReleaseNotesSheet by remember { mutableStateOf(false) }
-    var showSettingsSheet by remember { mutableStateOf(false) }
+    var showSettingsScreen by remember { mutableStateOf(false) }
     var liveSheetFraction by remember { mutableStateOf(0f) }
     var sparkleTaps by remember { mutableStateOf(0) }
     var pendingDeleteChat by remember { mutableStateOf<ChatRecord?>(null) }
@@ -975,7 +976,7 @@ internal fun MainScreenContent(
                         }
                         IconButton(onClick = {
                             scope.launch { drawerState.close() }
-                            showSettingsSheet = true
+                            showSettingsScreen = true
                         }) {
                             Icon(Icons.Default.Settings, contentDescription = "Settings", tint = GeminiTextPrimary)
                         }
@@ -992,7 +993,7 @@ internal fun MainScreenContent(
         } else {
             (1f + (drawerOffset / drawerWidthPx)).coerceIn(0f, 1f)
         }
-        val anySheetOpen = showModelSheet || showMemorySheet || showPrivacySheet || showConnectionsSheet || showReleaseNotesSheet || showSettingsSheet
+        val anySheetOpen = showModelSheet || showMemorySheet || showPrivacySheet || showConnectionsSheet || showReleaseNotesSheet
         BackHandler(enabled = state.activeTurns.isNotEmpty() && !anySheetOpen && !drawerState.isOpen) {
             onNewChat()
         }
@@ -1475,7 +1476,10 @@ internal fun MainScreenContent(
                 }
 
                 Surface(
-                    modifier = Modifier.fillMaxWidth().padding(horizontal = 14.dp, vertical = 10.dp),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 14.dp, vertical = 10.dp)
+                        .animatedAiBorder(isActive = state.isGenerating, cornerRadius = 28.dp),
                     shape = RoundedCornerShape(28.dp),
                     color = GeminiPillBg
                 ) {
@@ -1507,10 +1511,10 @@ internal fun MainScreenContent(
                                     if (isListening) {
                                         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                                             ListeningWaveformIndicator()
-                                            Text("Listening...", color = GeminiAccentBlue, fontSize = 16.sp)
+                                            Text(stringResource(R.string.listening), color = GeminiAccentBlue, fontSize = 16.sp)
                                         }
                                     } else {
-                                        Text("Ask Kairo", color = GeminiTextSecondary, fontSize = 16.sp)
+                                        Text(stringResource(R.string.ask_kairo), color = GeminiTextSecondary, fontSize = 16.sp)
                                     }
                                 }
                                 innerTextField()
@@ -1719,25 +1723,14 @@ internal fun MainScreenContent(
                     }
                 }
 
-                SetupSwitchRow(
-                    title = "Live Nerd Stats (tok/s, RAM)",
-                    subtitle = "Show inference speed & memory usage",
-                    checked = state.settings.showNerdStats,
-                    onCheckedChange = { onUpdateSettings(state.settings.copy(showNerdStats = it)) }
-                )
-
-                OutlinedButton(
-                    onClick = {
-                        showModelSheet = false
-                        onFetchReleaseNotes()
-                        showReleaseNotesSheet = true
+                AppLanguagePickerRow(
+                    selectedAppLang = state.settings.appLanguage,
+                    selectedModelLang = state.settings.preferredLanguage,
+                    onSelectAppAndModelLang = { appLang, modelLang ->
+                        onUpdateSettings(state.settings.copy(appLanguage = appLang, preferredLanguage = modelLang))
                     },
-                    modifier = Modifier.fillMaxWidth()
-                ) {
-                    Icon(Icons.Default.NewReleases, contentDescription = null)
-                    Spacer(Modifier.width(8.dp))
-                    Text("Release Notes (GitHub)")
-                }
+                    accentColor = GeminiAccentBlue
+                )
 
                 OutlinedButton(
                     onClick = {
@@ -1751,92 +1744,6 @@ internal fun MainScreenContent(
                     Text("Set as Default Digital Assistant")
                 }
 
-                HorizontalDivider(color = Color(0xFF232528))
-
-                when (val update = state.updateStatus) {
-                    is UpdateCheckResult.UpdateAvailable -> {
-                        Surface(
-                            color = Color(0xFF151E34),
-                            shape = RoundedCornerShape(18.dp)
-                        ) {
-                            Column(
-                                modifier = Modifier.fillMaxWidth().padding(14.dp),
-                                verticalArrangement = Arrangement.spacedBy(10.dp)
-                            ) {
-                                Row(
-                                    modifier = Modifier.fillMaxWidth(),
-                                    horizontalArrangement = Arrangement.SpaceBetween,
-                                    verticalAlignment = Alignment.CenterVertically
-                                ) {
-                                    Surface(color = GeminiAccentBlue.copy(alpha = 0.2f), shape = RoundedCornerShape(50)) {
-                                        Text(
-                                            text = "NEW RELEASE",
-                                            color = GeminiAccentBlue,
-                                            style = MaterialTheme.typography.labelSmall,
-                                            fontWeight = FontWeight.Bold,
-                                            modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp)
-                                        )
-                                    }
-                                    Text(
-                                        text = "v${update.currentVersion} → ${update.latestVersion}",
-                                        color = ActionSuccessGreen,
-                                        style = MaterialTheme.typography.labelMedium,
-                                        fontWeight = FontWeight.SemiBold
-                                    )
-                                }
-                                if (update.releaseNotes.isNotBlank()) {
-                                    Text(
-                                        text = update.releaseNotes,
-                                        color = GeminiTextSecondary,
-                                        style = MaterialTheme.typography.bodySmall,
-                                        maxLines = 4,
-                                        overflow = TextOverflow.Ellipsis
-                                    )
-                                }
-                                Button(
-                                    onClick = { onOpenUrl(update.apkUrl ?: update.releaseUrl) },
-                                    modifier = Modifier.fillMaxWidth()
-                                ) {
-                                    Icon(Icons.Default.Download, contentDescription = null)
-                                    Spacer(Modifier.width(8.dp))
-                                    Text("Download & Install ${update.latestVersion}")
-                                }
-                            }
-                        }
-                    }
-                    is UpdateCheckResult.UpToDate -> {
-                        Surface(color = GeminiPillBg, shape = RoundedCornerShape(14.dp)) {
-                            Row(
-                                modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 8.dp),
-                                horizontalArrangement = Arrangement.SpaceBetween,
-                                verticalAlignment = Alignment.CenterVertically
-                            ) {
-                                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                                    Icon(Icons.Default.CheckCircle, contentDescription = null, tint = ActionSuccessGreen, modifier = Modifier.size(18.dp))
-                                    Text("Up to date (v${update.currentVersion})", style = MaterialTheme.typography.bodySmall, color = GeminiTextPrimary)
-                                }
-                                TextButton(onClick = onCheckUpdates, enabled = !state.isCheckingUpdates) {
-                                    Text(if (state.isCheckingUpdates) "Checking..." else "Check", color = GeminiAccentBlue)
-                                }
-                            }
-                        }
-                    }
-                    is UpdateCheckResult.Unavailable -> {
-                        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
-                            Text(update.reason, style = MaterialTheme.typography.bodySmall, color = GeminiTextSecondary, modifier = Modifier.weight(1f))
-                            TextButton(onClick = onCheckUpdates, enabled = !state.isCheckingUpdates) {
-                                Text(if (state.isCheckingUpdates) "Checking..." else "Retry", color = GeminiAccentBlue)
-                            }
-                        }
-                    }
-                    null -> {
-                        FilledTonalButton(onClick = onCheckUpdates, enabled = !state.isCheckingUpdates, modifier = Modifier.fillMaxWidth()) {
-                            Icon(Icons.Default.NewReleases, contentDescription = null)
-                            Spacer(Modifier.width(8.dp))
-                            Text(if (state.isCheckingUpdates) "Checking GitHub..." else "Check for Updates")
-                        }
-                    }
-                }
                 Spacer(Modifier.height(12.dp))
             }
         }
@@ -2164,311 +2071,34 @@ internal fun MainScreenContent(
         }
     }
 
-    if (showSettingsSheet) {
-        var endpointDraft by remember(state.settings.localEndpointUrl) { mutableStateOf(state.settings.localEndpointUrl) }
-        var modelDraft by remember(state.settings.localModelName) { mutableStateOf(state.settings.localModelName) }
-        var cloudEndpointDraft by remember(state.settings.cloudEndpointUrl) { mutableStateOf(state.settings.cloudEndpointUrl) }
-        var cloudKeyDraft by remember(state.settings.cloudApiKey) { mutableStateOf(state.settings.cloudApiKey) }
-        var cloudModelDraft by remember(state.settings.cloudModelName) { mutableStateOf(state.settings.cloudModelName) }
-        var mcpDraft by remember(state.settings.mcpServerUrls) { mutableStateOf(state.settings.mcpServerUrls) }
-        var mcpStatus by remember { mutableStateOf<String?>(null) }
-        var cloudConfirmStep by remember { mutableStateOf(0) }
-
-        if (cloudConfirmStep == 1) {
-            androidx.compose.material3.AlertDialog(
-                onDismissRequest = { cloudConfirmStep = 0 },
-                containerColor = GeminiDrawerBg,
-                titleContentColor = GeminiTextPrimary,
-                textContentColor = GeminiTextSecondary,
-                title = { Text("Privacy Warning: Cloud AI", fontWeight = FontWeight.SemiBold) },
-                text = {
-                    Text(
-                        "Enabling Cloud AI sends your prompts, images, and context to an external third-party server. " +
-                            "On-device privacy is NO LONGER guaranteed while Cloud AI is active.\n\n" +
-                            "You can turn Cloud AI off at any time from the top bar or Settings."
-                    )
-                },
-                confirmButton = {
-                    Button(onClick = { cloudConfirmStep = 2 }) { Text("I Understand, Continue") }
-                },
-                dismissButton = {
-                    TextButton(onClick = { cloudConfirmStep = 0 }) { Text("Stay On-Device", color = GeminiAccentBlue) }
-                }
-            )
-        } else if (cloudConfirmStep == 2) {
-            androidx.compose.material3.AlertDialog(
-                onDismissRequest = { cloudConfirmStep = 0 },
-                containerColor = GeminiDrawerBg,
-                titleContentColor = GeminiTextPrimary,
-                textContentColor = GeminiTextSecondary,
-                title = { Text("Final Confirmation", fontWeight = FontWeight.SemiBold) },
-                text = {
-                    Text("Are you completely sure you want to switch to Cloud AI? Third-party servers will process your requests.")
-                },
-                confirmButton = {
-                    Button(onClick = {
-                        cloudConfirmStep = 0
-                        onUpdateSettings(state.settings.copy(backendMode = EngineBackendMode.CLOUD_AI))
-                    }) { Text("Enable Cloud AI") }
-                },
-                dismissButton = {
-                    TextButton(onClick = { cloudConfirmStep = 0 }) { Text("Cancel", color = GeminiTextSecondary) }
-                }
-            )
-        }
-
-        val settingsSheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
-        val settingsTravelPx = with(LocalDensity.current) { 420.dp.toPx() }
-        LaunchedEffect(settingsSheetState) {
-            androidx.compose.runtime.snapshotFlow {
-                runCatching { settingsSheetState.requireOffset() }.getOrNull()
-            }.collect { offset ->
-                if (offset != null && settingsTravelPx > 0f) {
-                    liveSheetFraction = (1f - (offset / settingsTravelPx)).coerceIn(0f, 1f)
-                }
-            }
-        }
-        ModalBottomSheet(
-            sheetState = settingsSheetState,
-            onDismissRequest = {
-                liveSheetFraction = 0f
-                showSettingsSheet = false
+    if (showSettingsScreen) {
+        SettingsScreen(
+            state = state,
+            wakeWordEnabled = wakeWordEnabled,
+            onBack = { showSettingsScreen = false },
+            onUpdateSettings = onUpdateSettings,
+            onToggleWakeWord = onToggleWakeWord,
+            onOpenMemory = {
+                showSettingsScreen = false
+                showMemorySheet = true
             },
-            containerColor = GeminiDrawerBg,
-            contentColor = GeminiTextPrimary
-        ) {
-            Column(
-                modifier = Modifier.fillMaxWidth().heightIn(max = 560.dp).padding(horizontal = 20.dp, vertical = 12.dp).verticalScroll(rememberScrollState()),
-                verticalArrangement = Arrangement.spacedBy(12.dp)
-            ) {
-                Text("Settings & Preferences", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
-
-                OutlinedButton(
-                    onClick = {
-                        showSettingsSheet = false
-                        introTourStep = 0
-                        showIntroTour = true
-                    },
-                    modifier = Modifier.fillMaxWidth()
-                ) {
-                    Text("Replay Interactive App Tour", color = GeminiTextPrimary)
-                }
-
-                OutlinedButton(
-                    onClick = { onOpenUrl("https://paypal.me/damanmikey") },
-                    modifier = Modifier.fillMaxWidth()
-                ) {
-                    Icon(Icons.Default.FavoriteBorder, contentDescription = null, modifier = Modifier.size(18.dp), tint = GeminiAccentBlue)
-                    Spacer(Modifier.width(8.dp))
-                    Text("Support Project (PayPal)", color = GeminiAccentBlue)
-                }
-
-                Text(
-                    "Setup animations & One UI widget core inspired by Twidget (credit: thatjoshguy67).",
-                    style = MaterialTheme.typography.labelSmall,
-                    color = GeminiTextSecondary
-                )
-
-                AppLanguagePickerRow(
-                    selectedAppLang = state.settings.appLanguage,
-                    selectedModelLang = state.settings.preferredLanguage,
-                    onSelectAppAndModelLang = { appLang, modelLang ->
-                        onUpdateSettings(state.settings.copy(appLanguage = appLang, preferredLanguage = modelLang))
-                    },
-                    accentColor = GeminiAccentBlue
-                )
-
-                SetupSwitchRow(
-                    title = "Multi-Agent Collaboration",
-                    subtitle = "Split complex prompts across Planner & Synthesizer agents (higher CPU/heat)",
-                    checked = state.settings.multiAgentEnabled,
-                    onCheckedChange = { onUpdateSettings(state.settings.copy(multiAgentEnabled = it)) }
-                )
-
-                Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    FilledTonalButton(
-                        onClick = {
-                            showSettingsSheet = false
-                            showMemorySheet = true
-                        },
-                        modifier = Modifier.weight(1f)
-                    ) {
-                        Icon(Icons.Default.Psychology, contentDescription = null, modifier = Modifier.size(18.dp))
-                        Spacer(Modifier.width(6.dp))
-                        Text("Memory (${state.memories.size})")
-                    }
-                    FilledTonalButton(
-                        onClick = {
-                            showSettingsSheet = false
-                            showConnectionsSheet = true
-                        },
-                        modifier = Modifier.weight(1f)
-                    ) {
-                        Icon(Icons.Default.Hub, contentDescription = null, modifier = Modifier.size(18.dp))
-                        Spacer(Modifier.width(6.dp))
-                        Text("Connections")
-                    }
-                }
-
-                SetupSwitchRow(
-                    title = "Live Nerd Stats (tok/s, RAM)",
-                    subtitle = "Show inference speed & memory usage",
-                    checked = state.settings.showNerdStats,
-                    onCheckedChange = { onUpdateSettings(state.settings.copy(showNerdStats = it)) }
-                )
-                SetupSwitchRow(
-                    title = "Cover-Screen Mini-Mode Overlay",
-                    subtitle = "Start overlay as a compact pill until a reply streams",
-                    checked = state.settings.miniModeOverlay,
-                    onCheckedChange = { onUpdateSettings(state.settings.copy(miniModeOverlay = it)) }
-                )
-                SetupSwitchRow(
-                    title = "Root / Shell Power Mode",
-                    subtitle = "Allow shell / root commands when requested",
-                    checked = state.settings.rootPowerMode,
-                    onCheckedChange = { onUpdateSettings(state.settings.copy(rootPowerMode = it)) }
-                )
-                SetupSwitchRow(
-                    title = "Bypass compatibility checks",
-                    subtitle = "Continue even if AICore is unavailable",
-                    checked = state.settings.bypassCompatibility,
-                    onCheckedChange = { onUpdateSettings(state.settings.copy(bypassCompatibility = it)) }
-                )
-
-                HorizontalDivider(color = Color(0xFF232528))
-                Text("Inference Backend", style = MaterialTheme.typography.labelLarge, color = GeminiAccentBlue)
-                FlowRow(
-                    horizontalArrangement = Arrangement.spacedBy(8.dp),
-                    verticalArrangement = Arrangement.spacedBy(6.dp)
-                ) {
-                    EngineBackendMode.entries.forEach { mode ->
-                        FilterChip(
-                            selected = state.settings.backendMode == mode,
-                            onClick = {
-                                if (mode == EngineBackendMode.CLOUD_AI && state.settings.backendMode != EngineBackendMode.CLOUD_AI) {
-                                    cloudConfirmStep = 1
-                                } else {
-                                    onUpdateSettings(state.settings.copy(backendMode = mode))
-                                }
-                            },
-                            label = { Text(mode.name) }
-                        )
-                    }
-                }
-
-                if (state.settings.backendMode == EngineBackendMode.CLOUD_AI) {
-                    Surface(color = Color(0xFF4A1E24), shape = RoundedCornerShape(14.dp)) {
-                        Column(modifier = Modifier.fillMaxWidth().padding(12.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                            Text("Cloud AI Active — Privacy Not Guaranteed", color = Color(0xFFF28B82), style = MaterialTheme.typography.labelLarge, fontWeight = FontWeight.SemiBold)
-                            Text("Requests are sent to your configured cloud endpoint.", color = GeminiTextSecondary, style = MaterialTheme.typography.bodySmall)
-                            Button(
-                                onClick = { onUpdateSettings(state.settings.copy(backendMode = EngineBackendMode.AUTO)) },
-                                modifier = Modifier.fillMaxWidth()
-                            ) { Text("Disable Cloud AI") }
-                        }
-                    }
-                    OutlinedTextField(
-                        value = cloudEndpointDraft,
-                        onValueChange = {
-                            cloudEndpointDraft = it
-                            onUpdateSettings(state.settings.copy(cloudEndpointUrl = it))
-                        },
-                        label = { Text("Cloud AI Endpoint (OpenAI-compatible)") },
-                        singleLine = true,
-                        modifier = Modifier.fillMaxWidth()
-                    )
-                    OutlinedTextField(
-                        value = cloudKeyDraft,
-                        onValueChange = {
-                            cloudKeyDraft = it
-                            onUpdateSettings(state.settings.copy(cloudApiKey = it))
-                        },
-                        label = { Text("Cloud API Key") },
-                        visualTransformation = androidx.compose.ui.text.input.PasswordVisualTransformation(),
-                        singleLine = true,
-                        modifier = Modifier.fillMaxWidth()
-                    )
-                    OutlinedTextField(
-                        value = cloudModelDraft,
-                        onValueChange = {
-                            cloudModelDraft = it
-                            onUpdateSettings(state.settings.copy(cloudModelName = it))
-                        },
-                        label = { Text("Cloud Model Name (e.g. gpt-4o-mini)") },
-                        singleLine = true,
-                        modifier = Modifier.fillMaxWidth()
-                    )
-                }
-
-                OutlinedTextField(
-                    value = endpointDraft,
-                    onValueChange = {
-                        endpointDraft = it
-                        onUpdateSettings(state.settings.copy(localEndpointUrl = it))
-                    },
-                    label = { Text("Local Model Endpoint") },
-                    singleLine = true,
-                    modifier = Modifier.fillMaxWidth()
-                )
-                OutlinedTextField(
-                    value = modelDraft,
-                    onValueChange = {
-                        modelDraft = it
-                        onUpdateSettings(state.settings.copy(localModelName = it))
-                    },
-                    label = { Text("Local Model Name") },
-                    singleLine = true,
-                    modifier = Modifier.fillMaxWidth()
-                )
-
-                HorizontalDivider(color = Color(0xFF232528))
-                Text("MCP Servers (Model Context Protocol)", style = MaterialTheme.typography.labelLarge, color = GeminiAccentBlue)
-                OutlinedTextField(
-                    value = mcpDraft,
-                    onValueChange = {
-                        mcpDraft = it
-                        onUpdateSettings(state.settings.copy(mcpServerUrls = it))
-                    },
-                    label = { Text("MCP HTTP Server URLs (one per line)") },
-                    placeholder = { Text("http://127.0.0.1:3000/mcp") },
-                    modifier = Modifier.fillMaxWidth()
-                )
-                Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
-                    FilledTonalButton(onClick = {
-                        val urls = com.kairo.agent.agent.McpClientManager.parseServerUrls(mcpDraft)
-                        if (urls.isEmpty()) {
-                            mcpStatus = "Enter at least one http:// or https:// MCP URL."
-                        } else {
-                            mcpStatus = "Checking ${urls.size} server(s)..."
-                            scope.launch {
-                                val results = urls.map { url ->
-                                    val res = com.kairo.agent.agent.McpClientManager.listTools(url)
-                                    res.fold(
-                                        onSuccess = { list -> "$url: ${list.size} tool(s) (${list.joinToString { it.name }})" },
-                                        onFailure = { err -> "$url: ${err.localizedMessage ?: "error"}" }
-                                    )
-                                }
-                                mcpStatus = results.joinToString("\n")
-                            }
-                        }
-                    }) { Text("Test MCP Tools") }
-                }
-                if (!mcpStatus.isNullOrBlank()) {
-                    Text(mcpStatus!!, style = MaterialTheme.typography.bodySmall, color = GeminiTextSecondary)
-                }
-
-                OutlinedButton(
-                    onClick = {
-                        showSettingsSheet = false
-                        onUpdateSettings(state.settings.copy(hasCompletedOnboarding = false))
-                    },
-                    modifier = Modifier.fillMaxWidth()
-                ) {
-                    Text("Re-run First-Time Setup")
-                }
-                Spacer(Modifier.height(12.dp))
-            }
-        }
+            onOpenConnections = {
+                showSettingsScreen = false
+                showConnectionsSheet = true
+            },
+            onOpenReleaseNotes = {
+                showSettingsScreen = false
+                onFetchReleaseNotes()
+                showReleaseNotesSheet = true
+            },
+            onCheckUpdates = onCheckUpdates,
+            onReplayTour = {
+                showSettingsScreen = false
+                introTourStep = 0
+                showIntroTour = true
+            },
+            onOpenUrl = onOpenUrl
+        )
     }
 }
 

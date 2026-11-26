@@ -251,9 +251,12 @@ fun GemmaAssistantSheet(
         AnimatedVisibility(
             visible = sheetVisible,
             enter = slideInVertically(
-                initialOffsetY = { it / 2 },
+                initialOffsetY = { it / 3 },
+                animationSpec = spring(dampingRatio = Spring.DampingRatioLowBouncy, stiffness = Spring.StiffnessLow)
+            ) + androidx.compose.animation.scaleIn(
+                initialScale = 0.92f,
                 animationSpec = spring(dampingRatio = Spring.DampingRatioLowBouncy, stiffness = Spring.StiffnessMediumLow)
-            ) + fadeIn(tween(220))
+            ) + fadeIn(tween(260))
         ) {
             Surface(
                 modifier = Modifier

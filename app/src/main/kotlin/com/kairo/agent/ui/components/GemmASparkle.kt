@@ -13,6 +13,7 @@ import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Row
@@ -368,6 +369,45 @@ fun BlurIntoText(
     ) {
         content()
     }
+}
+
+/**
+ * Animated Gemini-style rotating gradient border when AI is thinking or typing.
+ */
+@Composable
+fun Modifier.animatedAiBorder(
+    isActive: Boolean,
+    cornerRadius: Dp = 24.dp,
+    activeWidth: Dp = 2.dp
+): Modifier {
+    if (!isActive) return this
+    val transition = rememberInfiniteTransition(label = "ai_border_anim")
+    val phase by transition.animateFloat(
+        initialValue = 0f,
+        targetValue = 1f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(durationMillis = 1800, easing = LinearEasing),
+            repeatMode = RepeatMode.Restart
+        ),
+        label = "ai_border_phase"
+    )
+    val shift = phase * 420f
+    val brush = Brush.linearGradient(
+        colors = listOf(
+            Color(0xFF4285F4),
+            Color(0xFFA8C7FA),
+            Color(0xFF9B72CB),
+            Color(0xFFD96570),
+            Color(0xFF4285F4)
+        ),
+        start = Offset(shift, 0f),
+        end = Offset(shift + 320f, 320f)
+    )
+    return this.border(
+        width = activeWidth,
+        brush = brush,
+        shape = androidx.compose.foundation.shape.RoundedCornerShape(cornerRadius)
+    )
 }
 
 /**
