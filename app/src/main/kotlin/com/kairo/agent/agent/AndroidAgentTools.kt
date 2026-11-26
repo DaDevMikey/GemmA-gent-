@@ -93,9 +93,18 @@ class AndroidAgentTools(
         screenText: String? = null,
         conversationHistory: List<Pair<String, String>> = emptyList(),
         persona: AgentPersona = AgentPersona.DEFAULT,
-        rootPowerMode: Boolean = false
+        rootPowerMode: Boolean = false,
+        preferredLanguage: String = "en",
+        incognito: Boolean = false
     ): String = buildString {
         appendLine("You are Kairo (pronounced /kaj/roo/), a helpful on-device Android AI agent powered by Gemma 4.")
+        val langLabel = when (preferredLanguage.lowercase()) {
+            "nl" -> "Dutch (Nederlands)"
+            "de" -> "German (Deutsch)"
+            "ru" -> "Russian (Русский)"
+            else -> "English"
+        }
+        appendLine("User's preferred language: $langLabel. Reply in $langLabel unless the user explicitly writes in another language.")
         appendLine("Persona instruction: ${persona.instruction}")
         appendLine("Live device context: ${currentTimeString()}, ${batteryContextString()}.")
 
@@ -106,12 +115,15 @@ class AndroidAgentTools(
             }
         }
 
-        val memoryBlock = memoryStore.formatForPrompt()
-        if (memoryBlock.isNotEmpty()) {
-            append(memoryBlock)
+        if (!incognito) {
+            val memoryBlock = memoryStore.formatForPrompt()
+            if (memoryBlock.isNotEmpty()) {
+                append(memoryBlock)
+            }
+            appendLine("Memory rule: ONLY emit <memory>fact about the user</memory> when the USER explicitly shares personal facts, preferences, their name, routines, or goals about THEMSELVES. NEVER save your own responses, device status, tool outputs, or general facts.")
+        } else {
+            appendLine("Incognito mode is active: DO NOT reference personal memory and DO NOT emit <memory> tags.")
         }
-
-        appendLine("Memory rule: ONLY emit <memory>fact about the user</memory> when the USER explicitly shares personal facts, preferences, their name, routines, or goals about THEMSELVES. NEVER save your own responses, device status, tool outputs, or general facts.")
 
         if (!screenText.isNullOrBlank()) {
             appendLine("Visible text from the user's current screen:")
@@ -213,6 +225,46 @@ class AndroidAgentTools(
 
     fun hasToolCall(rawText: String): Boolean =
         TOOL_CALL_REGEX.containsMatchIn(rawText) || GEMMA_CALL_REGEX.containsMatchIn(rawText)
+
+    fun formatFriendlyToolDescription(toolName: String, rawOutput: String): String {
+        val args = TOOL_CALL_REGEX.find(rawOutput)?.let { match ->
+            runCatching { JSONObject(match.groupValues[1]).optJSONObject("args") }.getOrNull()
+        }
+        return when (toolName) {
+            "call_person", "dial_phone" -> {
+                val target = args?.optString("target")?.ifBlank { args.optString("phone_number") }.orEmpty().ifBlank { "this contact" }
+                "Place a phone call to $target"
+            }
+            "text_person", "send_sms" -> {
+                val target = args?.optString("target")?.ifBlank { args.optString("phone_number") }.orEmpty().ifBlank { "this contact" }
+                val msg = args?.optString("message").orEmpty()
+                if (msg.isNotBlank()) "Send a text message to $target: \"$msg\"" else "Send a text message to $target"
+            }
+            "send_whatsapp" -> {
+                val target = args?.optString("target").orEmpty().ifBlank { "this contact" }
+                val msg = args?.optString("message").orEmpty()
+                if (msg.isNotBlank()) "Send a WhatsApp message to $target: \"$msg\"" else "Send a WhatsApp message to $target"
+            }
+            "send_email" -> {
+                val to = args?.optString("to").orEmpty().ifBlank { "recipient" }
+                val subject = args?.optString("subject").orEmpty()
+                if (subject.isNotBlank()) "Draft an email to $to with subject \"$subject\"" else "Draft an email to $to"
+            }
+            "set_ringer_mode" -> {
+                val mode = args?.optString("mode").orEmpty().ifBlank { "selected" }
+                "Change your phone's ringer mode to $mode"
+            }
+            "forget_memory" -> {
+                val q = args?.optString("query").orEmpty()
+                "Remove saved memories matching \"$q\""
+            }
+            "run_shell_command" -> {
+                val cmd = args?.optString("command").orEmpty()
+                "Run device shell command: \"$cmd\""
+            }
+            else -> "Perform action: ${toolName.replace('_', ' ')}"
+        }
+    }
 
     fun extractToolName(rawText: String): String? {
         TOOL_CALL_REGEX.find(rawText)?.let { match ->

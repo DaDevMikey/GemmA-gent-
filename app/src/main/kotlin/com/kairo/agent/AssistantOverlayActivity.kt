@@ -163,24 +163,34 @@ class AssistantOverlayActivity : ComponentActivity() {
                     },
                     onToggleTts = { voiceController.setTtsEnabled(!voiceState.ttsEnabled) },
                     onOpenFullscreen = {
-                        runCatching {
-                            val launchIntent = Intent(this, MainActivity::class.java).apply {
-                                addFlags(
-                                    Intent.FLAG_ACTIVITY_NEW_TASK or
-                                        Intent.FLAG_ACTIVITY_CLEAR_TOP or
-                                        Intent.FLAG_ACTIVITY_SINGLE_TOP
+                        val turnsToHandoff = buildList {
+                            conversationHistory.forEach { (p, r) ->
+                                add(com.kairo.agent.data.OverlayHandoffTurn(prompt = p, response = r))
+                            }
+                            val pendingPrompt = lastPrompt
+                            if (!pendingPrompt.isNullOrBlank() && conversationHistory.lastOrNull()?.first != pendingPrompt) {
+                                add(
+                                    com.kairo.agent.data.OverlayHandoffTurn(
+                                        prompt = pendingPrompt,
+                                        response = responseText,
+                                        actionSummary = actionSummary,
+                                        image = attachedImage
+                                    )
                                 )
                             }
-                            startActivity(launchIntent)
-                        }.onFailure {
-                            packageManager.getLaunchIntentForPackage(packageName)?.let { fallback ->
-                                fallback.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-                                runCatching { startActivity(fallback) }
-                            }
+                        }
+                        com.kairo.agent.data.OverlayHandoffHolder.setTurns(turnsToHandoff)
+                        runCatching {
+                            startActivity(
+                                Intent(this, MainActivity::class.java).apply {
+                                    addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_SINGLE_TOP)
+                                    putExtra("from_overlay_handoff", true)
+                                }
+                            )
                         }
                         android.os.Handler(android.os.Looper.getMainLooper()).postDelayed({
                             if (!isFinishing && !isDestroyed) finish()
-                        }, 180L)
+                        }, 240L)
                     },
                     onDismiss = { finish() }
                 )

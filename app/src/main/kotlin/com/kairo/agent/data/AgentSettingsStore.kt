@@ -30,7 +30,9 @@ data class AgentSettings(
     val cloudEndpointUrl: String = "https://api.openai.com/v1/chat/completions",
     val cloudApiKey: String = "",
     val cloudModelName: String = "gpt-4o-mini",
-    val mcpServerUrls: String = ""
+    val mcpServerUrls: String = "",
+    val multiAgentEnabled: Boolean = false,
+    val preferredLanguage: String = "en"
 )
 
 /**
@@ -58,7 +60,9 @@ class AgentSettingsStore(context: Context) {
             ?: "https://api.openai.com/v1/chat/completions",
         cloudApiKey = prefs.getString(KEY_CLOUD_KEY, "") ?: "",
         cloudModelName = prefs.getString(KEY_CLOUD_MODEL, "gpt-4o-mini") ?: "gpt-4o-mini",
-        mcpServerUrls = prefs.getString(KEY_MCP_URLS, "") ?: ""
+        mcpServerUrls = prefs.getString(KEY_MCP_URLS, "") ?: "",
+        multiAgentEnabled = prefs.getBoolean(KEY_MULTI_AGENT, false),
+        preferredLanguage = prefs.getString(KEY_LANG, "en") ?: "en"
     )
 
     fun save(settings: AgentSettings) {
@@ -76,6 +80,8 @@ class AgentSettingsStore(context: Context) {
             .putString(KEY_CLOUD_KEY, settings.cloudApiKey)
             .putString(KEY_CLOUD_MODEL, settings.cloudModelName)
             .putString(KEY_MCP_URLS, settings.mcpServerUrls)
+            .putBoolean(KEY_MULTI_AGENT, settings.multiAgentEnabled)
+            .putString(KEY_LANG, settings.preferredLanguage)
             .apply()
     }
 
@@ -93,5 +99,7 @@ class AgentSettingsStore(context: Context) {
         const val KEY_CLOUD_KEY = "cloud_api_key"
         const val KEY_CLOUD_MODEL = "cloud_model_name"
         const val KEY_MCP_URLS = "mcp_server_urls"
+        const val KEY_MULTI_AGENT = "multi_agent_enabled"
+        const val KEY_LANG = "preferred_language"
     }
 }

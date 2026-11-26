@@ -2,4 +2,13 @@
     <string name="app_name">Kairo</string>
     <string name="assistant_title">Kairo</string>
     <string name="assistant_subtitle">Kairo Agent • Powered by Gemma 4</string>
+    <string name="new_chat">New chat</string>
+    <string name="incognito_chat">Incognito chat</string>
+    <string name="incognito_banner">Incognito • No memory or personal context • Auto-expires in 24h</string>
+    <string name="settings_title">Settings &amp; Preferences</string>
+    <string name="whats_new_title">What\'s New in Kairo</string>
+    <string name="preferred_language">Preferred Language</string>
+    <string name="multi_agent_title">Multi-Agent Collaboration</string>
+    <string name="multi_agent_subtitle">Split complex tasks across planner &amp; synthesizer agents (uses more CPU/heat)</string>
+    <string name="confirm_action_title">Confirm Action</string>
 </resources>

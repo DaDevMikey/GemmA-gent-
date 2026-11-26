@@ -1,5 +1,14 @@
 # Changelog
 
+## v1.2.0
+- Added **Response Version Switcher** (`‹ 1/2 ›`) when regenerating responses instead of starting a new turn
+- Added **Multi-Agent Collaboration** mode in Settings (splits complex prompts across Planner & Synthesizer agents, off by default for thermal safety)
+- Fixed popup-to-fullscreen crash and added **exact chat handoff** from overlay into the main app (`OverlayHandoffHolder`)
+- Made **dangerous action confirmation** user-friendly (plain English summary instead of raw JSON/code)
+- Moved **Incognito Chat** directly next to New Chat (24h auto-expire, no memory, no personal context)
+- Added **Multi-Language Support** (`English`, `Nederlands`, `Deutsch`, `Русский`) in `strings.xml`, Setup, Settings, and AI system prompt
+- Added automatic **What's New** changelog dialog after app updates
+
 ## v1.1.9
 - Added **Chess Coach** mode (`AgentPersona.CHESS`) for Chess.com screen/overlay analysis
 - Added **`/` and `@` tool autocomplete & forced tool override** in chat input (e.g., `@weather`, `/python`, `@find_local_image`)

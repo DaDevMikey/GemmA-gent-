@@ -40,7 +40,9 @@ data class ConversationTurn(
     val responseImage: Bitmap? = null,
     val actionSummary: String? = null,
     val actionSuccess: Boolean = true,
-    val isStreaming: Boolean = false
+    val isStreaming: Boolean = false,
+    val versions: List<String> = if (response.isNotEmpty()) listOf(response) else emptyList(),
+    val selectedVersionIndex: Int = 0
 )
 
 data class PendingToolConfirmation(
@@ -209,7 +211,7 @@ class MainScreenViewModel(
         _state.update { it.copy(incognitoMode = !it.incognitoMode) }
     }
 
-    fun startNewChat() {
+    fun startNewChat(incognito: Boolean = false) {
         activeJob?.cancel()
         activeSessionId = java.util.UUID.randomUUID().toString()
         _state.update {
@@ -217,9 +219,48 @@ class MainScreenViewModel(
                 activeTurns = emptyList(),
                 isGenerating = false,
                 statusDetail = null,
-                nerdStats = null
+                nerdStats = null,
+                incognitoMode = incognito
             )
         }
+    }
+
+    fun selectTurnVersion(turnIndex: Int, versionIndex: Int) {
+        _state.update { state ->
+            val updated = state.activeTurns.toMutableList()
+            val turn = updated.getOrNull(turnIndex) ?: return@update state
+            val clamped = versionIndex.coerceIn(0, (turn.versions.size - 1).coerceAtLeast(0))
+            val text = turn.versions.getOrElse(clamped) { turn.response }
+            updated[turnIndex] = turn.copy(response = text, selectedVersionIndex = clamped)
+            state.copy(activeTurns = updated)
+        }
+    }
+
+    fun consumeOverlayHandoff() {
+        val handoff = com.kairo.agent.data.OverlayHandoffHolder.consumeTurns() ?: return
+        activeJob?.cancel()
+        activeSessionId = java.util.UUID.randomUUID().toString()
+        _state.update {
+            it.copy(
+                activeTurns = handoff.map { h ->
+                    ConversationTurn(
+                        prompt = h.prompt,
+                        response = h.response,
+                        image = h.image,
+                        actionSummary = h.actionSummary,
+                        actionSuccess = true,
+                        isStreaming = false
+                    )
+                },
+                isGenerating = false,
+                statusDetail = null
+            )
+        }
+    }
+
+    fun regenerateTurn(turnIndex: Int) {
+        val turn = _state.value.activeTurns.getOrNull(turnIndex) ?: return
+        sendPrompt(userPrompt = turn.prompt, image = turn.image, replaceTurnIndex = turnIndex)
     }
 
     fun loadChatIntoView(record: ChatRecord) {
@@ -255,7 +296,12 @@ class MainScreenViewModel(
         }
     }
 
-    fun sendPrompt(userPrompt: String, image: Bitmap? = null, thinkHarder: Boolean = false) {
+    fun sendPrompt(
+        userPrompt: String,
+        image: Bitmap? = null,
+        thinkHarder: Boolean = false,
+        replaceTurnIndex: Int? = null
+    ) {
         val trimmed = userPrompt.trim()
         if (trimmed.isEmpty() && image == null) return
         val effectivePrompt = trimmed.ifEmpty { "Describe this image." }
@@ -286,21 +332,35 @@ class MainScreenViewModel(
         }
 
         activeJob?.cancel()
-        val historySnapshot = _state.value.activeTurns
+        val existingTurns = _state.value.activeTurns
+        val isRegenerate = replaceTurnIndex != null && replaceTurnIndex in existingTurns.indices
+        val historySnapshot = (if (isRegenerate) existingTurns.take(replaceTurnIndex!!) else existingTurns)
             .filter { !it.isStreaming && it.response.isNotBlank() }
             .map { it.prompt to it.response }
-        val turnIndex = _state.value.activeTurns.size
+        val turnIndex = if (isRegenerate) replaceTurnIndex!! else existingTurns.size
         val currentPersona = _state.value.selectedPersona
         val currentSettings = _state.value.settings
+        val isIncognito = _state.value.incognitoMode
 
         _state.update {
-            it.copy(
-                activeTurns = it.activeTurns + ConversationTurn(
+            val updatedList = if (isRegenerate) {
+                it.activeTurns.toMutableList().apply {
+                    this[turnIndex] = this[turnIndex].copy(
+                        response = "",
+                        isStreaming = true,
+                        actionSummary = null
+                    )
+                }
+            } else {
+                it.activeTurns + ConversationTurn(
                     prompt = effectivePrompt,
                     response = "",
                     image = image,
                     isStreaming = true
-                ),
+                )
+            }
+            it.copy(
+                activeTurns = updatedList,
                 isGenerating = true,
                 statusDetail = null
             )
@@ -360,6 +420,7 @@ class MainScreenViewModel(
                 persona = currentPersona,
                 thinkHarder = thinkHarder,
                 settings = currentSettings,
+                incognito = isIncognito,
                 confirmDangerousTool = { toolName, detail ->
                     val deferred = CompletableDeferred<Boolean>()
                     _state.update {
@@ -441,12 +502,16 @@ class MainScreenViewModel(
                             _state.update { state ->
                                 val updatedTurns = state.activeTurns.toMutableList()
                                 if (turnIndex in updatedTurns.indices) {
-                                    updatedTurns[turnIndex] = updatedTurns[turnIndex].copy(
+                                    val prevTurn = updatedTurns[turnIndex]
+                                    val newVersions = (prevTurn.versions + event.finalText).distinct()
+                                    updatedTurns[turnIndex] = prevTurn.copy(
                                         response = event.finalText,
                                         responseImage = event.attachedImage,
                                         actionSummary = event.actionSummary,
                                         actionSuccess = event.actionSuccess,
-                                        isStreaming = false
+                                        isStreaming = false,
+                                        versions = newVersions,
+                                        selectedVersionIndex = (newVersions.size - 1).coerceAtLeast(0)
                                     )
                                 }
                                 state.copy(
