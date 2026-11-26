@@ -168,45 +168,14 @@ fun SettingsScreen(
 
             HorizontalDivider(color = Color(0xFF232528))
 
-            Text(
-                text = stringResource(R.string.settings_section_updates),
-                color = Color(0xFFA8C7FA),
-                style = MaterialTheme.typography.labelLarge
-            )
-
             Surface(color = Color(0xFF1E2025), shape = RoundedCornerShape(16.dp)) {
-                Column(modifier = Modifier.fillMaxWidth().padding(14.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
-                        Text(stringResource(R.string.updates_card_title), color = Color(0xFFE3E3E3), style = MaterialTheme.typography.titleSmall)
-                        TextButton(onClick = onCheckUpdates, enabled = !state.isCheckingUpdates) {
-                            if (state.isCheckingUpdates) CircularProgressIndicator(modifier = Modifier.size(14.dp), strokeWidth = 2.dp)
-                            else Text(stringResource(R.string.check_now), color = Color(0xFFA8C7FA))
-                        }
-                    }
-                    when (val upd = state.updateStatus) {
-                        is UpdateCheckResult.UpdateAvailable -> {
-                            Text(stringResource(R.string.update_available_label, upd.latestVersion), color = Color(0xFF81C995), style = MaterialTheme.typography.bodySmall)
-                            Button(onClick = { onOpenUrl(upd.apkUrl ?: upd.releaseUrl) }, modifier = Modifier.fillMaxWidth()) {
-                                Icon(Icons.Default.Download, contentDescription = null, modifier = Modifier.size(16.dp))
-                                Spacer(Modifier.width(6.dp))
-                                Text(stringResource(R.string.download_update))
-                            }
-                        }
-                        is UpdateCheckResult.UpToDate -> {
-                            Text(stringResource(R.string.up_to_date_label, upd.currentVersion), color = Color(0xFF9AA0A6), style = MaterialTheme.typography.bodySmall)
-                        }
-                        is UpdateCheckResult.Unavailable -> {
-                            Text(upd.reason, color = Color(0xFF9AA0A6), style = MaterialTheme.typography.bodySmall)
-                        }
-                        null -> {
-                            Text(stringResource(R.string.tap_check_updates), color = Color(0xFF9AA0A6), style = MaterialTheme.typography.bodySmall)
-                        }
-                    }
-                    OutlinedButton(onClick = onOpenReleaseNotes, modifier = Modifier.fillMaxWidth()) {
-                        Icon(Icons.Default.NewReleases, contentDescription = null, modifier = Modifier.size(16.dp))
-                        Spacer(Modifier.width(6.dp))
-                        Text(stringResource(R.string.release_notes))
-                    }
+                Column(modifier = Modifier.fillMaxWidth().padding(14.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                    Text("Google Play Edition", color = Color(0xFFE3E3E3), style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.SemiBold)
+                    Text(
+                        "App updates are managed through Google Play. Self-updating from GitHub is disabled in this build.",
+                        color = Color(0xFF9AA0A6),
+                        style = MaterialTheme.typography.bodySmall
+                    )
                 }
             }
 

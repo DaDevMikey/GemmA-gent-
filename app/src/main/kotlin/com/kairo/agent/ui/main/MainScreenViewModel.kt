@@ -137,31 +137,11 @@ class MainScreenViewModel(
     }
 
     fun checkForUpdates() {
-        val checker = updateChecker ?: return
-        viewModelScope.launch {
-            _state.update { it.copy(isCheckingUpdates = true) }
-            val result = checker.checkForUpdates()
-            _state.update { it.copy(isCheckingUpdates = false, updateStatus = result) }
-        }
+        // Updates are managed by Google Play on this branch.
     }
 
     fun fetchReleaseNotes() {
-        val checker = updateChecker ?: return
-        viewModelScope.launch {
-            _state.update { it.copy(isLoadingReleaseNotes = true, releaseNotesError = null) }
-            checker.fetchReleaseNotes()
-                .onSuccess { notes ->
-                    _state.update { it.copy(isLoadingReleaseNotes = false, releaseNotes = notes) }
-                }
-                .onFailure { err ->
-                    _state.update {
-                        it.copy(
-                            isLoadingReleaseNotes = false,
-                            releaseNotesError = err.localizedMessage ?: "Failed to load release notes."
-                        )
-                    }
-                }
-        }
+        // GitHub release fetching is disabled on Google Play builds.
     }
 
     fun completeOnboarding(userName: String = "") {

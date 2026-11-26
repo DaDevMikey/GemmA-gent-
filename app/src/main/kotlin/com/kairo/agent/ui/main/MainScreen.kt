@@ -86,10 +86,12 @@ import androidx.compose.material.icons.filled.Download
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.ErrorOutline
 import androidx.compose.material.icons.filled.FavoriteBorder
+import androidx.compose.material.icons.filled.Flag
 import androidx.compose.material.icons.filled.Hearing
 import androidx.compose.material.icons.filled.Hub
 import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material.icons.filled.Mic
+import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.NewReleases
 import androidx.compose.material.icons.filled.NotificationsActive
 import androidx.compose.material.icons.filled.Phone
@@ -565,7 +567,15 @@ internal fun MainScreenContent(
     var liveSheetFraction by remember { mutableStateOf(0f) }
     var sparkleTaps by remember { mutableStateOf(0) }
     var pendingDeleteChat by remember { mutableStateOf<ChatRecord?>(null) }
+    var pendingReportTurn by remember { mutableStateOf<ConversationTurn?>(null) }
     var showClearAllConfirm by remember { mutableStateOf(false) }
+
+    pendingReportTurn?.let { reportTurn ->
+        ReportResponseDialog(
+            turn = reportTurn,
+            onDismiss = { pendingReportTurn = null }
+        )
+    }
     val context = LocalContext.current
     var draft by remember { mutableStateOf("") }
     var showIntroTour by remember {
@@ -864,11 +874,6 @@ internal fun MainScreenContent(
 
                     Spacer(Modifier.height(8.dp))
 
-                    DrawerMenuRow(Icons.Default.NewReleases, "Release Notes") {
-                        scope.launch { drawerState.close() }
-                        onFetchReleaseNotes()
-                        showReleaseNotesSheet = true
-                    }
                     DrawerMenuRow(Icons.Default.Policy, "Privacy, Terms & Credits") {
                         scope.launch { drawerState.close() }
                         showPrivacySheet = true
@@ -1295,7 +1300,8 @@ internal fun MainScreenContent(
                                             onSpeak = { onSpeakResponse(turn.response) },
                                             onRegenerate = { onRegenerateTurn(idx) },
                                             onSelectVersion = { ver -> onSelectTurnVersion(idx, ver) },
-                                            onThinkHarder = { onThinkHarder(turn.prompt) }
+                                            onThinkHarder = { onThinkHarder(turn.prompt) },
+                                            onReport = { pendingReportTurn = turn }
                                         )
                                     }
                                 }
@@ -2182,7 +2188,8 @@ private fun ConversationTurnItem(
     onSpeak: () -> Unit = {},
     onRegenerate: () -> Unit = {},
     onSelectVersion: (Int) -> Unit = {},
-    onThinkHarder: () -> Unit = {}
+    onThinkHarder: () -> Unit = {},
+    onReport: () -> Unit = {}
 ) {
     val clipboardManager = LocalClipboardManager.current
     val context = LocalContext.current
@@ -2302,20 +2309,8 @@ private fun ConversationTurnItem(
                         IconButton(onClick = onSpeak, modifier = Modifier.size(32.dp)) {
                             Icon(Icons.AutoMirrored.Filled.VolumeUp, contentDescription = "Read aloud", tint = GeminiTextSecondary, modifier = Modifier.size(16.dp))
                         }
-                        IconButton(
-                            onClick = {
-                                val sendIntent = Intent(Intent.ACTION_SEND).apply {
-                                    type = "text/plain"
-                                    putExtra(Intent.EXTRA_TEXT, turn.response)
-                                }
-                                context.startActivity(Intent.createChooser(sendIntent, "Share via Kairo"))
-                            },
-                            modifier = Modifier.size(32.dp)
-                        ) {
-                            Icon(Icons.Default.Share, contentDescription = "Share response", tint = GeminiTextSecondary, modifier = Modifier.size(16.dp))
-                        }
-                        IconButton(onClick = onRegenerate, modifier = Modifier.size(32.dp)) {
-                            Icon(Icons.Default.Refresh, contentDescription = "Regenerate", tint = GeminiTextSecondary, modifier = Modifier.size(16.dp))
+                        IconButton(onClick = onReport, modifier = Modifier.size(32.dp)) {
+                            Icon(Icons.Default.Flag, contentDescription = "Report response", tint = Color(0xFFF28B82), modifier = Modifier.size(16.dp))
                         }
                         if (turn.versions.size > 1) {
                             Row(verticalAlignment = Alignment.CenterVertically) {
@@ -2340,13 +2335,45 @@ private fun ConversationTurnItem(
                                 }
                             }
                         }
-                        IconButton(onClick = onThinkHarder, modifier = Modifier.size(32.dp)) {
-                            Icon(
-                                Icons.Default.Psychology,
-                                contentDescription = stringResource(R.string.think_harder_cd),
-                                tint = GeminiAccentBlue,
-                                modifier = Modifier.size(18.dp)
-                            )
+                        var showMoreMenu by remember { mutableStateOf(false) }
+                        Box {
+                            IconButton(onClick = { showMoreMenu = true }, modifier = Modifier.size(32.dp)) {
+                                Icon(Icons.Default.MoreVert, contentDescription = "More options", tint = GeminiTextSecondary, modifier = Modifier.size(16.dp))
+                            }
+                            androidx.compose.material3.DropdownMenu(
+                                expanded = showMoreMenu,
+                                onDismissRequest = { showMoreMenu = false },
+                                containerColor = GeminiDrawerBg
+                            ) {
+                                androidx.compose.material3.DropdownMenuItem(
+                                    text = { Text("Rethink / Regenerate", color = GeminiTextPrimary) },
+                                    leadingIcon = { Icon(Icons.Default.Refresh, contentDescription = null, tint = GeminiTextSecondary) },
+                                    onClick = {
+                                        showMoreMenu = false
+                                        onRegenerate()
+                                    }
+                                )
+                                androidx.compose.material3.DropdownMenuItem(
+                                    text = { Text(stringResource(R.string.think_harder_cd), color = GeminiAccentBlue) },
+                                    leadingIcon = { Icon(Icons.Default.Psychology, contentDescription = null, tint = GeminiAccentBlue) },
+                                    onClick = {
+                                        showMoreMenu = false
+                                        onThinkHarder()
+                                    }
+                                )
+                                androidx.compose.material3.DropdownMenuItem(
+                                    text = { Text("Share", color = GeminiTextPrimary) },
+                                    leadingIcon = { Icon(Icons.Default.Share, contentDescription = null, tint = GeminiTextSecondary) },
+                                    onClick = {
+                                        showMoreMenu = false
+                                        val sendIntent = Intent(Intent.ACTION_SEND).apply {
+                                            type = "text/plain"
+                                            putExtra(Intent.EXTRA_TEXT, turn.response)
+                                        }
+                                        context.startActivity(Intent.createChooser(sendIntent, "Share via Kairo"))
+                                    }
+                                )
+                            }
                         }
                     }
                 }
