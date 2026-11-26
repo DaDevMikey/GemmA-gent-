@@ -1,0 +1,14 @@
+<resources>
+    <string name="app_name">Kairo</string>
+    <string name="assistant_title">Kairo</string>
+    <string name="assistant_subtitle">Kairo Агент • На базе Gemma 4</string>
+    <string name="new_chat">Новый чат</string>
+    <string name="incognito_chat">Чат инкогнито</string>
+    <string name="incognito_banner">Инкогнито • Без памяти и личного контекста • Удаляется через 24ч</string>
+    <string name="settings_title">Настройки и параметры</string>
+    <string name="whats_new_title">Что нового в Kairo</string>
+    <string name="preferred_language">Предпочитаемый язык</string>
+    <string name="multi_agent_title">Мультиагентная работа</string>
+    <string name="multi_agent_subtitle">Разделение сложных задач между агентами (выше нагрузка на CPU)</string>
+    <string name="confirm_action_title">Подтвердить действие</string>
+</resources>

@@ -44,6 +44,7 @@ class AgentRunner(
         persona: AgentPersona = AgentPersona.DEFAULT,
         thinkHarder: Boolean = false,
         settings: AgentSettings = AgentSettings(),
+        incognito: Boolean = false,
         confirmDangerousTool: (suspend (toolName: String, detail: String) -> Boolean)? = null
     ): Flow<AgentStreamEvent> = flow {
         val startMs = System.currentTimeMillis()
@@ -51,11 +52,27 @@ class AgentRunner(
         var chunkCount = 0
 
         val route = classifyIntent(userPrompt, !screenText.isNullOrBlank())
-        val routedPrompt = when (route) {
+        val baseRoutedPrompt = when (route) {
             MicroAgentRoute.TOOL_ACTION -> "$userPrompt\n[Router: Focus on accurate JSON tool-calling.]"
             MicroAgentRoute.SUMMARIZE -> "$userPrompt\n[Router: Focus on concise, structured summarization.]"
             MicroAgentRoute.MEMORY_QUERY -> "$userPrompt\n[Router: Check local memory/ephemeral clipboard if relevant.]"
             MicroAgentRoute.GENERAL -> userPrompt
+        }
+
+        val isComplex = userPrompt.split(Regex("\\s+")).count { it.isNotEmpty() } >= 10 ||
+            userPrompt.lowercase().containsAny("compare", "plan", "analyze", "step by step", "pros and cons")
+        val routedPrompt = if (settings.multiAgentEnabled && isComplex) {
+            emit(AgentStreamEvent.RunningTool("multi_agent_planner"))
+            val plannerNotes = StringBuilder()
+            engine.streamResponse(
+                userQuery = "You are Kairo Planner Sub-Agent. Briefly list 3 concise steps or key angles to answer this user request accurately:\n$userPrompt",
+                thinkHarder = false,
+                settings = settings
+            ).collect { chunk -> plannerNotes.append(chunk) }
+            emit(AgentStreamEvent.ToolCompleted("Planner sub-agent shared 3-step brief", true))
+            "$baseRoutedPrompt\n[Planner Sub-Agent Brief: ${plannerNotes.toString().take(500)}]"
+        } else {
+            baseRoutedPrompt
         }
 
         val initialPrompt = tools.buildAgentPrompt(
@@ -63,7 +80,9 @@ class AgentRunner(
             screenText = screenText,
             conversationHistory = conversationHistory,
             persona = persona,
-            rootPowerMode = settings.rootPowerMode
+            rootPowerMode = settings.rootPowerMode,
+            preferredLanguage = settings.preferredLanguage,
+            incognito = incognito
         )
         val firstTurnRaw = StringBuilder()
 
@@ -83,7 +102,7 @@ class AgentRunner(
         }
 
         val rawOutput = firstTurnRaw.toString()
-        val autoSavedMemories = tools.extractAndSaveMemories(rawOutput)
+        val autoSavedMemories = if (incognito) emptyList() else tools.extractAndSaveMemories(rawOutput)
 
         if (!tools.hasToolCall(rawOutput)) {
             val clean = tools.stripToolCallMarkup(rawOutput)
@@ -105,7 +124,8 @@ class AgentRunner(
 
         val detectedTool = tools.extractToolName(rawOutput) ?: "action"
         if (detectedTool in DANGEROUS_TOOLS && confirmDangerousTool != null) {
-            val allowed = confirmDangerousTool(detectedTool, rawOutput.take(240))
+            val friendly = tools.formatFriendlyToolDescription(detectedTool, rawOutput)
+            val allowed = confirmDangerousTool(detectedTool, friendly)
             if (!allowed) {
                 emit(
                     AgentStreamEvent.Finished(

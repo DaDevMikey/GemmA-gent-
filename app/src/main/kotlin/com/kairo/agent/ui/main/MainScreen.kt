@@ -289,6 +289,11 @@ fun MainScreen(
 
     var attachedImage by remember { mutableStateOf<Bitmap?>(null) }
 
+    LifecycleResumeEffect(Unit) {
+        viewModel.consumeOverlayHandoff()
+        onPauseOrDispose {}
+    }
+
     val imagePickerLauncher = rememberLauncherForActivityResult(
         ActivityResultContracts.PickVisualMedia()
     ) { uri ->
@@ -367,7 +372,10 @@ fun MainScreen(
                 onUpdateSettings = viewModel::updateSettings,
                 onToggleIncognito = viewModel::toggleIncognitoMode,
                 onRunCompatibilityChecks = viewModel::runCompatibilityChecks,
-                onNewChat = viewModel::startNewChat,
+                onNewChat = { viewModel.startNewChat(incognito = false) },
+                onNewIncognitoChat = { viewModel.startNewChat(incognito = true) },
+                onRegenerateTurn = viewModel::regenerateTurn,
+                onSelectTurnVersion = viewModel::selectTurnVersion,
                 onSelectChat = viewModel::loadChatIntoView,
                 onDeleteChat = viewModel::deleteChat,
                 onClearChats = viewModel::clearChats,
@@ -469,6 +477,9 @@ internal fun MainScreenContent(
     onToggleIncognito: () -> Unit = {},
     onRunCompatibilityChecks: () -> Unit = {},
     onNewChat: () -> Unit,
+    onNewIncognitoChat: () -> Unit = {},
+    onRegenerateTurn: (Int) -> Unit = {},
+    onSelectTurnVersion: (Int, Int) -> Unit = { _, _ -> },
     onSelectChat: (ChatRecord) -> Unit,
     onDeleteChat: (String) -> Unit = {},
     onClearChats: () -> Unit,
@@ -513,6 +524,36 @@ internal fun MainScreenContent(
         )
     }
     var introTourStep by remember { mutableStateOf(0) }
+    val pkgInfo = remember(context) {
+        runCatching { context.packageManager.getPackageInfo(context.packageName, 0) }.getOrNull()
+    }
+    val currentVersionCode = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
+        pkgInfo?.longVersionCode?.toInt() ?: 1
+    } else {
+        @Suppress("DEPRECATION")
+        pkgInfo?.versionCode ?: 1
+    }
+    val currentVersionName = pkgInfo?.versionName ?: "1.2.0"
+    var showWhatsNewDialog by remember {
+        val prefs = context.getSharedPreferences("kairo_ui_prefs", Context.MODE_PRIVATE)
+        val lastCode = prefs.getInt("last_seen_version_code", currentVersionCode)
+        val updated = currentVersionCode > lastCode && state.settings.hasCompletedOnboarding
+        mutableStateOf(updated)
+    }
+
+    if (showWhatsNewDialog) {
+        val latestNotes = state.releaseNotes.firstOrNull()?.body?.takeIf { it.isNotBlank() }
+            ?: "## v$currentVersionName\n- Response version switcher (scroll between regenerated answers)\n- Multi-Agent Collaboration mode in Settings\n- Exact popup-to-fullscreen chat handoff\n- Incognito Chat directly in New Chat (24h auto-expire, no memory)\n- Multi-language support (English, Dutch, German, Russian)\n- User-friendly action confirmations"
+        WhatsNewChangelogDialog(
+            versionName = currentVersionName,
+            changelogMarkdown = latestNotes,
+            onDismiss = {
+                context.getSharedPreferences("kairo_ui_prefs", Context.MODE_PRIVATE)
+                    .edit().putInt("last_seen_version_code", currentVersionCode).apply()
+                showWhatsNewDialog = false
+            }
+        )
+    }
 
     if (showIntroTour) {
         val tourSteps = listOf(
@@ -709,61 +750,6 @@ internal fun MainScreenContent(
                         }
                     }
 
-                    if (state.isGenerating || state.isThermallyThrottled) {
-                    val tempStr = if (state.deviceTempC > 0f) "${"%.1f".format(state.deviceTempC)}°C • " else ""
-                    Surface(
-                        color = if (state.isThermallyThrottled) Color(0xFF4A1E24) else GeminiPillBg,
-                        shape = RoundedCornerShape(50),
-                        modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp)
-                    ) {
-                        Text(
-                            text = if (state.isThermallyThrottled) "⚠ Thermal Guard: $tempStr${state.thermalLabel}" else "Device: $tempStr${state.thermalLabel}",
-                            color = if (state.isThermallyThrottled) Color(0xFFF28B82) else GeminiTextSecondary,
-                            style = MaterialTheme.typography.labelSmall,
-                            modifier = Modifier.padding(horizontal = 12.dp, vertical = 5.dp)
-                        )
-                    }
-                }
-
-                val slashOrAtQuery = remember(draft) {
-                    val m = Regex("""(?:^|\s)([/@])([a-z_]*)$""").find(draft)
-                    m?.let { it.groupValues[1] to it.groupValues[2] }
-                }
-                if (slashOrAtQuery != null) {
-                    val (sigil, prefix) = slashOrAtQuery
-                    val allTools = listOf(
-                        "get_weather" to "Live local weather",
-                        "get_current_time" to "Exact local time",
-                        "run_python_script" to "Run Python math/script",
-                        "find_local_image" to "Attach photo from device",
-                        "search_ephemeral_memory" to "7-day clipboard/screen memory",
-                        "web_search" to "In-app search",
-                        "get_health_summary" to "Health Connect insights",
-                        "call_person" to "Call contact",
-                        "send_whatsapp" to "Send WhatsApp message"
-                    ).filter { it.first.contains(prefix, ignoreCase = true) }
-                    if (allTools.isNotEmpty()) {
-                        Row(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .horizontalScroll(rememberScrollState())
-                                .padding(horizontal = 16.dp, vertical = 4.dp),
-                            horizontalArrangement = Arrangement.spacedBy(6.dp)
-                        ) {
-                            allTools.forEach { (toolName, desc) ->
-                                AssistChip(
-                                    onClick = {
-                                        draft = draft.replace(Regex("""([/@])[a-z_]*$"""), "$sigil$toolName ")
-                                    },
-                                    label = { Text("$sigil$toolName • $desc", color = GeminiAccentBlue, style = MaterialTheme.typography.labelSmall) },
-                                    colors = AssistChipDefaults.assistChipColors(containerColor = GeminiPillBg),
-                                    border = null
-                                )
-                            }
-                        }
-                    }
-                }
-
                 AnimatedVisibility(visible = showDrawerSearch) {
                         OutlinedTextField(
                             value = drawerSearchQuery,
@@ -777,27 +763,51 @@ internal fun MainScreenContent(
 
                     Spacer(Modifier.height(6.dp))
 
-                    Surface(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .clip(RoundedCornerShape(50))
-                            .clickable(
-                                interactionSource = remember { MutableInteractionSource() },
-                                indication = ripple(color = GeminiAccentBlue)
-                            ) {
-                                onNewChat()
-                                scope.launch { drawerState.close() }
-                            },
-                        shape = RoundedCornerShape(50),
-                        color = GeminiPillBg
-                    ) {
-                        Row(
-                            modifier = Modifier.padding(horizontal = 18.dp, vertical = 13.dp),
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.spacedBy(14.dp)
+                    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        Surface(
+                            modifier = Modifier
+                                .weight(1f)
+                                .clip(RoundedCornerShape(50))
+                                .clickable(
+                                    interactionSource = remember { MutableInteractionSource() },
+                                    indication = ripple(color = GeminiAccentBlue)
+                                ) {
+                                    onNewChat()
+                                    scope.launch { drawerState.close() }
+                                },
+                            shape = RoundedCornerShape(50),
+                            color = GeminiPillBg
                         ) {
-                            Icon(Icons.Default.Edit, contentDescription = null, tint = GeminiTextPrimary, modifier = Modifier.size(20.dp))
-                            Text("New chat", color = GeminiTextPrimary, style = MaterialTheme.typography.bodyLarge)
+                            Row(
+                                modifier = Modifier.padding(horizontal = 16.dp, vertical = 13.dp),
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(10.dp)
+                            ) {
+                                Icon(Icons.Default.Edit, contentDescription = null, tint = GeminiTextPrimary, modifier = Modifier.size(18.dp))
+                                Text("New chat", color = GeminiTextPrimary, style = MaterialTheme.typography.bodyLarge)
+                            }
+                        }
+                        Surface(
+                            modifier = Modifier
+                                .clip(RoundedCornerShape(50))
+                                .clickable(
+                                    interactionSource = remember { MutableInteractionSource() },
+                                    indication = ripple(color = GeminiAccentBlue)
+                                ) {
+                                    onNewIncognitoChat()
+                                    scope.launch { drawerState.close() }
+                                },
+                            shape = RoundedCornerShape(50),
+                            color = Color(0xFF282235)
+                        ) {
+                            Row(
+                                modifier = Modifier.padding(horizontal = 14.dp, vertical = 13.dp),
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(6.dp)
+                            ) {
+                                Icon(Icons.Default.Policy, contentDescription = "Incognito chat", tint = GeminiAccentBlue, modifier = Modifier.size(18.dp))
+                                Text("Incognito", color = GeminiAccentBlue, style = MaterialTheme.typography.labelLarge)
+                            }
                         }
                     }
 
@@ -1232,7 +1242,8 @@ internal fun MainScreenContent(
                                             turn = turn,
                                             sparkleModifier = sparkleModifier,
                                             onSpeak = { onSpeakResponse(turn.response) },
-                                            onRegenerate = { onSendPrompt(turn.prompt) },
+                                            onRegenerate = { onRegenerateTurn(idx) },
+                                            onSelectVersion = { ver -> onSelectTurnVersion(idx, ver) },
                                             onThinkHarder = { onThinkHarder(turn.prompt) }
                                         )
                                     }
@@ -2100,11 +2111,19 @@ internal fun MainScreenContent(
                     color = GeminiTextSecondary
                 )
 
+                AppLanguagePickerRow(
+                    selectedLang = state.settings.preferredLanguage,
+                    onSelectLang = { lang ->
+                        onUpdateSettings(state.settings.copy(preferredLanguage = lang))
+                    },
+                    accentColor = GeminiAccentBlue
+                )
+
                 SetupSwitchRow(
-                    title = "Incognito Context",
-                    subtitle = "Do not save this session to local chat history",
-                    checked = state.incognitoMode,
-                    onCheckedChange = { onToggleIncognito() }
+                    title = "Multi-Agent Collaboration",
+                    subtitle = "Split complex prompts across Planner & Synthesizer agents (higher CPU/heat)",
+                    checked = state.settings.multiAgentEnabled,
+                    onCheckedChange = { onUpdateSettings(state.settings.copy(multiAgentEnabled = it)) }
                 )
 
                 Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -2367,6 +2386,7 @@ private fun ConversationTurnItem(
     sparkleModifier: Modifier = Modifier,
     onSpeak: () -> Unit = {},
     onRegenerate: () -> Unit = {},
+    onSelectVersion: (Int) -> Unit = {},
     onThinkHarder: () -> Unit = {}
 ) {
     val clipboardManager = LocalClipboardManager.current
@@ -2501,6 +2521,29 @@ private fun ConversationTurnItem(
                         }
                         IconButton(onClick = onRegenerate, modifier = Modifier.size(32.dp)) {
                             Icon(Icons.Default.Refresh, contentDescription = "Regenerate", tint = GeminiTextSecondary, modifier = Modifier.size(16.dp))
+                        }
+                        if (turn.versions.size > 1) {
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                TextButton(
+                                    onClick = { onSelectVersion(turn.selectedVersionIndex - 1) },
+                                    enabled = turn.selectedVersionIndex > 0,
+                                    contentPadding = PaddingValues(horizontal = 4.dp, vertical = 0.dp)
+                                ) {
+                                    Text("‹", color = GeminiTextSecondary)
+                                }
+                                Text(
+                                    text = "${turn.selectedVersionIndex + 1}/${turn.versions.size}",
+                                    color = GeminiTextSecondary,
+                                    style = MaterialTheme.typography.labelSmall
+                                )
+                                TextButton(
+                                    onClick = { onSelectVersion(turn.selectedVersionIndex + 1) },
+                                    enabled = turn.selectedVersionIndex < turn.versions.lastIndex,
+                                    contentPadding = PaddingValues(horizontal = 4.dp, vertical = 0.dp)
+                                ) {
+                                    Text("›", color = GeminiTextSecondary)
+                                }
+                            }
                         }
                         TextButton(onClick = onThinkHarder) {
                             Icon(Icons.Default.Psychology, contentDescription = null, tint = GeminiAccentBlue, modifier = Modifier.size(15.dp))
