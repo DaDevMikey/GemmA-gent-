@@ -1,5 +1,9 @@
 # Changelog
 
+## v1.2.2
+- Fixed App UI language switching (`LocaleHelper` + `attachBaseContext` + `LocaleManager` on `MainActivity` & `AssistantOverlayActivity` with automatic activity recreate)
+- Added confirmation popup when choosing an app language to sync it with the AI model's preferred response language
+
 ## v1.2.1
 - Full translations across Setup, Home, Drawer, Settings, Example Prompts, and Dialogs (`English`, `Nederlands`, `Deutsch`, `Русский`)
 - Added confirmation popup asking if the selected app language should also be used for AI model replies

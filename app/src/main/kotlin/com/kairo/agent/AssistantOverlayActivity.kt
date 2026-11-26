@@ -39,6 +39,10 @@ import kotlinx.coroutines.launch
  */
 class AssistantOverlayActivity : ComponentActivity() {
 
+    override fun attachBaseContext(newBase: android.content.Context) {
+        super.attachBaseContext(com.kairo.agent.data.LocaleHelper.wrapContext(newBase))
+    }
+
     private val engine by lazy { GemmaAssistantEngine() }
     private val agentTools by lazy { AndroidAgentTools(this) }
     private val agentRunner by lazy { AgentRunner(engine, agentTools) }

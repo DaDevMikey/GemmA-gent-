@@ -301,9 +301,10 @@ fun OnboardingScreen(
                                             onCheckedChange = { onUpdateSettings(settings.copy(miniModeOverlay = it)) }
                                         )
                                         com.kairo.agent.ui.main.AppLanguagePickerRow(
-                                            selectedLang = settings.preferredLanguage,
-                                            onSelectLang = { lang ->
-                                                onUpdateSettings(settings.copy(preferredLanguage = lang))
+                                            selectedAppLang = settings.appLanguage,
+                                            selectedModelLang = settings.preferredLanguage,
+                                            onSelectAppAndModelLang = { appLang, modelLang ->
+                                                onUpdateSettings(settings.copy(appLanguage = appLang, preferredLanguage = modelLang))
                                             }
                                         )
                                     }

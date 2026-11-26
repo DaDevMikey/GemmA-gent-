@@ -2270,9 +2270,10 @@ internal fun MainScreenContent(
                 )
 
                 AppLanguagePickerRow(
-                    selectedLang = state.settings.preferredLanguage,
-                    onSelectLang = { lang ->
-                        onUpdateSettings(state.settings.copy(preferredLanguage = lang))
+                    selectedAppLang = state.settings.appLanguage,
+                    selectedModelLang = state.settings.preferredLanguage,
+                    onSelectAppAndModelLang = { appLang, modelLang ->
+                        onUpdateSettings(state.settings.copy(appLanguage = appLang, preferredLanguage = modelLang))
                     },
                     accentColor = GeminiAccentBlue
                 )
