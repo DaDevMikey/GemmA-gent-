@@ -70,6 +70,8 @@ import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
+import com.kairo.agent.R
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
@@ -187,21 +189,21 @@ fun OnboardingScreen(
                             ) {
                                 GemmASparkleIcon(size = 68.dp, isAnimating = true)
                                 com.kairo.agent.ui.components.StaggeredBlurText(
-                                    text = "Welcome to Kairo",
+                                    text = stringResource(R.string.welcome_title),
                                     style = MaterialTheme.typography.headlineMedium.copy(fontWeight = FontWeight.Bold),
                                     color = TextPrimary,
                                     key = "welcome_title"
                                 )
                                 BlurIntoText(key = "sub_0", delayMs = 340L) {
                                     Text(
-                                        text = "Pronounced /kaj/roo/ • 100% On-Device",
+                                        text = stringResource(R.string.welcome_sub),
                                         color = AccentBlue,
                                         style = MaterialTheme.typography.labelLarge
                                     )
                                 }
                                 BlurIntoText(key = "desc_0", delayMs = 460L) {
                                     Text(
-                                        text = "Your private Android AI agent powered by Gemma 4. Prompts, voice, images, and screen context never leave your device.",
+                                        text = stringResource(R.string.welcome_desc),
                                         color = TextSecondary,
                                         style = MaterialTheme.typography.bodyLarge,
                                         textAlign = TextAlign.Center
@@ -227,13 +229,13 @@ fun OnboardingScreen(
                                         )
                                         Column(modifier = Modifier.weight(1f)) {
                                             Text(
-                                                "I agree to the Privacy Policy",
+                                                stringResource(R.string.agree_privacy_title),
                                                 color = TextPrimary,
                                                 style = MaterialTheme.typography.labelLarge,
                                                 fontWeight = FontWeight.SemiBold
                                             )
                                             Text(
-                                                "On-device by default; optional Cloud AI is strictly opt-in.",
+                                                stringResource(R.string.agree_privacy_sub),
                                                 color = TextSecondary,
                                                 style = MaterialTheme.typography.labelSmall
                                             )
@@ -245,7 +247,7 @@ fun OnboardingScreen(
                                                 )
                                             }
                                         }) {
-                                            Text("Read", color = AccentBlue)
+                                            Text(stringResource(R.string.read_policy), color = AccentBlue)
                                         }
                                     }
                                 }
@@ -256,7 +258,7 @@ fun OnboardingScreen(
                                 modifier = Modifier.fillMaxWidth().height(56.dp),
                                 shape = RoundedCornerShape(50)
                             ) {
-                                Text("Get started", fontSize = 16.sp, fontWeight = FontWeight.SemiBold)
+                                Text(stringResource(R.string.get_started), fontSize = 16.sp, fontWeight = FontWeight.SemiBold)
                             }
                         }
                     }
@@ -270,8 +272,8 @@ fun OnboardingScreen(
                                 modifier = Modifier.weight(1f).verticalScroll(rememberScrollState()),
                                 verticalArrangement = Arrangement.spacedBy(14.dp)
                             ) {
-                                AnimatedHeadline("Personalize Kairo")
-                                Text("Tell Kairo what to call you and pick your default experience.", color = TextSecondary, style = MaterialTheme.typography.bodyMedium)
+                                AnimatedHeadline(stringResource(R.string.personalize_title))
+                                Text(stringResource(R.string.personalize_sub), color = TextSecondary, style = MaterialTheme.typography.bodyMedium)
 
                                 Surface(
                                     color = FrostedCardBg,
@@ -627,7 +629,7 @@ fun OnboardingScreen(
                                         },
                                     shape = RoundedCornerShape(50)
                                 ) {
-                                    Text("Ready?", fontSize = 16.sp, fontWeight = FontWeight.SemiBold)
+                                    Text(stringResource(R.string.ready_question), fontSize = 16.sp, fontWeight = FontWeight.SemiBold)
                                 }
                             }
                         }

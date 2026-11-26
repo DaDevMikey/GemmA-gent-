@@ -1,5 +1,11 @@
 # Changelog
 
+## v1.2.1
+- Full translations across Setup, Home, Drawer, Settings, Example Prompts, and Dialogs (`English`, `Nederlands`, `Deutsch`, `Русский`)
+- Added confirmation popup asking if the selected app language should also be used for AI model replies
+- Added prominent **Incognito active** banner with one-tap Exit whenever an Incognito chat is active
+- Removed text label next to the **Think Harder** icon button for a cleaner action bar
+
 ## v1.2.0
 - Added **Response Version Switcher** (`‹ 1/2 ›`) when regenerating responses instead of starting a new turn
 - Added **Multi-Agent Collaboration** mode in Settings (splits complex prompts across Planner & Synthesizer agents, off by default for thermal safety)
