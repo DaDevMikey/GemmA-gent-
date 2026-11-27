@@ -97,4 +97,240 @@
     <string name="setup_incompat_title">Device reported as incompatible</string>
     <string name="setup_bypass_btn">Bypass &amp; Continue Anyway</string>
     <string name="setup_final_sub">Gemma 4 is configured locally on your NPU with zero cloud telemetry.</string>
+
+    <!-- Check updates on startup -->
+    <string name="check_updates_startup_title">Check for updates on startup</string>
+    <string name="check_updates_startup_sub">Automatically check GitHub for new releases when Kairo opens</string>
+
+    <!-- Re-run setup -->
+    <string name="rerun_setup">Re-run Setup Wizard</string>
+
+    <!-- Plugins section -->
+    <string name="plugins_section_title">Plugins &amp; Extensions</string>
+    <string name="plugins_empty">No standalone Kairo plugin APKs installed. Install a theme, language, or tool plugin APK to extend Kairo.</string>
+    <string name="plugin_reload_title">Reload to Apply Theme?</string>
+    <string name="plugin_reload_body">Kairo needs to reload to apply &quot;%1$s&quot;. Reload now?</string>
+    <string name="plugin_reload_now">Reload Now</string>
+    <string name="plugin_later">Later</string>
+    <string name="plugin_use_lang_title">Use %1$s Now?</string>
+    <string name="plugin_use_lang_body">Would you like to switch Kairo\'s UI and AI response language to %1$s right now?</string>
+    <string name="plugin_use_now">Use Now</string>
+    <string name="plugin_enable_only">Enable Only</string>
+
+    <!-- Drawer -->
+    <string name="drawer_kairo_by">Kairo • by DaManMikey</string>
+    <string name="drawer_on_device">ON-DEVICE • GEMMA 4</string>
+    <string name="drawer_about_kairo">About Kairo</string>
+    <string name="drawer_release_notes">Release Notes</string>
+    <string name="drawer_privacy_credits">Privacy, Terms &amp; Credits</string>
+    <string name="drawer_wake_word">Hey Kairo wake word</string>
+    <string name="drawer_search_placeholder">Search recent chats</string>
+    <string name="drawer_no_chats_yet">No recent chats yet.</string>
+    <string name="drawer_no_matching_chats">No matching chats.</string>
+
+    <!-- Dialogs -->
+    <string name="clear_all_chats_body">This will permanently delete all %1$d saved conversations from your device.</string>
+    <string name="delete_chat_body">Remove &quot;%1$s&quot; from your local chat history? This cannot be undone.</string>
+    <string name="confirm_action_body">Kairo is about to execute `%1$s`:\n\n%2$s\n\nAllow this action?</string>
+    <string name="confirm_action_colon">Confirm Action: %1$s</string>
+    <string name="not_now">Not now</string>
+
+    <!-- Home screen example prompts -->
+    <string name="example_battery">Check my battery &amp; status</string>
+    <string name="example_notifications">Catch me up on notifications</string>
+    <string name="example_alarm">Set a 7:30 AM alarm</string>
+    <string name="example_capabilities">What can you do?</string>
+
+    <!-- Quick action shortcuts -->
+    <string name="qa_catchup">Catch me up</string>
+    <string name="qa_catchup_prompt">Catch me up on my recent notifications</string>
+    <string name="qa_health">Health today</string>
+    <string name="qa_health_prompt">Check my Health Connect steps and heart rate today</string>
+    <string name="qa_alarm">Set 7:30 alarm</string>
+    <string name="qa_alarm_prompt">Set an alarm for 7:30 AM</string>
+    <string name="qa_flashlight">Flashlight on</string>
+    <string name="qa_flashlight_prompt">Turn on the flashlight</string>
+    <string name="qa_battery_short">Battery</string>
+    <string name="qa_battery_prompt">What is my battery status?</string>
+    <string name="qa_call">Call…</string>
+    <string name="qa_call_prompt">Call </string>
+    <string name="qa_text">Text…</string>
+    <string name="qa_text_prompt">Text </string>
+    <string name="qa_send_image">Send image</string>
+    <string name="qa_send_image_prompt">Send this image</string>
+    <string name="qa_remember">Remember</string>
+    <string name="qa_remember_prompt">Remember that </string>
+
+    <!-- Image attached -->
+    <string name="image_attached">Image attached</string>
+
+    <!-- Permission status -->
+    <string name="perm_granted">Granted</string>
+
+    <!-- Connections sheet -->
+    <string name="connections_title">Connections &amp; Permissions</string>
+    <string name="connections_body">Manage optional Android permissions and power features. All processing stays on-device.</string>
+    <string name="conn_perm_microphone">Microphone</string>
+    <string name="conn_perm_microphone_sub">Voice prompts &amp; wake word</string>
+    <string name="conn_perm_location">Location</string>
+    <string name="conn_perm_location_sub">Local weather, nearby places &amp; GPS context</string>
+    <string name="conn_perm_contacts">Contacts</string>
+    <string name="conn_perm_contacts_sub">Call &amp; text people by name</string>
+    <string name="conn_perm_calling">Direct Calling</string>
+    <string name="conn_perm_calling_sub">Place calls directly</string>
+    <string name="conn_perm_notifications">Notification Catch-Up</string>
+    <string name="conn_perm_notifications_sub">Summarize unread messages</string>
+    <string name="conn_perm_health">Health Connect</string>
+    <string name="conn_perm_health_sub">Steps, heart rate, sleep, distance, calories &amp; workouts</string>
+    <string name="conn_perm_brightness">System Brightness</string>
+    <string name="conn_perm_brightness_sub">Adjust screen brightness</string>
+    <string name="conn_perm_root_title">Root / Shell Power Mode</string>
+    <string name="conn_perm_root_sub">Allow shell / root commands when requested</string>
+    <string name="conn_perm_nerd_title">Live Nerd Stats (tok/s, RAM)</string>
+    <string name="conn_perm_nerd_sub">Show inference speed &amp; memory usage</string>
+    <string name="conn_perm_mini_title">Cover-Screen Mini-Mode Overlay</string>
+    <string name="conn_perm_mini_sub">Start overlay as a compact pill until a reply streams</string>
+    <string name="connected_apps_title">Connected Apps &amp; Actions</string>
+    <string name="connected_apps_body">• Split-Screen Multitasking (open two apps side-by-side)\n• Spotify &amp; System Media Controls (play, pause, next, prev)\n• WhatsApp, SMS, Phone &amp; Email\n• Maps Navigation, Nearby Search &amp; YouTube\n• Clock Alarms/Timers, Calendar Events &amp; Play Store\n• Home Screen &amp; Cover-Screen Widgets</string>
+
+    <!-- Disclosure dialogs -->
+    <string name="disclosure_mic_title">Microphone Access</string>
+    <string name="disclosure_mic_body">Used strictly when you tap the mic or enable \'Hey Kairo\' wake word. Audio is processed locally and never uploaded.</string>
+    <string name="disclosure_location_title">Location Access</string>
+    <string name="disclosure_location_body">Used only when you ask location-based questions (weather, nearby places). Coordinates stay 100%% on-device.</string>
+    <string name="disclosure_contacts_title">Contacts Access</string>
+    <string name="disclosure_contacts_body">Used locally on-device solely to resolve spoken/typed contact names to phone numbers or emails.</string>
+    <string name="disclosure_calling_title">Direct Calling Access</string>
+    <string name="disclosure_calling_body">Allows Kairo to place calls directly when you ask instead of stopping at the dialer.</string>
+    <string name="disclosure_notif_title">Notification Catch-Up</string>
+    <string name="disclosure_notif_body">Reads unread notifications locally in memory so Kairo can summarize what you missed.</string>
+    <string name="disclosure_health_title">Health Connect Access</string>
+    <string name="disclosure_health_body">Reads your local Health Connect fitness &amp; sleep metrics solely for private on-device summaries.</string>
+    <string name="disclosure_brightness_title">Modify System Settings</string>
+    <string name="disclosure_brightness_body">Lets Kairo adjust screen brightness directly when you ask.</string>
+    <string name="disclosure_onboard_mic_body">Kairo uses your microphone strictly when you tap the mic or enable optional \'Hey Kairo\' wake word detection. Audio is processed locally on your device and never uploaded.</string>
+    <string name="disclosure_onboard_assistant_title">Default Digital Assistant</string>
+    <string name="disclosure_onboard_assistant_body">Setting Kairo as your Digital Assistant lets it capture transient screen text or screenshots only when you trigger \'Ask about screen\'. Nothing is stored or uploaded.</string>
+
+    <!-- Privacy sheet -->
+    <string name="privacy_sheet_title">Privacy Policy, Terms &amp; Credits</string>
+    <string name="privacy_local_label">100%% Local On-Device Agent</string>
+    <string name="privacy_body">• All prompts, images, screen context, notifications, and voice transcriptions are processed locally via Android AICore (Gemma 4) or your own local model endpoint.\n• Recent chats and saved memories are stored only in private app storage and can be deleted anytime.\n• Zero analytics, zero ads, and zero tracking SDKs.</string>
+    <string name="terms_label">Terms of Service (MIT)</string>
+    <string name="terms_body">Kairo is open-source software provided under the MIT License without warranty. Always verify AI-generated responses and device actions.</string>
+    <string name="credits_source_label">Credits &amp; Source Code</string>
+    <string name="credits_body">Kairo (/kaj/roo/) • Created by DaManMikey • Powered by on-device Gemma 4.</string>
+    <string name="btn_damanmikey_me">damanmikey.me</string>
+    <string name="btn_source_code">Source Code</string>
+
+    <!-- Release notes sheet -->
+    <string name="release_notes_all_filter">All</string>
+    <string name="release_notes_loading">Loading…</string>
+    <string name="btn_open_github_releases">Open GitHub Releases</string>
+    <string name="no_releases_loaded">No releases loaded yet.</string>
+    <string name="btn_download_apk">Download APK</string>
+
+    <!-- Memory sheet -->
+    <string name="memory_sheet_title">Kairo Memory</string>
+    <string name="memory_clear_all">Clear all</string>
+    <string name="memory_body">Kairo automatically saves important facts with &lt;memory&gt; tags and injects them across all chats.</string>
+    <string name="memory_add_placeholder">Add a memory…</string>
+    <string name="memory_save">Save</string>
+    <string name="no_memories_yet">No memories saved yet.</string>
+
+    <!-- AICore model sheet -->
+    <string name="aicore_model_title">AICore Model</string>
+    <string name="aicore_auto_label">Auto (Best Available)</string>
+    <string name="aicore_auto_sub">Prefers Stable, falls back to Preview if needed</string>
+    <string name="btn_download_gemma4">Download Gemma 4</string>
+    <string name="btn_warmup_gemma4">Warm up Gemma 4</string>
+    <string name="warming_up">Warming up…</string>
+    <string name="btn_set_digital_assistant">Set as Default Digital Assistant</string>
+    <string name="cloud_ai_active">Cloud AI Active (%1$s)</string>
+    <string name="cloud_ai_privacy_warning">Privacy is not guaranteed while Cloud AI is enabled.</string>
+    <string name="btn_disable_cloud">Disable Cloud AI</string>
+
+    <!-- Onboarding step 3 & 4 -->
+    <string name="onboarding_voice_title">Core Assistant &amp; Voice</string>
+    <string name="onboarding_voice_body">Set up how you talk to Kairo and summon it over any app. Both are optional and run 100%% on-device.</string>
+    <string name="onboarding_connections_title">Smart Connections (Optional)</string>
+    <string name="onboarding_connections_body">Let Kairo connect with your local apps and data. You can skip any of these and enable them later in Settings.</string>
+    <string name="perm_microphone">Microphone</string>
+    <string name="perm_microphone_sub">Enables voice prompts, hands-free dictation, and optional \'Hey Kairo\' wake word detection. Audio is transcribed locally and never sent off-device.</string>
+    <string name="perm_digital_assistant">Default Digital Assistant</string>
+    <string name="perm_digital_assistant_sub">Bind Kairo to your power button or corner swipe to open the floating overlay over any app and ask about your screen.</string>
+    <string name="perm_location">Location</string>
+    <string name="perm_location_sub">Used locally when you ask for nearby places, local weather, or your current city/address. Coordinates never leave your device.</string>
+    <string name="perm_contacts">Contacts</string>
+    <string name="perm_contacts_sub">Lets Kairo look up people by name when you say &quot;Call Mom&quot; or &quot;Text Alex on WhatsApp&quot; without needing phone numbers.</string>
+    <string name="perm_calling">Direct Calling</string>
+    <string name="perm_calling_sub">Allows Kairo to start phone calls immediately when asked, instead of only opening the dialer.</string>
+    <string name="perm_notifications">Notification Catch-Up</string>
+    <string name="perm_notifications_sub">Reads unread notifications locally (WhatsApp, Telegram, Discord, SMS) so Kairo can summarize what you missed.</string>
+    <string name="perm_health">Health Connect</string>
+    <string name="perm_health_sub">Reads today\'s steps, heart rate, sleep, distance, calories, and workouts from Health Connect for private on-device wellness summaries.</string>
+    <string name="perm_set_up">Set Up</string>
+    <string name="perm_allow">Allow</string>
+    <string name="perm_continue">Continue</string>
+    <string name="perm_not_now">Not now</string>
+
+    <!-- Onboarding privacy banner -->
+    <string name="onboard_privacy_header">100%% On-Device • Zero Cloud Uploads</string>
+    <string name="onboard_privacy_compact">Everything—voice, location, contacts, and memories—stays strictly on your phone.</string>
+    <string name="onboard_privacy_full">Your chats, memories, voice, photos, location, and screen context are processed locally on your silicon. No analytics, no tracking, no servers.</string>
+
+    <!-- Onboarding compat step -->
+    <string name="setup_aicore_supported">AICore Supported — Additional Setup Needed</string>
+    <string name="setup_aicore_supported_body">Your SoC (%1$s) supports AICore, but it isn\'t active yet. Open Developer Options → Debugging → AICore and enable the preview toggle, then tap Re-check.</string>
+    <string name="setup_incompat_body">Your SoC (%1$s) is not on the Snapdragon 8 Elite / Tensor G5+ allowlist and AICore/Local endpoint isn\'t ready. You can still bypass this check to continue.</string>
+    <string name="setup_local_endpoint_hint">Local Model Endpoint (Optional)</string>
+    <string name="setup_auto_best">Auto (Best Available)</string>
+
+    <!-- Onboarding final step -->
+    <string name="onboarding_welcome_name">Welcome, %1$s</string>
+    <string name="onboarding_welcome_default">All Set, Ready?</string>
+
+    <!-- About -->
+    <string name="about_title">About Kairo</string>
+    <string name="about_app_name">Kairo</string>
+    <string name="about_version">v%1$s • 100%% On-Device • Open Source (MIT)</string>
+    <string name="about_summary">Kairo is a private, local Android AI agent powered by Gemma 4 via Android AICore. It runs on-device with zero cloud inference, offering a floating assistant overlay, screen context, voice wake-up, real Android tool calling, and standalone APK plugins.</string>
+    <string name="about_credits_title">Credits</string>
+    <string name="about_links_title">Links</string>
+    <string name="about_credit_damanmikey">DaManMikey</string>
+    <string name="about_credit_damanmikey_role">Creator &amp; Lead Developer (damanmikey.me)</string>
+    <string name="about_credit_joshguy">ThatJoshGuy (thatjoshguy67)</string>
+    <string name="about_credit_joshguy_role">Twidget setup animations, One UI widget core &amp; oneui-icons</string>
+    <string name="about_credit_tribalfs">tribalfs</string>
+    <string name="about_credit_tribalfs_role">One UI design system reference (oneui-design)</string>
+    <string name="about_link_website">Website &amp; Direct Downloads</string>
+    <string name="about_link_website_sub">kairo.mikeyslabs.xyz</string>
+    <string name="about_link_github">GitHub Source Code (MIT)</string>
+    <string name="about_link_github_sub">github.com/DaDevMikey/Kairo</string>
+    <string name="about_link_releases">Releases &amp; Plugins</string>
+    <string name="about_link_releases_sub">github.com/DaDevMikey/Kairo/releases</string>
+    <string name="about_link_plugin_docs">Plugin SDK Guide</string>
+    <string name="about_link_plugin_docs_sub">PLUGINS.md</string>
+    <string name="about_link_privacy">Privacy Policy</string>
+    <string name="about_link_privacy_sub">kairo.mikeyslabs.xyz/privacy.html</string>
+    <string name="about_link_terms">Terms of Service</string>
+    <string name="about_link_terms_sub">kairo.mikeyslabs.xyz/terms.html</string>
+    <string name="about_link_support">Support Project (PayPal)</string>
+    <string name="about_link_support_sub">paypal.me/DaManMikey</string>
+
+    <!-- Persona / Modes -->
+    <string name="persona_default">Default</string>
+    <string name="persona_roast">Roast</string>
+    <string name="persona_tldr">TL;DR</string>
+    <string name="persona_dev">Dev Mode</string>
+    <string name="persona_grammar">Grammar / Reply</string>
+    <string name="persona_chess">Chess Coach</string>
+
+    <!-- Welcome greetings -->
+    <string name="greeting_1">Let\'s get started</string>
+    <string name="greeting_2">What\'s on your mind?</string>
+    <string name="greeting_3">Ready when you are</string>
+    <string name="greeting_4">Purely local. Completely yours.</string>
+    <string name="greeting_5">Ask anything, command anything.</string>
+    <string name="greeting_6">Your silicon, your rules.</string>
 </resources>
