@@ -218,17 +218,8 @@ private val GeminiListeningRed = Color(0xFFF28B82)
 private val ActionSuccessGreen = Color(0xFF81C995)
 private val ActionErrorRed = Color(0xFFF28B82)
 
-private val AgentQuickActions = listOf(
-    "Catch me up" to "Catch me up on my recent notifications",
-    "Health today" to "Check my Health Connect steps and heart rate today",
-    "Set 7:30 alarm" to "Set an alarm for 7:30 AM",
-    "Flashlight on" to "Turn on the flashlight",
-    "Battery" to "What is my battery status?",
-    "Call..." to "Call ",
-    "Text..." to "Text ",
-    "Send image" to "Send this image",
-    "Remember" to "Remember that "
-)
+// Quick actions are built dynamically with stringResource in the composable
+// (see MainScreenContent where AgentQuickActions is replaced by agentQuickActions val)
 
 @Composable
 fun MainScreen(
@@ -501,14 +492,7 @@ fun MainScreen(
     }
 }
 
-private val UniqueGreetings = listOf(
-    "Let's get started",
-    "What's on your mind?",
-    "Ready when you are",
-    "Purely local. Completely yours.",
-    "Ask anything, command anything.",
-    "Your silicon, your rules."
-)
+// UniqueGreetings are defined inline with stringResource in the composable
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalSharedTransitionApi::class, ExperimentalLayoutApi::class, ExperimentalFoundationApi::class)
 @Composable
@@ -567,6 +551,17 @@ internal fun MainScreenContent(
     var pendingDeleteChat by remember { mutableStateOf<ChatRecord?>(null) }
     var showClearAllConfirm by remember { mutableStateOf(false) }
     val context = LocalContext.current
+    val agentQuickActions = listOf(
+        stringResource(R.string.qa_catchup) to stringResource(R.string.qa_catchup_prompt),
+        stringResource(R.string.qa_health) to stringResource(R.string.qa_health_prompt),
+        stringResource(R.string.qa_alarm) to stringResource(R.string.qa_alarm_prompt),
+        stringResource(R.string.qa_flashlight) to stringResource(R.string.qa_flashlight_prompt),
+        stringResource(R.string.qa_battery_short) to stringResource(R.string.qa_battery_prompt),
+        stringResource(R.string.qa_call) to stringResource(R.string.qa_call_prompt),
+        stringResource(R.string.qa_text) to stringResource(R.string.qa_text_prompt),
+        stringResource(R.string.qa_send_image) to stringResource(R.string.qa_send_image_prompt),
+        stringResource(R.string.qa_remember) to stringResource(R.string.qa_remember_prompt)
+    )
     var draft by remember { mutableStateOf("") }
     var showIntroTour by remember {
         mutableStateOf(
@@ -687,16 +682,16 @@ internal fun MainScreenContent(
             titleContentColor = GeminiTextPrimary,
             textContentColor = GeminiTextSecondary,
             icon = { Icon(Icons.Default.DeleteOutline, contentDescription = null, tint = Color(0xFFF28B82)) },
-            title = { Text("Clear all chats?", fontWeight = FontWeight.SemiBold) },
-            text = { Text("This will permanently delete all ${state.recentChats.size} saved conversations from your device.") },
+            title = { Text(stringResource(R.string.clear_all_chats_title), fontWeight = FontWeight.SemiBold) },
+            text = { Text(stringResource(R.string.clear_all_chats_body, state.recentChats.size)) },
             confirmButton = {
                 Button(onClick = {
                     onClearChats()
                     showClearAllConfirm = false
-                }) { Text("Clear All") }
+                }) { Text(stringResource(R.string.clear_all)) }
             },
             dismissButton = {
-                TextButton(onClick = { showClearAllConfirm = false }) { Text("Cancel", color = GeminiTextSecondary) }
+                TextButton(onClick = { showClearAllConfirm = false }) { Text(stringResource(R.string.cancel), color = GeminiTextSecondary) }
             }
         )
     }
@@ -708,16 +703,16 @@ internal fun MainScreenContent(
             titleContentColor = GeminiTextPrimary,
             textContentColor = GeminiTextSecondary,
             icon = { Icon(Icons.Default.DeleteOutline, contentDescription = null, tint = Color(0xFFF28B82)) },
-            title = { Text("Delete chat?", fontWeight = FontWeight.SemiBold) },
-            text = { Text("Remove \"${chatToDelete.prompt.take(60)}\" from your local chat history? This cannot be undone.") },
+            title = { Text(stringResource(R.string.delete_chat_title), fontWeight = FontWeight.SemiBold) },
+            text = { Text(stringResource(R.string.delete_chat_body, chatToDelete.prompt.take(60))) },
             confirmButton = {
                 Button(onClick = {
                     onDeleteChat(chatToDelete.id)
                     pendingDeleteChat = null
-                }) { Text("Delete") }
+                }) { Text(stringResource(R.string.delete)) }
             },
             dismissButton = {
-                TextButton(onClick = { pendingDeleteChat = null }) { Text("Cancel", color = GeminiTextSecondary) }
+                TextButton(onClick = { pendingDeleteChat = null }) { Text(stringResource(R.string.cancel), color = GeminiTextSecondary) }
             }
         )
     }
@@ -728,15 +723,15 @@ internal fun MainScreenContent(
             containerColor = GeminiDrawerBg,
             titleContentColor = GeminiTextPrimary,
             textContentColor = GeminiTextSecondary,
-            title = { Text("Confirm Action: ${pending.toolName}", fontWeight = FontWeight.SemiBold) },
+            title = { Text(stringResource(R.string.confirm_action_colon, pending.toolName), fontWeight = FontWeight.SemiBold) },
             text = {
-                Text("Kairo is about to execute `${pending.toolName}`:\n\n${pending.detail}\n\nAllow this action?")
+                Text(stringResource(R.string.confirm_action_body, pending.toolName, pending.detail))
             },
             confirmButton = {
-                Button(onClick = { pending.onDecision(true) }) { Text("Allow") }
+                Button(onClick = { pending.onDecision(true) }) { Text(stringResource(R.string.allow)) }
             },
             dismissButton = {
-                TextButton(onClick = { pending.onDecision(false) }) { Text("Cancel", color = GeminiTextSecondary) }
+                TextButton(onClick = { pending.onDecision(false) }) { Text(stringResource(R.string.cancel), color = GeminiTextSecondary) }
             }
         )
     }
@@ -794,7 +789,7 @@ internal fun MainScreenContent(
                                 showDrawerSearch = !showDrawerSearch
                                 if (!showDrawerSearch) drawerSearchQuery = ""
                             }) {
-                                Icon(Icons.Default.Search, contentDescription = "Search chats", tint = GeminiTextPrimary)
+                                Icon(Icons.Default.Search, contentDescription = stringResource(R.string.drawer_search_placeholder), tint = GeminiTextPrimary)
                             }
                             IconButton(onClick = { scope.launch { drawerState.close() } }) {
                                 Icon(Icons.Default.Close, contentDescription = "Close drawer", tint = GeminiTextPrimary)
@@ -806,7 +801,7 @@ internal fun MainScreenContent(
                         OutlinedTextField(
                             value = drawerSearchQuery,
                             onValueChange = { drawerSearchQuery = it },
-                            placeholder = { Text("Search recent chats", color = GeminiTextSecondary) },
+                            placeholder = { Text(stringResource(R.string.drawer_search_placeholder), color = GeminiTextSecondary) },
                             singleLine = true,
                             modifier = Modifier.fillMaxWidth().padding(bottom = 10.dp),
                             shape = RoundedCornerShape(16.dp)
@@ -865,16 +860,16 @@ internal fun MainScreenContent(
 
                     Spacer(Modifier.height(8.dp))
 
-                    DrawerMenuRow(Icons.Default.NewReleases, "Release Notes") {
+                    DrawerMenuRow(Icons.Default.NewReleases, stringResource(R.string.drawer_release_notes)) {
                         scope.launch { drawerState.close() }
                         onFetchReleaseNotes()
                         showReleaseNotesSheet = true
                     }
-                    DrawerMenuRow(Icons.Default.Policy, "Privacy, Terms & Credits") {
+                    DrawerMenuRow(Icons.Default.Policy, stringResource(R.string.drawer_privacy_credits)) {
                         scope.launch { drawerState.close() }
                         showPrivacySheet = true
                     }
-                    DrawerMenuRow(Icons.Default.AutoAwesome, "About Kairo") {
+                    DrawerMenuRow(Icons.Default.AutoAwesome, stringResource(R.string.drawer_about_kairo)) {
                         scope.launch { drawerState.close() }
                         context.startActivity(Intent(context, com.kairo.agent.AboutActivity::class.java))
                     }
@@ -895,7 +890,7 @@ internal fun MainScreenContent(
                                 tint = if (wakeWordEnabled) GeminiAccentBlue else GeminiTextPrimary,
                                 modifier = Modifier.size(20.dp)
                             )
-                            Text("Hey Kairo wake word", color = GeminiTextPrimary, style = MaterialTheme.typography.bodyMedium)
+                            Text(stringResource(R.string.drawer_wake_word), color = GeminiTextPrimary, style = MaterialTheme.typography.bodyMedium)
                         }
                         Switch(checked = wakeWordEnabled, onCheckedChange = onToggleWakeWord)
                     }
@@ -907,12 +902,12 @@ internal fun MainScreenContent(
                         horizontalArrangement = Arrangement.SpaceBetween,
                         verticalAlignment = Alignment.CenterVertically
                     ) {
-                        Text("Recent", style = MaterialTheme.typography.labelLarge, color = GeminiTextSecondary)
+                        Text(stringResource(R.string.recent_chats), style = MaterialTheme.typography.labelLarge, color = GeminiTextSecondary)
                         if (state.recentChats.isNotEmpty()) {
                             TextButton(onClick = { showClearAllConfirm = true }) {
                                 Icon(Icons.Default.DeleteOutline, contentDescription = null, tint = GeminiTextSecondary, modifier = Modifier.size(16.dp))
                                 Spacer(Modifier.width(4.dp))
-                                Text("Clear", color = GeminiTextSecondary)
+                                Text(stringResource(R.string.clear), color = GeminiTextSecondary)
                             }
                         }
                     }
@@ -927,7 +922,7 @@ internal fun MainScreenContent(
 
                     if (filteredChats.isEmpty()) {
                         Text(
-                            text = if (state.recentChats.isEmpty()) "No recent chats yet." else "No matching chats.",
+                            text = if (state.recentChats.isEmpty()) stringResource(R.string.drawer_no_chats_yet) else stringResource(R.string.drawer_no_matching_chats),
                             style = MaterialTheme.typography.bodySmall,
                             color = GeminiTextSecondary,
                             modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp)
@@ -976,8 +971,8 @@ internal fun MainScreenContent(
                         horizontalArrangement = Arrangement.SpaceBetween
                     ) {
                         Column {
-                            Text("Kairo • by DaManMikey", color = GeminiTextPrimary, style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.Medium)
-                            Text("ON-DEVICE • GEMMA 4", color = GeminiAccentBlue, style = MaterialTheme.typography.labelSmall)
+                            Text(stringResource(R.string.drawer_kairo_by), color = GeminiTextPrimary, style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.Medium)
+                            Text(stringResource(R.string.drawer_on_device), color = GeminiAccentBlue, style = MaterialTheme.typography.labelSmall)
                         }
                         IconButton(onClick = {
                             scope.launch { drawerState.close() }
@@ -1069,7 +1064,7 @@ internal fun MainScreenContent(
                                 }
                             ) {
                                 Text(
-                                    text = "Disable Cloud AI",
+                                    text = stringResource(R.string.btn_disable_cloud),
                                     color = Color(0xFFF28B82),
                                     style = MaterialTheme.typography.labelSmall,
                                     fontWeight = FontWeight.SemiBold,
@@ -1168,9 +1163,15 @@ internal fun MainScreenContent(
                                     ) {
                                         GemmASparkleIcon(size = 44.dp, isAnimating = state.isGenerating || sparkleTaps >= 5)
                                     }
-                                    val baseGreeting = remember(greetingSeed) {
-                                        UniqueGreetings[greetingSeed % UniqueGreetings.size]
-                                    }
+                                    val uniqueGreetings = listOf(
+                                        stringResource(R.string.greeting_1),
+                                        stringResource(R.string.greeting_2),
+                                        stringResource(R.string.greeting_3),
+                                        stringResource(R.string.greeting_4),
+                                        stringResource(R.string.greeting_5),
+                                        stringResource(R.string.greeting_6)
+                                    )
+                                    val baseGreeting = uniqueGreetings[greetingSeed % uniqueGreetings.size]
                                     val greeting = when {
                                         sparkleTaps >= 15 -> "✦ Overclocked local vibes!"
                                         sparkleTaps >= 10 -> "Pure local silicon, zero cloud."
@@ -1253,10 +1254,10 @@ internal fun MainScreenContent(
                                         verticalArrangement = Arrangement.spacedBy(8.dp)
                                     ) {
                                         listOf(
-                                            "Check my battery & status",
-                                            "Catch me up on notifications",
-                                            "Set a 7:30 AM alarm",
-                                            "What can you do?"
+                                            stringResource(R.string.example_battery),
+                                            stringResource(R.string.example_notifications),
+                                            stringResource(R.string.example_alarm),
+                                            stringResource(R.string.example_capabilities)
                                         ).forEach { example ->
                                             AssistChip(
                                                 onClick = { onSendPrompt(example) },
@@ -1271,7 +1272,7 @@ internal fun MainScreenContent(
                                         FilledTonalButton(onClick = onDownloadModel) {
                                             Icon(Icons.Default.Download, contentDescription = null)
                                             Spacer(Modifier.width(8.dp))
-                                            Text("Download Gemma 4")
+                                            Text(stringResource(R.string.btn_download_gemma4))
                                         }
                                     }
                                 }
@@ -1411,10 +1412,18 @@ internal fun MainScreenContent(
                             horizontalArrangement = Arrangement.spacedBy(6.dp)
                         ) {
                             AgentPersona.entries.forEach { persona ->
+                                val personaLabel = when (persona) {
+                                    AgentPersona.DEFAULT -> stringResource(R.string.persona_default)
+                                    AgentPersona.ROAST -> stringResource(R.string.persona_roast)
+                                    AgentPersona.TLDR -> stringResource(R.string.persona_tldr)
+                                    AgentPersona.DEV -> stringResource(R.string.persona_dev)
+                                    AgentPersona.GRAMMAR -> stringResource(R.string.persona_grammar)
+                                    AgentPersona.CHESS -> stringResource(R.string.persona_chess)
+                                }
                                 FilterChip(
                                     selected = state.selectedPersona == persona,
                                     onClick = { onSelectPersona(persona) },
-                                    label = { Text(persona.label, style = MaterialTheme.typography.labelSmall) },
+                                    label = { Text(personaLabel, style = MaterialTheme.typography.labelSmall) },
                                     colors = FilterChipDefaults.filterChipColors(
                                         containerColor = GeminiPillBg,
                                         selectedContainerColor = GeminiAccentBlue.copy(alpha = 0.22f),
@@ -1432,7 +1441,7 @@ internal fun MainScreenContent(
                                 .padding(horizontal = 16.dp, vertical = 2.dp),
                             horizontalArrangement = Arrangement.spacedBy(8.dp)
                         ) {
-                            AgentQuickActions.forEach { (label, promptText) ->
+                            agentQuickActions.forEach { (label, promptText) ->
                                 AssistChip(
                                     onClick = {
                                         showQuickActions = false
@@ -1465,7 +1474,7 @@ internal fun MainScreenContent(
                                 contentScale = ContentScale.Crop,
                                 modifier = Modifier.size(40.dp).clip(RoundedCornerShape(8.dp))
                             )
-                            Text("Image attached", color = GeminiTextPrimary, style = MaterialTheme.typography.labelMedium)
+                            Text(stringResource(R.string.image_attached), color = GeminiTextPrimary, style = MaterialTheme.typography.labelMedium)
                             IconButton(onClick = onClearImage, modifier = Modifier.size(24.dp)) {
                                 Icon(Icons.Default.Close, contentDescription = "Remove image", tint = GeminiTextSecondary, modifier = Modifier.size(16.dp))
                             }
@@ -1602,18 +1611,18 @@ internal fun MainScreenContent(
                         else -> "Kairo • Powered by Gemma 4"
                     }
                     Text(headerTitle, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold, modifier = Modifier.weight(1f))
-                    TextButton(onClick = onRefreshStatus) { Text("Refresh", color = GeminiAccentBlue) }
+                    TextButton(onClick = onRefreshStatus) { Text(stringResource(R.string.refresh), color = GeminiAccentBlue) }
                 }
 
                 if (state.settings.backendMode == com.kairo.agent.data.EngineBackendMode.CLOUD_AI) {
                     Surface(color = Color(0xFF4A1E24), shape = RoundedCornerShape(14.dp)) {
                         Column(modifier = Modifier.fillMaxWidth().padding(12.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                            Text("Cloud AI Active (${state.settings.cloudModelName})", color = Color(0xFFF28B82), style = MaterialTheme.typography.labelLarge, fontWeight = FontWeight.SemiBold)
-                            Text("Privacy is not guaranteed while Cloud AI is enabled.", color = GeminiTextSecondary, style = MaterialTheme.typography.bodySmall)
+                            Text(stringResource(R.string.cloud_ai_active, state.settings.cloudModelName), color = Color(0xFFF28B82), style = MaterialTheme.typography.labelLarge, fontWeight = FontWeight.SemiBold)
+                            Text(stringResource(R.string.cloud_ai_privacy_warning), color = GeminiTextSecondary, style = MaterialTheme.typography.bodySmall)
                             Button(
                                 onClick = { onUpdateSettings(state.settings.copy(backendMode = com.kairo.agent.data.EngineBackendMode.AUTO)) },
                                 modifier = Modifier.fillMaxWidth()
-                            ) { Text("Disable Cloud AI") }
+                            ) { Text(stringResource(R.string.btn_disable_cloud)) }
                         }
                     }
                 }
@@ -1641,7 +1650,7 @@ internal fun MainScreenContent(
                 }
 
                 // AICore Model Selector (Auto + discovered Stable/Preview Fast/Full models)
-                Text("AICore Model", color = GeminiAccentBlue, style = MaterialTheme.typography.labelLarge)
+                Text(stringResource(R.string.aicore_model_title), color = GeminiAccentBlue, style = MaterialTheme.typography.labelLarge)
                 Surface(
                     color = Color(0xFF141619),
                     shape = RoundedCornerShape(16.dp),
@@ -1663,8 +1672,8 @@ internal fun MainScreenContent(
                             horizontalArrangement = Arrangement.SpaceBetween
                         ) {
                             Column(modifier = Modifier.weight(1f)) {
-                                Text("Auto (Best Available)", color = GeminiTextPrimary, style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.Medium)
-                                Text("Prefers Stable, falls back to Preview if needed", color = GeminiTextSecondary, style = MaterialTheme.typography.labelSmall)
+                                Text(stringResource(R.string.aicore_auto_label), color = GeminiTextPrimary, style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.Medium)
+                                Text(stringResource(R.string.aicore_auto_sub), color = GeminiTextSecondary, style = MaterialTheme.typography.labelSmall)
                             }
                             if (autoSelected) {
                                 Icon(Icons.Default.CheckCircle, contentDescription = null, tint = GeminiAccentBlue, modifier = Modifier.size(18.dp))
@@ -1721,11 +1730,11 @@ internal fun MainScreenContent(
                     Button(onClick = onDownloadModel, modifier = Modifier.fillMaxWidth()) {
                         Icon(Icons.Default.Download, contentDescription = null)
                         Spacer(Modifier.width(8.dp))
-                        Text("Download Gemma 4")
+                        Text(stringResource(R.string.btn_download_gemma4))
                     }
                 } else if (state.availability == ModelAvailability.AVAILABLE) {
                     FilledTonalButton(onClick = onWarmupModel, enabled = !state.isWarmingUp, modifier = Modifier.fillMaxWidth()) {
-                        Text(if (state.isWarmingUp) "Warming up..." else "Warm up Gemma 4")
+                        Text(if (state.isWarmingUp) stringResource(R.string.warming_up) else stringResource(R.string.btn_warmup_gemma4))
                     }
                 }
 
@@ -1747,7 +1756,7 @@ internal fun MainScreenContent(
                 ) {
                     Icon(Icons.Default.Settings, contentDescription = null)
                     Spacer(Modifier.width(8.dp))
-                    Text("Set as Default Digital Assistant")
+                    Text(stringResource(R.string.btn_set_digital_assistant))
                 }
 
                 Spacer(Modifier.height(12.dp))
@@ -1778,10 +1787,10 @@ internal fun MainScreenContent(
                     Button(onClick = {
                         pendingDisclosure = null
                         proceed()
-                    }) { Text("Continue") }
+                    }) { Text(stringResource(R.string.perm_continue)) }
                 },
                 dismissButton = {
-                    TextButton(onClick = { pendingDisclosure = null }) { Text("Cancel", color = GeminiTextSecondary) }
+                    TextButton(onClick = { pendingDisclosure = null }) { Text(stringResource(R.string.cancel), color = GeminiTextSecondary) }
                 }
             )
         }
@@ -1797,34 +1806,49 @@ internal fun MainScreenContent(
                 }
             }
         }
+        val micDiscTitle = stringResource(R.string.disclosure_mic_title)
+        val micDiscBody = stringResource(R.string.disclosure_mic_body)
+        val locDiscTitle = stringResource(R.string.disclosure_location_title)
+        val locDiscBody = stringResource(R.string.disclosure_location_body)
+        val contactsDiscTitle = stringResource(R.string.disclosure_contacts_title)
+        val contactsDiscBody = stringResource(R.string.disclosure_contacts_body)
+        val callDiscTitle = stringResource(R.string.disclosure_calling_title)
+        val callDiscBody = stringResource(R.string.disclosure_calling_body)
+        val notifDiscTitle = stringResource(R.string.disclosure_notif_title)
+        val notifDiscBody = stringResource(R.string.disclosure_notif_body)
+        val healthDiscTitle = stringResource(R.string.disclosure_health_title)
+        val healthDiscBody = stringResource(R.string.disclosure_health_body)
+        val brightDiscTitle = stringResource(R.string.disclosure_brightness_title)
+        val brightDiscBody = stringResource(R.string.disclosure_brightness_body)
+
         ModalBottomSheet(sheetState = connSheetState, onDismissRequest = { liveSheetFraction = 0f; showConnectionsSheet = false }, containerColor = GeminiDrawerBg, contentColor = GeminiTextPrimary) {
             Column(
                 modifier = Modifier.fillMaxWidth().padding(horizontal = 20.dp, vertical = 12.dp).verticalScroll(rememberScrollState()),
                 verticalArrangement = Arrangement.spacedBy(10.dp)
             ) {
-                Text("Connections & Permissions", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
-                Text("Manage optional Android permissions and power features. All processing stays on-device.", style = MaterialTheme.typography.bodySmall, color = GeminiTextSecondary)
+                Text(stringResource(R.string.connections_title), style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
+                Text(stringResource(R.string.connections_body), style = MaterialTheme.typography.bodySmall, color = GeminiTextSecondary)
 
-                ConnectionPermRow("Microphone", "Voice prompts & wake word", micGranted) {
-                    pendingDisclosure = Triple("Microphone Access", "Used strictly when you tap the mic or enable 'Hey Kairo' wake word. Audio is processed locally and never uploaded.", onMicClick)
+                ConnectionPermRow(stringResource(R.string.conn_perm_microphone), stringResource(R.string.conn_perm_microphone_sub), micGranted) {
+                    pendingDisclosure = Triple(micDiscTitle, micDiscBody, onMicClick)
                 }
-                ConnectionPermRow("Location", "Local weather, nearby places & GPS context", locationGranted) {
-                    pendingDisclosure = Triple("Location Access", "Used only when you ask location-based questions (weather, nearby places). Coordinates stay 100% on-device.", onGrantLocation)
+                ConnectionPermRow(stringResource(R.string.conn_perm_location), stringResource(R.string.conn_perm_location_sub), locationGranted) {
+                    pendingDisclosure = Triple(locDiscTitle, locDiscBody, onGrantLocation)
                 }
-                ConnectionPermRow("Contacts", "Call & text people by name", contactsGranted) {
-                    pendingDisclosure = Triple("Contacts Access", "Used locally on-device solely to resolve spoken/typed contact names to phone numbers or emails.", onGrantContacts)
+                ConnectionPermRow(stringResource(R.string.conn_perm_contacts), stringResource(R.string.conn_perm_contacts_sub), contactsGranted) {
+                    pendingDisclosure = Triple(contactsDiscTitle, contactsDiscBody, onGrantContacts)
                 }
-                ConnectionPermRow("Direct Calling", "Place calls directly", callGranted) {
-                    pendingDisclosure = Triple("Direct Calling Access", "Allows Kairo to place calls directly when you ask instead of stopping at the dialer.", onGrantCall)
+                ConnectionPermRow(stringResource(R.string.conn_perm_calling), stringResource(R.string.conn_perm_calling_sub), callGranted) {
+                    pendingDisclosure = Triple(callDiscTitle, callDiscBody, onGrantCall)
                 }
-                ConnectionPermRow("Notification Catch-Up", "Summarize unread messages", notifGranted) {
-                    pendingDisclosure = Triple("Notification Catch-Up", "Reads unread notifications locally in memory so Kairo can summarize what you missed.", onOpenNotificationAccess)
+                ConnectionPermRow(stringResource(R.string.conn_perm_notifications), stringResource(R.string.conn_perm_notifications_sub), notifGranted) {
+                    pendingDisclosure = Triple(notifDiscTitle, notifDiscBody, onOpenNotificationAccess)
                 }
-                ConnectionPermRow("Health Connect", "Steps, heart rate, sleep, distance, calories & workouts", state.healthConnectGranted) {
-                    pendingDisclosure = Triple("Health Connect Access", "Reads your local Health Connect fitness & sleep metrics solely for private on-device summaries.", onGrantHealthConnect)
+                ConnectionPermRow(stringResource(R.string.conn_perm_health), stringResource(R.string.conn_perm_health_sub), state.healthConnectGranted) {
+                    pendingDisclosure = Triple(healthDiscTitle, healthDiscBody, onGrantHealthConnect)
                 }
-                ConnectionPermRow("System Brightness", "Adjust screen brightness", writeSettingsGranted) {
-                    pendingDisclosure = Triple("Modify System Settings", "Lets Kairo adjust screen brightness directly when you ask.") {
+                ConnectionPermRow(stringResource(R.string.conn_perm_brightness), stringResource(R.string.conn_perm_brightness_sub), writeSettingsGranted) {
+                    pendingDisclosure = Triple(brightDiscTitle, brightDiscBody) {
                         val pkgIntent = Intent(Settings.ACTION_MANAGE_WRITE_SETTINGS, Uri.parse("package:${ctx.packageName}"))
                         val fallbackIntent = Intent(Settings.ACTION_MANAGE_WRITE_SETTINGS)
                         val target = if (pkgIntent.resolveActivity(ctx.packageManager) != null) pkgIntent else fallbackIntent
@@ -1835,33 +1859,28 @@ internal fun MainScreenContent(
                 HorizontalDivider(color = Color(0xFF232528), modifier = Modifier.padding(vertical = 4.dp))
 
                 SetupSwitchRow(
-                    title = "Root / Shell Power Mode",
-                    subtitle = "Allow shell / root commands when requested",
+                    title = stringResource(R.string.conn_perm_root_title),
+                    subtitle = stringResource(R.string.conn_perm_root_sub),
                     checked = state.settings.rootPowerMode,
                     onCheckedChange = { onUpdateSettings(state.settings.copy(rootPowerMode = it)) }
                 )
                 SetupSwitchRow(
-                    title = "Live Nerd Stats (tok/s, RAM)",
-                    subtitle = "Show inference speed & memory usage",
+                    title = stringResource(R.string.conn_perm_nerd_title),
+                    subtitle = stringResource(R.string.conn_perm_nerd_sub),
                     checked = state.settings.showNerdStats,
                     onCheckedChange = { onUpdateSettings(state.settings.copy(showNerdStats = it)) }
                 )
                 SetupSwitchRow(
-                    title = "Cover-Screen Mini-Mode Overlay",
-                    subtitle = "Start overlay as a compact pill until a reply streams",
+                    title = stringResource(R.string.conn_perm_mini_title),
+                    subtitle = stringResource(R.string.conn_perm_mini_sub),
                     checked = state.settings.miniModeOverlay,
                     onCheckedChange = { onUpdateSettings(state.settings.copy(miniModeOverlay = it)) }
                 )
 
                 HorizontalDivider(color = Color(0xFF232528), modifier = Modifier.padding(vertical = 4.dp))
-                Text("Connected Apps & Actions", style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.SemiBold, color = GeminiAccentBlue)
+                Text(stringResource(R.string.connected_apps_title), style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.SemiBold, color = GeminiAccentBlue)
                 Text(
-                    "• Split-Screen Multitasking (open two apps side-by-side)\n" +
-                        "• Spotify & System Media Controls (play, pause, next, prev)\n" +
-                        "• WhatsApp, SMS, Phone & Email\n" +
-                        "• Maps Navigation, Nearby Search & YouTube\n" +
-                        "• Clock Alarms/Timers, Calendar Events & Play Store\n" +
-                        "• Home Screen & Cover-Screen Widgets",
+                    stringResource(R.string.connected_apps_body),
                     style = MaterialTheme.typography.bodySmall,
                     color = GeminiTextSecondary
                 )
@@ -1897,9 +1916,9 @@ internal fun MainScreenContent(
                 verticalArrangement = Arrangement.spacedBy(12.dp)
             ) {
                 Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
-                    Text("Release Notes", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
+                    Text(stringResource(R.string.release_notes), style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
                     TextButton(onClick = onFetchReleaseNotes, enabled = !state.isLoadingReleaseNotes) {
-                        Text(if (state.isLoadingReleaseNotes) "Loading..." else "Refresh", color = GeminiAccentBlue)
+                        Text(if (state.isLoadingReleaseNotes) stringResource(R.string.release_notes_loading) else stringResource(R.string.refresh), color = GeminiAccentBlue)
                     }
                 }
 
@@ -1911,7 +1930,7 @@ internal fun MainScreenContent(
                         FilterChip(
                             selected = selectedVersionFilter == null,
                             onClick = { selectedVersionFilter = null },
-                            label = { Text("All") }
+                            label = { Text(stringResource(R.string.release_notes_all_filter)) }
                         )
                         state.releaseNotes.forEach { rel ->
                             FilterChip(
@@ -1932,9 +1951,9 @@ internal fun MainScreenContent(
                     OutlinedButton(
                         onClick = { onOpenUrl(UpdateChecker.RELEASES_PAGE_URL) },
                         modifier = Modifier.fillMaxWidth()
-                    ) { Text("Open GitHub Releases") }
+                    ) { Text(stringResource(R.string.btn_open_github_releases)) }
                 } else if (state.releaseNotes.isEmpty()) {
-                    Text("No releases loaded yet.", style = MaterialTheme.typography.bodySmall, color = GeminiTextSecondary)
+                    Text(stringResource(R.string.no_releases_loaded), style = MaterialTheme.typography.bodySmall, color = GeminiTextSecondary)
                 } else {
                     val filteredNotes = if (selectedVersionFilter == null) state.releaseNotes
                     else state.releaseNotes.filter { it.tagName == selectedVersionFilter }
@@ -1961,7 +1980,7 @@ internal fun MainScreenContent(
                                         TextButton(onClick = { onOpenUrl(rel.apkUrl) }) {
                                             Icon(Icons.Default.Download, contentDescription = null, modifier = Modifier.size(16.dp))
                                             Spacer(Modifier.width(6.dp))
-                                            Text("Download APK", color = GeminiAccentBlue)
+                                            Text(stringResource(R.string.btn_download_apk), color = GeminiAccentBlue)
                                         }
                                     }
                                 }
@@ -1990,17 +2009,17 @@ internal fun MainScreenContent(
         ModalBottomSheet(sheetState = memSheetState, onDismissRequest = { liveSheetFraction = 0f; showMemorySheet = false }, containerColor = GeminiDrawerBg, contentColor = GeminiTextPrimary) {
             Column(modifier = Modifier.fillMaxWidth().padding(horizontal = 20.dp, vertical = 12.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
                 Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
-                    Text("Kairo Memory", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
+                    Text(stringResource(R.string.memory_sheet_title), style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
                     if (state.memories.isNotEmpty()) {
-                        TextButton(onClick = onClearMemories) { Text("Clear all", color = GeminiListeningRed) }
+                        TextButton(onClick = onClearMemories) { Text(stringResource(R.string.memory_clear_all), color = GeminiListeningRed) }
                     }
                 }
-                Text("Kairo automatically saves important facts with <memory> tags and injects them across all chats.", style = MaterialTheme.typography.bodySmall, color = GeminiTextSecondary)
+                Text(stringResource(R.string.memory_body), style = MaterialTheme.typography.bodySmall, color = GeminiTextSecondary)
                 Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
                     OutlinedTextField(
                         value = newMemoryText,
                         onValueChange = { newMemoryText = it },
-                        placeholder = { Text("Add a memory...", color = GeminiTextSecondary) },
+                        placeholder = { Text(stringResource(R.string.memory_add_placeholder), color = GeminiTextSecondary) },
                         singleLine = true,
                         modifier = Modifier.weight(1f),
                         shape = RoundedCornerShape(14.dp)
@@ -2010,10 +2029,10 @@ internal fun MainScreenContent(
                             onAddMemory(newMemoryText)
                             newMemoryText = ""
                         }
-                    }) { Text("Save") }
+                    }) { Text(stringResource(R.string.memory_save)) }
                 }
                 if (state.memories.isEmpty()) {
-                    Text("No memories saved yet.", style = MaterialTheme.typography.bodyMedium, color = GeminiTextSecondary, modifier = Modifier.padding(vertical = 8.dp))
+                    Text(stringResource(R.string.no_memories_yet), style = MaterialTheme.typography.bodyMedium, color = GeminiTextSecondary, modifier = Modifier.padding(vertical = 8.dp))
                 } else {
                     LazyColumn(modifier = Modifier.fillMaxWidth().heightIn(max = 260.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                         items(state.memories, key = { it.id }) { item ->
@@ -2054,23 +2073,21 @@ internal fun MainScreenContent(
                 modifier = Modifier.fillMaxWidth().verticalScroll(rememberScrollState()).padding(horizontal = 20.dp, vertical = 12.dp),
                 verticalArrangement = Arrangement.spacedBy(12.dp)
             ) {
-                Text("Privacy Policy, Terms & Credits", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
-                Text("100% Local On-Device Agent", style = MaterialTheme.typography.labelLarge, color = GeminiAccentBlue)
+                Text(stringResource(R.string.privacy_sheet_title), style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
+                Text(stringResource(R.string.privacy_local_label), style = MaterialTheme.typography.labelLarge, color = GeminiAccentBlue)
                 Text(
-                    "• All prompts, images, screen context, notifications, and voice transcriptions are processed locally via Android AICore (Gemma 4) or your own local model endpoint.\n" +
-                        "• Recent chats and saved memories are stored only in private app storage and can be deleted anytime.\n" +
-                        "• Zero analytics, zero ads, and zero tracking SDKs.",
+                    stringResource(R.string.privacy_body),
                     style = MaterialTheme.typography.bodySmall,
                     color = GeminiTextSecondary
                 )
-                Text("Terms of Service (MIT)", style = MaterialTheme.typography.labelLarge, color = GeminiAccentBlue)
-                Text("Kairo is open-source software provided under the MIT License without warranty. Always verify AI-generated responses and device actions.", style = MaterialTheme.typography.bodySmall, color = GeminiTextSecondary)
+                Text(stringResource(R.string.terms_label), style = MaterialTheme.typography.labelLarge, color = GeminiAccentBlue)
+                Text(stringResource(R.string.terms_body), style = MaterialTheme.typography.bodySmall, color = GeminiTextSecondary)
                 HorizontalDivider(color = Color(0xFF232528))
-                Text("Credits & Source Code", style = MaterialTheme.typography.labelLarge, color = GeminiAccentBlue)
-                Text("Kairo (/kaj/roo/) • Created by DaManMikey • Powered by on-device Gemma 4.", style = MaterialTheme.typography.bodySmall, color = GeminiTextSecondary)
+                Text(stringResource(R.string.credits_source_label), style = MaterialTheme.typography.labelLarge, color = GeminiAccentBlue)
+                Text(stringResource(R.string.credits_body), style = MaterialTheme.typography.bodySmall, color = GeminiTextSecondary)
                 Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    OutlinedButton(onClick = { onOpenUrl("https://damanmikey.me/") }, modifier = Modifier.weight(1f)) { Text("damanmikey.me") }
-                    OutlinedButton(onClick = { onOpenUrl("https://github.com/DaDevMikey/Kairo") }, modifier = Modifier.weight(1f)) { Text("Source Code") }
+                    OutlinedButton(onClick = { onOpenUrl("https://damanmikey.me/") }, modifier = Modifier.weight(1f)) { Text(stringResource(R.string.btn_damanmikey_me)) }
+                    OutlinedButton(onClick = { onOpenUrl("https://github.com/DaDevMikey/Kairo") }, modifier = Modifier.weight(1f)) { Text(stringResource(R.string.btn_source_code)) }
                 }
                 Spacer(Modifier.height(12.dp))
             }
@@ -2128,10 +2145,10 @@ private fun ConnectionPermRow(
             if (granted) {
                 Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
                     Icon(Icons.Default.CheckCircle, contentDescription = null, tint = ActionSuccessGreen, modifier = Modifier.size(16.dp))
-                    Text("Granted", color = ActionSuccessGreen, style = MaterialTheme.typography.labelMedium)
+                    Text(stringResource(R.string.perm_granted), color = ActionSuccessGreen, style = MaterialTheme.typography.labelMedium)
                 }
             } else {
-                FilledTonalButton(onClick = onAction) { Text("Allow") }
+                FilledTonalButton(onClick = onAction) { Text(stringResource(R.string.perm_allow)) }
             }
         }
     }
