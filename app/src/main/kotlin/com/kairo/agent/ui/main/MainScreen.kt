@@ -874,6 +874,10 @@ internal fun MainScreenContent(
                         scope.launch { drawerState.close() }
                         showPrivacySheet = true
                     }
+                    DrawerMenuRow(Icons.Default.AutoAwesome, "About Kairo") {
+                        scope.launch { drawerState.close() }
+                        context.startActivity(Intent(context, com.kairo.agent.AboutActivity::class.java))
+                    }
 
                     Row(
                         modifier = Modifier
