@@ -187,8 +187,8 @@ fun SettingsScreen(
                         }
                     }
                     SettingsToggleRow(
-                        title = "Check for updates on startup",
-                        subtitle = "Automatically check GitHub for new releases when Kairo opens",
+                        title = stringResource(R.string.check_updates_startup_title),
+                        subtitle = stringResource(R.string.check_updates_startup_sub),
                         checked = state.settings.checkUpdatesOnStartup,
                         onCheckedChange = { onUpdateSettings(state.settings.copy(checkUpdatesOnStartup = it)) }
                     )
@@ -230,7 +230,7 @@ fun SettingsScreen(
                 },
                 modifier = Modifier.fillMaxWidth()
             ) {
-                Text("Re-run Setup Wizard", color = palette.accent)
+                Text(stringResource(R.string.rerun_setup), color = palette.accent)
             }
 
             val ctx = androidx.compose.ui.platform.LocalContext.current
@@ -248,16 +248,16 @@ fun SettingsScreen(
                     containerColor = palette.surface,
                     titleContentColor = Color(0xFFE3E3E3),
                     textContentColor = Color(0xFF9AA0A6),
-                    title = { Text("Reload to Apply Theme?", fontWeight = FontWeight.SemiBold) },
-                    text = { Text("Kairo needs to reload to apply \"$pluginName\". Reload now?") },
+                    title = { Text(stringResource(R.string.plugin_reload_title), fontWeight = FontWeight.SemiBold) },
+                    text = { Text(stringResource(R.string.plugin_reload_body, pluginName)) },
                     confirmButton = {
                         Button(onClick = {
                             pendingThemeReload = null
                             (ctx as? android.app.Activity)?.recreate()
-                        }) { Text("Reload Now") }
+                        }) { Text(stringResource(R.string.plugin_reload_now)) }
                     },
                     dismissButton = {
-                        TextButton(onClick = { pendingThemeReload = null }) { Text("Later", color = Color(0xFF9AA0A6)) }
+                        TextButton(onClick = { pendingThemeReload = null }) { Text(stringResource(R.string.plugin_later), color = Color(0xFF9AA0A6)) }
                     }
                 )
             }
@@ -269,27 +269,27 @@ fun SettingsScreen(
                     containerColor = palette.surface,
                     titleContentColor = Color(0xFFE3E3E3),
                     textContentColor = Color(0xFF9AA0A6),
-                    title = { Text("Use ${langPlugin.name} Now?", fontWeight = FontWeight.SemiBold) },
-                    text = { Text("Would you like to switch Kairo's UI and AI response language to ${langPlugin.name} right now?") },
+                    title = { Text(stringResource(R.string.plugin_use_lang_title, langPlugin.name), fontWeight = FontWeight.SemiBold) },
+                    text = { Text(stringResource(R.string.plugin_use_lang_body, langPlugin.name)) },
                     confirmButton = {
                         Button(onClick = {
                             pendingLangInstant = null
                             onUpdateSettings(state.settings.copy(appLanguage = code, preferredLanguage = code))
                             com.kairo.agent.data.LocaleHelper.applyAppLanguage(ctx, code, recreateActivity = true)
-                        }) { Text("Use Now") }
+                        }) { Text(stringResource(R.string.plugin_use_now)) }
                     },
                     dismissButton = {
-                        TextButton(onClick = { pendingLangInstant = null }) { Text("Enable Only", color = Color(0xFF9AA0A6)) }
+                        TextButton(onClick = { pendingLangInstant = null }) { Text(stringResource(R.string.plugin_enable_only), color = Color(0xFF9AA0A6)) }
                     }
                 )
             }
 
             Surface(color = palette.surface, shape = RoundedCornerShape(palette.cornerDp.dp)) {
                 Column(modifier = Modifier.fillMaxWidth().padding(14.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    Text("Plugins & Extensions", color = palette.accent, style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.SemiBold)
+                    Text(stringResource(R.string.plugins_section_title), color = palette.accent, style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.SemiBold)
                     if (plugins.isEmpty()) {
                         Text(
-                            "No standalone Kairo plugin APKs installed. Install a theme, language, or tool plugin APK to extend Kairo.",
+                            stringResource(R.string.plugins_empty),
                             color = Color(0xFF9AA0A6),
                             style = MaterialTheme.typography.bodySmall
                         )

@@ -137,10 +137,10 @@ fun OnboardingScreen(
                 Button(onClick = {
                     pendingDisclosure = null
                     proceed()
-                }) { Text("Continue") }
+                }) { Text(stringResource(R.string.perm_continue)) }
             },
             dismissButton = {
-                TextButton(onClick = { pendingDisclosure = null }) { Text("Not now", color = TextSecondary) }
+                TextButton(onClick = { pendingDisclosure = null }) { Text(stringResource(R.string.perm_not_now), color = TextSecondary) }
             }
         )
     }
@@ -331,8 +331,8 @@ fun OnboardingScreen(
                             }
 
                             Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                                OutlinedButton(onClick = { step = 0 }, modifier = Modifier.weight(1f).height(50.dp)) { Text("Back") }
-                                Button(onClick = { step = 2 }, modifier = Modifier.weight(1f).height(50.dp)) { Text("Next") }
+                                OutlinedButton(onClick = { step = 0 }, modifier = Modifier.weight(1f).height(50.dp)) { Text(stringResource(R.string.back)) }
+                                Button(onClick = { step = 2 }, modifier = Modifier.weight(1f).height(50.dp)) { Text(stringResource(R.string.next)) }
                             }
                         }
                     }
@@ -357,10 +357,10 @@ fun OnboardingScreen(
                                 ) {
                                     Column(modifier = Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
                                         Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
-                                            Text("System Checks", color = TextPrimary, style = MaterialTheme.typography.titleSmall)
+                                            Text(stringResource(R.string.setup_system_checks), color = TextPrimary, style = MaterialTheme.typography.titleSmall)
                                             TextButton(onClick = onRunChecks) {
                                                 if (isCheckingCompatibility) CircularProgressIndicator(modifier = Modifier.size(14.dp), strokeWidth = 2.dp)
-                                                else Text("Re-check", color = AccentBlue)
+                                                else Text(stringResource(R.string.setup_recheck), color = AccentBlue)
                                             }
                                         }
                                         compatibilityReport?.items?.take(4)?.forEach { item ->
@@ -381,13 +381,13 @@ fun OnboardingScreen(
                                             FilledTonalButton(onClick = onDownloadModel, modifier = Modifier.fillMaxWidth()) {
                                                 Icon(Icons.Default.Download, contentDescription = null)
                                                 Spacer(Modifier.size(8.dp))
-                                                Text("Download Gemma 4")
+                                                Text(stringResource(R.string.btn_download_gemma4))
                                             }
                                         }
                                     }
                                 }
 
-                                Text("Backend Mode", color = AccentBlue, style = MaterialTheme.typography.labelLarge)
+                                Text(stringResource(R.string.setup_backend_mode), color = AccentBlue, style = MaterialTheme.typography.labelLarge)
                                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                                     listOf(EngineBackendMode.AUTO, EngineBackendMode.AICORE, EngineBackendMode.LOCAL_HTTP).forEach { mode ->
                                         FilterChip(
@@ -399,7 +399,7 @@ fun OnboardingScreen(
                                 }
 
                                 if (settings.backendMode != EngineBackendMode.LOCAL_HTTP) {
-                                    Text("AICore Model", color = AccentBlue, style = MaterialTheme.typography.labelLarge)
+                                    Text(stringResource(R.string.setup_aicore_model), color = AccentBlue, style = MaterialTheme.typography.labelLarge)
                                     val availableOptions = availableAiCoreModels.filter {
                                         it.availability == ModelAvailability.AVAILABLE || it.availability == ModelAvailability.DOWNLOADABLE
                                     }
@@ -407,7 +407,7 @@ fun OnboardingScreen(
                                         FilterChip(
                                             selected = settings.aiCoreModelProfile == AiCoreModelProfile.AUTO,
                                             onClick = { onUpdateSettings(settings.copy(aiCoreModelProfile = AiCoreModelProfile.AUTO)) },
-                                            label = { Text("Auto (Best Available)") }
+                                            label = { Text(stringResource(R.string.aicore_auto_label)) }
                                         )
                                         availableOptions.forEach { option ->
                                             FilterChip(
@@ -429,15 +429,15 @@ fun OnboardingScreen(
                                             endpointDraft = it
                                             onUpdateSettings(settings.copy(localEndpointUrl = it))
                                         },
-                                        label = { Text("Local Model Endpoint (Optional)") },
+                                        label = { Text(stringResource(R.string.setup_local_endpoint_hint)) },
                                         singleLine = true,
                                         modifier = Modifier.fillMaxWidth()
                                     )
                                 }
 
                                 SetupToggle(
-                                    title = "Bypass compatibility checks",
-                                    subtitle = "Continue even if AICore or SoC allowlist is unavailable",
+                                    title = stringResource(R.string.setup_bypass_title),
+                                    subtitle = stringResource(R.string.setup_bypass_sub),
                                     checked = settings.bypassCompatibility,
                                     onCheckedChange = { onUpdateSettings(settings.copy(bypassCompatibility = it)) }
                                 )
@@ -450,13 +450,13 @@ fun OnboardingScreen(
                                     ) {
                                         Column(modifier = Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
                                             Text(
-                                                "AICore Supported — Additional Setup Needed",
+                                                stringResource(R.string.setup_aicore_supported),
                                                 color = AccentBlue,
                                                 style = MaterialTheme.typography.labelLarge,
                                                 fontWeight = FontWeight.SemiBold
                                             )
                                             Text(
-                                                "Your SoC (${compatibilityReport.socName}) supports AICore, but it isn't active yet. Open Developer Options → Debugging → AICore and enable the preview toggle, then tap Re-check.",
+                                                stringResource(R.string.setup_aicore_supported_body, compatibilityReport.socName),
                                                 color = TextSecondary,
                                                 style = MaterialTheme.typography.bodySmall
                                             )
@@ -472,13 +472,13 @@ fun OnboardingScreen(
                                     ) {
                                         Column(modifier = Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                                             Text(
-                                                "Device reported as incompatible",
+                                                stringResource(R.string.setup_incompat_title),
                                                 color = Color(0xFFF28B82),
                                                 style = MaterialTheme.typography.labelLarge,
                                                 fontWeight = FontWeight.SemiBold
                                             )
                                             Text(
-                                                "Your SoC (${compatibilityReport.socName}) is not on the Snapdragon 8 Elite / Tensor G5+ allowlist and AICore/Local endpoint isn't ready. You can still bypass this check to continue.",
+                                                stringResource(R.string.setup_incompat_body, compatibilityReport.socName),
                                                 color = TextSecondary,
                                                 style = MaterialTheme.typography.bodySmall
                                             )
@@ -489,7 +489,7 @@ fun OnboardingScreen(
                                                 },
                                                 modifier = Modifier.fillMaxWidth()
                                             ) {
-                                                Text("Bypass & Continue Anyway")
+                                                Text(stringResource(R.string.setup_bypass_btn))
                                             }
                                         }
                                     }
@@ -498,18 +498,22 @@ fun OnboardingScreen(
 
                             val canContinueCompat = (compatibilityReport?.allCorePassed == true) || settings.bypassCompatibility
                             Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                                OutlinedButton(onClick = { step = 1 }, modifier = Modifier.weight(1f).height(50.dp)) { Text("Back") }
+                                OutlinedButton(onClick = { step = 1 }, modifier = Modifier.weight(1f).height(50.dp)) { Text(stringResource(R.string.back)) }
                                 Button(
                                     onClick = { step = 3 },
                                     enabled = canContinueCompat,
                                     modifier = Modifier.weight(1f).height(50.dp)
-                                ) { Text("Next") }
+                                ) { Text(stringResource(R.string.next)) }
                             }
                         }
                     }
 
                     3 -> {
                         val micGranted = ContextCompat.checkSelfPermission(context, Manifest.permission.RECORD_AUDIO) == PackageManager.PERMISSION_GRANTED
+                        val micTitle = stringResource(R.string.disclosure_mic_title)
+                        val micBody = stringResource(R.string.disclosure_onboard_mic_body)
+                        val assistantTitle = stringResource(R.string.disclosure_onboard_assistant_title)
+                        val assistantBody = stringResource(R.string.disclosure_onboard_assistant_body)
 
                         Column(
                             modifier = Modifier.fillMaxSize(),
@@ -519,44 +523,44 @@ fun OnboardingScreen(
                                 modifier = Modifier.weight(1f).verticalScroll(rememberScrollState()),
                                 verticalArrangement = Arrangement.spacedBy(12.dp)
                             ) {
-                                AnimatedHeadline("Core Assistant & Voice")
+                                AnimatedHeadline(stringResource(R.string.onboarding_voice_title))
                                 OnDevicePrivacyBanner(compact = true)
                                 Text(
-                                    "Set up how you talk to Kairo and summon it over any app. Both are optional and run 100% on-device.",
+                                    stringResource(R.string.onboarding_voice_body),
                                     color = TextSecondary,
                                     style = MaterialTheme.typography.bodyMedium
                                 )
 
                                 PermissionCard(
-                                    title = "Microphone",
-                                    subtitle = "Enables voice prompts, hands-free dictation, and optional 'Hey Kairo' wake word detection. Audio is transcribed locally and never sent off-device.",
+                                    title = stringResource(R.string.perm_microphone),
+                                    subtitle = stringResource(R.string.perm_microphone_sub),
                                     granted = micGranted,
                                     onAction = {
                                         pendingDisclosure = Triple(
-                                            "Microphone Access",
-                                            "Kairo uses your microphone strictly when you tap the mic or enable optional 'Hey Kairo' wake word detection. Audio is processed locally on your device and never uploaded.",
+                                            micTitle,
+                                            micBody,
                                             onGrantMic
                                         )
                                     }
                                 )
                                 PermissionCard(
-                                    title = "Default Digital Assistant",
-                                    subtitle = "Bind Kairo to your power button or corner swipe to open the floating overlay over any app and ask about your screen.",
+                                    title = stringResource(R.string.perm_digital_assistant),
+                                    subtitle = stringResource(R.string.perm_digital_assistant_sub),
                                     granted = false,
                                     onAction = {
                                         pendingDisclosure = Triple(
-                                            "Default Digital Assistant",
-                                            "Setting Kairo as your Digital Assistant lets it capture transient screen text or screenshots only when you trigger 'Ask about screen'. Nothing is stored or uploaded.",
+                                            assistantTitle,
+                                            assistantBody,
                                             onOpenAssistantSettings
                                         )
                                     },
-                                    actionLabel = "Set Up"
+                                    actionLabel = stringResource(R.string.perm_set_up)
                                 )
                             }
 
                             Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                                OutlinedButton(onClick = { step = 2 }, modifier = Modifier.weight(1f).height(50.dp)) { Text("Back") }
-                                Button(onClick = { step = 4 }, modifier = Modifier.weight(1f).height(50.dp)) { Text("Next") }
+                                OutlinedButton(onClick = { step = 2 }, modifier = Modifier.weight(1f).height(50.dp)) { Text(stringResource(R.string.back)) }
+                                Button(onClick = { step = 4 }, modifier = Modifier.weight(1f).height(50.dp)) { Text(stringResource(R.string.next)) }
                             }
                         }
                     }
@@ -567,6 +571,16 @@ fun OnboardingScreen(
                         val contactsGranted = ContextCompat.checkSelfPermission(context, Manifest.permission.READ_CONTACTS) == PackageManager.PERMISSION_GRANTED
                         val callGranted = ContextCompat.checkSelfPermission(context, Manifest.permission.CALL_PHONE) == PackageManager.PERMISSION_GRANTED
                         val notifGranted = NotificationCatchUpStore.isAccessGranted(context)
+                        val locDiscTitle = stringResource(R.string.disclosure_location_title)
+                        val locDiscBody = stringResource(R.string.disclosure_location_body)
+                        val contactsDiscTitle = stringResource(R.string.disclosure_contacts_title)
+                        val contactsDiscBody = stringResource(R.string.disclosure_contacts_body)
+                        val callDiscTitle = stringResource(R.string.disclosure_calling_title)
+                        val callDiscBody = stringResource(R.string.disclosure_calling_body)
+                        val notifDiscTitle = stringResource(R.string.disclosure_notif_title)
+                        val notifDiscBody = stringResource(R.string.disclosure_notif_body)
+                        val healthDiscTitle = stringResource(R.string.disclosure_health_title)
+                        val healthDiscBody = stringResource(R.string.disclosure_health_body)
 
                         Column(
                             modifier = Modifier.fillMaxSize(),
@@ -576,68 +590,68 @@ fun OnboardingScreen(
                                 modifier = Modifier.weight(1f).verticalScroll(rememberScrollState()),
                                 verticalArrangement = Arrangement.spacedBy(10.dp)
                             ) {
-                                AnimatedHeadline("Smart Connections (Optional)")
+                                AnimatedHeadline(stringResource(R.string.onboarding_connections_title))
                                 Text(
-                                    "Let Kairo connect with your local apps and data. You can skip any of these and enable them later in Settings.",
+                                    stringResource(R.string.onboarding_connections_body),
                                     color = TextSecondary,
                                     style = MaterialTheme.typography.bodyMedium
                                 )
                                 PermissionCard(
-                                    title = "Location",
-                                    subtitle = "Used locally when you ask for nearby places, local weather, or your current city/address. Coordinates never leave your device.",
+                                    title = stringResource(R.string.perm_location),
+                                    subtitle = stringResource(R.string.perm_location_sub),
                                     granted = locationGranted,
                                     onAction = {
                                         pendingDisclosure = Triple(
-                                            "Location Access",
-                                            "Kairo only reads your device's foreground location when you ask location-based questions (like nearby places or weather). Your coordinates stay 100% on-device.",
+                                            locDiscTitle,
+                                            locDiscBody,
                                             onGrantLocation
                                         )
                                     }
                                 )
                                 PermissionCard(
-                                    title = "Contacts",
-                                    subtitle = "Lets Kairo look up people by name when you say \"Call Mom\" or \"Text Alex on WhatsApp\" without needing phone numbers.",
+                                    title = stringResource(R.string.perm_contacts),
+                                    subtitle = stringResource(R.string.perm_contacts_sub),
                                     granted = contactsGranted,
                                     onAction = {
                                         pendingDisclosure = Triple(
-                                            "Contacts Access",
-                                            "Kairo reads your contacts locally on-device solely to match a spoken or typed name to a phone number or email. Contact data is never shared or uploaded.",
+                                            contactsDiscTitle,
+                                            contactsDiscBody,
                                             onGrantContacts
                                         )
                                     }
                                 )
                                 PermissionCard(
-                                    title = "Direct Calling",
-                                    subtitle = "Allows Kairo to start phone calls immediately when asked, instead of only opening the dialer.",
+                                    title = stringResource(R.string.perm_calling),
+                                    subtitle = stringResource(R.string.perm_calling_sub),
                                     granted = callGranted,
                                     onAction = {
                                         pendingDisclosure = Triple(
-                                            "Direct Calling Access",
-                                            "Kairo only places a call when you explicitly ask it to call someone. Call actions happen locally on your device.",
+                                            callDiscTitle,
+                                            callDiscBody,
                                             onGrantCall
                                         )
                                     }
                                 )
                                 PermissionCard(
-                                    title = "Notification Catch-Up",
-                                    subtitle = "Reads unread notifications locally (WhatsApp, Telegram, Discord, SMS) so Kairo can summarize what you missed.",
+                                    title = stringResource(R.string.perm_notifications),
+                                    subtitle = stringResource(R.string.perm_notifications_sub),
                                     granted = notifGranted,
                                     onAction = {
                                         pendingDisclosure = Triple(
-                                            "Notification Catch-Up Access",
-                                            "Kairo reads recent notifications strictly in local device memory when you ask to catch up. Nothing is logged to external servers.",
+                                            notifDiscTitle,
+                                            notifDiscBody,
                                             onOpenNotificationAccess
                                         )
                                     }
                                 )
                                 PermissionCard(
-                                    title = "Health Connect",
-                                    subtitle = "Reads today's steps, heart rate, sleep, distance, calories, and workouts from Health Connect for private on-device wellness summaries.",
+                                    title = stringResource(R.string.perm_health),
+                                    subtitle = stringResource(R.string.perm_health_sub),
                                     granted = healthConnectGranted,
                                     onAction = {
                                         pendingDisclosure = Triple(
-                                            "Health Connect Access",
-                                            "Kairo reads your local Health Connect metrics (steps, heart rate, sleep, distance, calories, workouts) solely to summarize your day on-device.",
+                                            healthDiscTitle,
+                                            healthDiscBody,
                                             onGrantHealthConnect
                                         )
                                     }
@@ -645,14 +659,14 @@ fun OnboardingScreen(
                             }
 
                             Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                                OutlinedButton(onClick = { step = 3 }, modifier = Modifier.weight(1f).height(50.dp)) { Text("Back") }
-                                Button(onClick = { step = 5 }, modifier = Modifier.weight(1f).height(50.dp)) { Text("Continue") }
+                                OutlinedButton(onClick = { step = 3 }, modifier = Modifier.weight(1f).height(50.dp)) { Text(stringResource(R.string.back)) }
+                                Button(onClick = { step = 5 }, modifier = Modifier.weight(1f).height(50.dp)) { Text(stringResource(R.string.continue_label)) }
                             }
                         }
                     }
 
                     else -> {
-                        val welcomeTitle = if (userName.isNotBlank()) "Welcome, ${userName.trim()}" else "All Set, Ready?"
+                        val welcomeTitle = if (userName.isNotBlank()) stringResource(R.string.onboarding_welcome_name, userName.trim()) else stringResource(R.string.onboarding_welcome_default)
                         var subVisible by remember { mutableStateOf(false) }
                         LaunchedEffect(Unit) {
                             delay(240L)
@@ -679,7 +693,7 @@ fun OnboardingScreen(
                                 GemmASparkleIcon(size = 86.dp, isAnimating = true)
                                 AnimatedHeadline(welcomeTitle)
                                 Text(
-                                    text = "Gemma 4 is configured locally on your NPU with zero cloud telemetry.",
+                                    text = stringResource(R.string.setup_final_sub),
                                     color = TextSecondary,
                                     fontSize = 15.sp,
                                     textAlign = TextAlign.Center,
@@ -750,8 +764,9 @@ private fun PermissionCard(
     subtitle: String,
     granted: Boolean,
     onAction: () -> Unit,
-    actionLabel: String = "Allow"
+    actionLabel: String = ""
 ) {
+    val resolvedActionLabel = actionLabel.ifEmpty { stringResource(R.string.perm_allow) }
     Surface(
         color = FrostedCardBg,
         shape = RoundedCornerShape(16.dp),
@@ -769,10 +784,10 @@ private fun PermissionCard(
             if (granted) {
                 Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
                     Icon(Icons.Default.CheckCircle, contentDescription = null, tint = SuccessGreen, modifier = Modifier.size(16.dp))
-                    Text("Granted", color = SuccessGreen, style = MaterialTheme.typography.labelMedium)
+                    Text(stringResource(R.string.perm_granted), color = SuccessGreen, style = MaterialTheme.typography.labelMedium)
                 }
             } else {
-                FilledTonalButton(onClick = onAction) { Text(actionLabel) }
+                FilledTonalButton(onClick = onAction) { Text(resolvedActionLabel) }
             }
         }
     }
@@ -815,16 +830,16 @@ private fun OnDevicePrivacyBanner(compact: Boolean = false) {
             }
             Column(modifier = Modifier.weight(1f)) {
                 Text(
-                    text = "100% On-Device • Zero Cloud Uploads",
+                    text = stringResource(R.string.onboard_privacy_header),
                     color = SuccessGreen,
                     style = MaterialTheme.typography.labelLarge,
                     fontWeight = FontWeight.SemiBold
                 )
                 Text(
                     text = if (compact) {
-                        "Everything—voice, location, contacts, and memories—stays strictly on your phone."
+                        stringResource(R.string.onboard_privacy_compact)
                     } else {
-                        "Your chats, memories, voice, photos, location, and screen context are processed locally on your silicon. No analytics, no tracking, no servers."
+                        stringResource(R.string.onboard_privacy_full)
                     },
                     color = TextSecondary,
                     style = MaterialTheme.typography.labelSmall

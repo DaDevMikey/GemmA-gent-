@@ -41,8 +41,10 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import com.kairo.agent.R
 import com.kairo.agent.ui.components.GemmASparkleIcon
 import com.kairo.agent.ui.components.ReactiveAuroraBackground
 import com.kairo.agent.ui.theme.GemmATheme
@@ -102,12 +104,12 @@ private fun AboutScreen(
                 IconButton(onClick = onBack) {
                     Icon(
                         imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                        contentDescription = "Back",
+                        contentDescription = stringResource(R.string.back),
                         tint = TextPrimary
                     )
                 }
                 Text(
-                    text = "About Kairo",
+                    text = stringResource(R.string.about_title),
                     style = MaterialTheme.typography.titleLarge,
                     fontWeight = FontWeight.Bold,
                     color = TextPrimary
@@ -128,19 +130,19 @@ private fun AboutScreen(
                 ) {
                     GemmASparkleIcon(size = 54.dp, isAnimating = true)
                     Text(
-                        text = "Kairo",
+                        text = stringResource(R.string.about_app_name),
                         style = MaterialTheme.typography.headlineSmall,
                         fontWeight = FontWeight.Bold,
                         color = TextPrimary
                     )
                     Text(
-                        text = "v$versionName • 100% On-Device • Open Source (MIT)",
+                        text = stringResource(R.string.about_version, versionName),
                         style = MaterialTheme.typography.labelMedium,
                         color = AccentBlue
                     )
                     Spacer(Modifier.height(4.dp))
                     Text(
-                        text = "Kairo is a private, local Android AI agent powered by Gemma 4 via Android AICore. It runs on-device with zero cloud inference, offering a floating assistant overlay, screen context, voice wake-up, real Android tool calling, and standalone APK plugins.",
+                        text = stringResource(R.string.about_summary),
                         style = MaterialTheme.typography.bodyMedium,
                         color = TextSecondary
                     )
@@ -159,24 +161,24 @@ private fun AboutScreen(
                     verticalArrangement = Arrangement.spacedBy(10.dp)
                 ) {
                     Text(
-                        text = "Credits",
+                        text = stringResource(R.string.about_credits_title),
                         style = MaterialTheme.typography.titleMedium,
                         fontWeight = FontWeight.SemiBold,
                         color = TextPrimary
                     )
                     CreditRow(
-                        name = "DaManMikey",
-                        role = "Creator & Lead Developer (damanmikey.me)",
+                        name = stringResource(R.string.about_credit_damanmikey),
+                        role = stringResource(R.string.about_credit_damanmikey_role),
                         onClick = { openUrl("https://damanmikey.me/") }
                     )
                     CreditRow(
-                        name = "ThatJoshGuy (thatjoshguy67)",
-                        role = "Twidget setup animations, One UI widget core & oneui-icons",
+                        name = stringResource(R.string.about_credit_joshguy),
+                        role = stringResource(R.string.about_credit_joshguy_role),
                         onClick = { openUrl("https://github.com/thatjoshguy67/oneui-icons") }
                     )
                     CreditRow(
-                        name = "tribalfs",
-                        role = "One UI design system reference (oneui-design)",
+                        name = stringResource(R.string.about_credit_tribalfs),
+                        role = stringResource(R.string.about_credit_tribalfs_role),
                         onClick = { openUrl("https://github.com/tribalfs/oneui-design") }
                     )
                 }
@@ -194,30 +196,30 @@ private fun AboutScreen(
                     verticalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
                     Text(
-                        text = "Links",
+                        text = stringResource(R.string.about_links_title),
                         style = MaterialTheme.typography.titleMedium,
                         fontWeight = FontWeight.SemiBold,
                         color = TextPrimary
                     )
-                    AboutLinkRow(Icons.Default.Language, "Website & Direct Downloads", "kairo.mikeyslabs.xyz") {
+                    AboutLinkRow(Icons.Default.Language, stringResource(R.string.about_link_website), stringResource(R.string.about_link_website_sub)) {
                         openUrl("https://kairo.mikeyslabs.xyz/")
                     }
-                    AboutLinkRow(Icons.Default.Code, "GitHub Source Code (MIT)", "github.com/DaDevMikey/Kairo") {
+                    AboutLinkRow(Icons.Default.Code, stringResource(R.string.about_link_github), stringResource(R.string.about_link_github_sub)) {
                         openUrl("https://github.com/DaDevMikey/Kairo")
                     }
-                    AboutLinkRow(Icons.Default.Download, "Releases & Plugins", "github.com/DaDevMikey/Kairo/releases") {
+                    AboutLinkRow(Icons.Default.Download, stringResource(R.string.about_link_releases), stringResource(R.string.about_link_releases_sub)) {
                         openUrl("https://github.com/DaDevMikey/Kairo/releases")
                     }
-                    AboutLinkRow(Icons.Default.Extension, "Plugin SDK Guide", "PLUGINS.md") {
+                    AboutLinkRow(Icons.Default.Extension, stringResource(R.string.about_link_plugin_docs), stringResource(R.string.about_link_plugin_docs_sub)) {
                         openUrl("https://github.com/DaDevMikey/Kairo/blob/main/PLUGINS.md")
                     }
-                    AboutLinkRow(Icons.Default.Policy, "Privacy Policy", "kairo.mikeyslabs.xyz/privacy.html") {
+                    AboutLinkRow(Icons.Default.Policy, stringResource(R.string.about_link_privacy), stringResource(R.string.about_link_privacy_sub)) {
                         openUrl("https://kairo.mikeyslabs.xyz/privacy.html")
                     }
-                    AboutLinkRow(Icons.Default.Policy, "Terms of Service", "kairo.mikeyslabs.xyz/terms.html") {
+                    AboutLinkRow(Icons.Default.Policy, stringResource(R.string.about_link_terms), stringResource(R.string.about_link_terms_sub)) {
                         openUrl("https://kairo.mikeyslabs.xyz/terms.html")
                     }
-                    AboutLinkRow(Icons.Default.Favorite, "Support Project (PayPal)", "paypal.me/DaManMikey") {
+                    AboutLinkRow(Icons.Default.Favorite, stringResource(R.string.about_link_support), stringResource(R.string.about_link_support_sub)) {
                         openUrl("https://paypal.me/DaManMikey")
                     }
                 }
