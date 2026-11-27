@@ -50,7 +50,8 @@ private sealed interface ResponseSegment {
 fun RichResponseText(
     text: String,
     textColor: Color = Color(0xFFE3E3E3),
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    isStreaming: Boolean = false
 ) {
     val segments = remember(text) { parseSegments(text) }
 
@@ -59,13 +60,17 @@ fun RichResponseText(
             modifier = Modifier.fillMaxWidth(),
             verticalArrangement = Arrangement.spacedBy(10.dp)
         ) {
-            segments.forEach { segment ->
+            segments.forEachIndexed { segIndex, segment ->
+                val isLastSegment = segIndex == segments.lastIndex
                 when (segment) {
                     is ResponseSegment.Prose -> {
                         if (segment.text.isNotBlank()) {
+                            val lines = segment.text.lines()
+                            val lastNonEmptyLineIdx = lines.indexOfLast { it.trimStart().isNotEmpty() }
                             Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                                segment.text.lines().forEach { line ->
+                                lines.forEachIndexed { lineIdx, line ->
                                     val trimmed = line.trimStart()
+                                    val useStreamingReveal = isStreaming && isLastSegment && lineIdx == lastNonEmptyLineIdx
                                     when {
                                         trimmed.startsWith("### ") -> Text(
                                             text = formatInlineMarkdown(trimmed.removePrefix("### ")),
@@ -88,17 +93,41 @@ fun RichResponseText(
                                             fontWeight = FontWeight.Bold,
                                             modifier = Modifier.padding(top = 6.dp)
                                         )
-                                        trimmed.startsWith("- ") || trimmed.startsWith("* ") -> Text(
-                                            text = formatInlineMarkdown("• " + trimmed.drop(2)),
-                                            color = textColor,
-                                            style = MaterialTheme.typography.bodyMedium,
-                                            modifier = Modifier.padding(start = 6.dp)
-                                        )
-                                        trimmed.isNotEmpty() -> Text(
-                                            text = formatInlineMarkdown(line),
-                                            color = textColor,
-                                            style = MaterialTheme.typography.bodyLarge
-                                        )
+                                        trimmed.startsWith("- ") || trimmed.startsWith("* ") -> {
+                                            val bulletText = "• " + trimmed.drop(2)
+                                            if (useStreamingReveal) {
+                                                LandingBlurText(
+                                                    text = formatInlineMarkdown(bulletText.removeSuffix(" ▌").removeSuffix("▌")).text,
+                                                    color = textColor,
+                                                    style = MaterialTheme.typography.bodyMedium,
+                                                    streaming = true,
+                                                    modifier = Modifier.padding(start = 6.dp)
+                                                )
+                                            } else {
+                                                Text(
+                                                    text = formatInlineMarkdown(bulletText),
+                                                    color = textColor,
+                                                    style = MaterialTheme.typography.bodyMedium,
+                                                    modifier = Modifier.padding(start = 6.dp)
+                                                )
+                                            }
+                                        }
+                                        trimmed.isNotEmpty() -> {
+                                            if (useStreamingReveal) {
+                                                LandingBlurText(
+                                                    text = formatInlineMarkdown(line.removeSuffix(" ▌").removeSuffix("▌")).text,
+                                                    color = textColor,
+                                                    style = MaterialTheme.typography.bodyLarge,
+                                                    streaming = true
+                                                )
+                                            } else {
+                                                Text(
+                                                    text = formatInlineMarkdown(line),
+                                                    color = textColor,
+                                                    style = MaterialTheme.typography.bodyLarge
+                                                )
+                                            }
+                                        }
                                     }
                                 }
                             }

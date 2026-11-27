@@ -418,6 +418,7 @@ fun GemmaAssistantSheet(
                                 RichResponseText(
                                     text = displayResponse,
                                     textColor = PrimaryText,
+                                    isStreaming = isGenerating,
                                     modifier = Modifier
                                         .fillMaxWidth()
                                         .verticalScroll(scrollState)

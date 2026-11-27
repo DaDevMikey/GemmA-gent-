@@ -63,16 +63,47 @@ internal class LandingTitleView @JvmOverloads constructor(
 
     private var shapedLayout: StaticLayout? = null
     private var settled = true
+    private var streamingMode = false
+    private var lastAssignedStartMs = 0f
 
-    fun bind(value: String, typeface: Typeface, textSizePx: Float, color: Int) {
-        val changed = title != value
+    private fun activeStaggerMs(): Float = if (streamingMode) STREAM_STAGGER_MS else LETTER_STAGGER_MS
+    private fun activeFadeMs(): Float = if (streamingMode) STREAM_FADE_MS else FADE_DURATION_MS
+    private fun activeMovementMs(): Long = if (streamingMode) STREAM_MOVEMENT_MS else MOVEMENT_DURATION_MS
+    private fun activeMaxBlurPx(): Float = if (streamingMode) STREAM_BLUR_RADIUS_PX else GLYPH_BLUR_RADIUS_PX
+    private fun activeSlideDistance(): Float = if (streamingMode) {
+        (width * 0.06f).coerceAtMost(dp(18f))
+    } else {
+        (width * 0.16f).coerceAtMost(dp(80f))
+    }
+
+    fun bind(value: String, typeface: Typeface, textSizePx: Float, color: Int, streaming: Boolean = false) {
+        val prevTitle = title
+        val modeChanged = streamingMode != streaming
+        streamingMode = streaming
+        val changed = prevTitle != value || modeChanged
         if (!changed && titlePaint.typeface == typeface && titlePaint.textSize == textSizePx && titlePaint.color == color) return
         titlePaint.typeface = typeface
         titlePaint.textSize = textSizePx
         titlePaint.color = color
         lettersLayer.updatePaint(titlePaint)
+
+        if (streaming && prevTitle.isNotEmpty() && value.startsWith(prevTitle) && !modeChanged) {
+            val prevGlyphs = geometry.glyphs
+            val currentElapsed = if (elapsedMs == Float.MAX_VALUE) 0f else elapsedMs.coerceAtLeast(0f)
+            if (elapsedMs == Float.MAX_VALUE) elapsedMs = 0f
+            title = value
+            requestLayout()
+            post {
+                if (!isAttachedToWindow) return@post
+                rebuildGeometryIncremental(width.coerceAtLeast(1), prevGlyphs, currentElapsed)
+                continueStreamingPlay()
+            }
+            return
+        }
+
         // The layer paint and glyph positions must both reflect a new theme/font.
         geometry = TitleGeometry.EMPTY
+        lastAssignedStartMs = 0f
         setTitle(value)
         if (changed) {
             prepare()
@@ -122,14 +153,15 @@ internal class LandingTitleView @JvmOverloads constructor(
             return
         }
         elapsedMs = 0f
-        val finalStart = (geometry.glyphs.last().sequence * LETTER_STAGGER_MS).toLong()
-        val duration = finalStart + MOVEMENT_DURATION_MS
+        val lastStart = geometry.glyphs.last().startTimeMs.toLong()
+        val duration = lastStart + activeMovementMs()
+        val startOffset = 0f
         letterAnimator = ValueAnimator.ofFloat(0f, 1f).apply {
             var cancelled = false
             this.duration = duration
             interpolator = LinearInterpolator()
             addUpdateListener { animator ->
-                elapsedMs = animator.currentPlayTime.toFloat()
+                elapsedMs = startOffset + animator.currentPlayTime.toFloat()
                 updateAnimationFrame()
             }
             addListener(object : AnimatorListenerAdapter() {
@@ -139,7 +171,42 @@ internal class LandingTitleView @JvmOverloads constructor(
 
                 override fun onAnimationEnd(animation: Animator) {
                     if (cancelled) return
-                    elapsedMs = duration.toFloat()
+                    elapsedMs = startOffset + duration.toFloat()
+                    updateAnimationFrame()
+                    onAnimationFinished?.invoke()
+                }
+            })
+            start()
+        }
+    }
+
+    private fun continueStreamingPlay() {
+        if (!ValueAnimator.areAnimatorsEnabled()) {
+            finish()
+            return
+        }
+        if (geometry.glyphs.isEmpty()) return
+        val currentElapsed = if (elapsedMs == Float.MAX_VALUE) 0f else elapsedMs.coerceAtLeast(0f)
+        val endTime = geometry.glyphs.maxOf { it.startTimeMs } + activeMovementMs()
+        val remaining = (endTime - currentElapsed).toLong().coerceAtLeast(16L)
+        cancel()
+        elapsedMs = currentElapsed
+        letterAnimator = ValueAnimator.ofFloat(0f, 1f).apply {
+            var cancelled = false
+            this.duration = remaining
+            interpolator = LinearInterpolator()
+            addUpdateListener { animator ->
+                elapsedMs = currentElapsed + animator.currentPlayTime.toFloat()
+                updateAnimationFrame()
+            }
+            addListener(object : AnimatorListenerAdapter() {
+                override fun onAnimationCancel(animation: Animator) {
+                    cancelled = true
+                }
+
+                override fun onAnimationEnd(animation: Animator) {
+                    if (cancelled) return
+                    elapsedMs = currentElapsed + remaining.toFloat()
                     updateAnimationFrame()
                     onAnimationFinished?.invoke()
                 }
@@ -185,13 +252,17 @@ internal class LandingTitleView @JvmOverloads constructor(
     }
 
     private fun rebuildGeometry(width: Int) {
+        rebuildGeometryIncremental(width, emptyList(), 0f)
+    }
+
+    private fun rebuildGeometryIncremental(width: Int, prevGlyphs: List<Glyph>, currentElapsedMs: Float) {
         if (title.isBlank()) {
             shapedLayout = null
             setGeometry(TitleGeometry.EMPTY)
             return
         }
         val layout = StaticLayout.Builder.obtain(title, 0, title.length, titlePaint, width)
-            .setAlignment(Layout.Alignment.ALIGN_CENTER)
+            .setAlignment(if (streamingMode) Layout.Alignment.ALIGN_NORMAL else Layout.Alignment.ALIGN_CENTER)
             // Samsung's sec font lets descenders such as g extend beyond the compact
             // line box. Keep the font padding so the title is never clipped.
             .setIncludePad(true)
@@ -199,6 +270,7 @@ internal class LandingTitleView @JvmOverloads constructor(
             .build()
         shapedLayout = layout
         var sequence = 0
+        val stagger = activeStaggerMs()
         val glyphs = buildList {
             val boundaries = BreakIterator.getCharacterInstance(resources.configuration.locales[0]).apply { setText(title) }
             var offset = boundaries.first()
@@ -206,6 +278,18 @@ internal class LandingTitleView @JvmOverloads constructor(
             while (next != BreakIterator.DONE) {
                 if (!title.substring(offset, next).all(Char::isWhitespace)) {
                     val line = layout.getLineForOffset(offset)
+                    val idx = sequence
+                    val startMs = if (idx < prevGlyphs.size) {
+                        prevGlyphs[idx].startTimeMs
+                    } else {
+                        val nextStart = if (streamingMode) {
+                            maxOf(currentElapsedMs, lastAssignedStartMs + stagger)
+                        } else {
+                            idx * stagger
+                        }
+                        lastAssignedStartMs = nextStart
+                        nextStart
+                    }
                     add(
                         Glyph(
                             start = offset,
@@ -216,6 +300,7 @@ internal class LandingTitleView @JvmOverloads constructor(
                             contextStart = layout.getLineStart(line),
                             contextEnd = layout.getLineEnd(line),
                             isRtl = layout.isRtlCharAt(offset),
+                            startTimeMs = startMs,
                         ),
                     )
                 }
@@ -284,12 +369,13 @@ internal class LandingTitleView @JvmOverloads constructor(
     }
 
     private fun updateAnimationFrame() {
-        settled = elapsedMs >= TitleRevealTiming.durationMs(geometry.glyphs.size)
+        val totalDuration = if (geometry.glyphs.isEmpty()) 0f else geometry.glyphs.maxOf { it.startTimeMs } + activeMovementMs()
+        settled = elapsedMs >= totalDuration
         for (index in 0 until childCount) getChildAt(index).visibility = if (settled) INVISIBLE else VISIBLE
         invalidate()
         if (settled) return
         if (usesHardwareBlur) {
-            val distance = (width * 0.16f).coerceAtMost(dp(80f))
+            val distance = activeSlideDistance()
             hardwareGlyphLayers.forEach { layer ->
                 layer.updateAnimation(elapsedMs, distance)
             }
@@ -310,6 +396,7 @@ internal class LandingTitleView @JvmOverloads constructor(
         val contextStart: Int,
         val contextEnd: Int,
         val isRtl: Boolean,
+        val startTimeMs: Float = 0f,
     )
 
     private data class TitleGeometry(
@@ -332,7 +419,7 @@ internal class LandingTitleView @JvmOverloads constructor(
         private var lastAppliedRadius = Float.NaN
 
         fun updateAnimation(globalTime: Float, horizontalDistance: Float) {
-            val localTime = globalTime - glyph.sequence * LETTER_STAGGER_MS
+            val localTime = globalTime - glyph.startTimeMs
             if (localTime <= 0f) {
                 alpha = 0f
                 translationX = horizontalDistance
@@ -340,17 +427,17 @@ internal class LandingTitleView @JvmOverloads constructor(
                 return
             }
             val fade = fadeInterpolator.getInterpolation(
-                (localTime / FADE_DURATION_MS).coerceIn(0f, 1f),
+                (localTime / activeFadeMs()).coerceIn(0f, 1f),
             )
             val movement = movementInterpolator.getInterpolation(
-                (localTime / MOVEMENT_DURATION_MS).coerceIn(0f, 1f),
+                (localTime / activeMovementMs()).coerceIn(0f, 1f),
             )
             alpha = fade
             translationX = horizontalDistance * (1f - movement)
             if (fade <= 0f) {
                 updateBlur(0f)
             } else {
-                updateBlur(GLYPH_BLUR_RADIUS_PX * (1f - movement))
+                updateBlur(activeMaxBlurPx() * (1f - movement))
             }
         }
 
@@ -397,18 +484,18 @@ internal class LandingTitleView @JvmOverloads constructor(
         override fun onDraw(canvas: Canvas) {
             super.onDraw(canvas)
             if (geometry.glyphs.isEmpty()) return
-            val horizontalDistance = (width * 0.16f).coerceAtMost(dp(80f))
+            val horizontalDistance = activeSlideDistance()
             geometry.glyphs.forEach { glyph ->
-                val localTime = elapsedMs - glyph.sequence * LETTER_STAGGER_MS
+                val localTime = elapsedMs - glyph.startTimeMs
                 if (localTime < 0f) return@forEach
                 val alpha = fadeInterpolator.getInterpolation(
-                    (localTime / FADE_DURATION_MS).coerceIn(0f, 1f),
+                    (localTime / activeFadeMs()).coerceIn(0f, 1f),
                 )
                 val movement = movementInterpolator.getInterpolation(
-                    (localTime / MOVEMENT_DURATION_MS).coerceIn(0f, 1f),
+                    (localTime / activeMovementMs()).coerceIn(0f, 1f),
                 )
                 paint.alpha = (alpha * 255).toInt()
-                val blurRadius = (GLYPH_BLUR_RADIUS_PX * (1f - movement)).coerceAtLeast(0f)
+                val blurRadius = (activeMaxBlurPx() * (1f - movement)).coerceAtLeast(0f)
                 paint.maskFilter = if (blurRadius > BLUR_REMOVE_PX) {
                     maskFor(blurRadius)
                 } else {
@@ -428,6 +515,10 @@ internal class LandingTitleView @JvmOverloads constructor(
         const val LETTER_STAGGER_MS = TitleRevealTiming.STAGGER_MS
         const val FADE_DURATION_MS = TitleRevealTiming.FADE_MS
         const val MOVEMENT_DURATION_MS = TitleRevealTiming.MOVEMENT_MS
+        const val STREAM_STAGGER_MS = 12f
+        const val STREAM_FADE_MS = 150f
+        const val STREAM_MOVEMENT_MS = 220L
+        const val STREAM_BLUR_RADIUS_PX = 32f
         const val GLYPH_BLUR_RADIUS_PX = 100f
         const val BLUR_RADIUS_STEP_PX = 1f
         const val BLUR_BUCKET_COUNT = (GLYPH_BLUR_RADIUS_PX / BLUR_RADIUS_STEP_PX).toInt()
