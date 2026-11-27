@@ -746,8 +746,15 @@ internal fun MainScreenContent(
     var showDrawerSearch by remember { mutableStateOf(false) }
     var drawerSearchQuery by remember { mutableStateOf("") }
     val listState = rememberLazyListState()
+    val drawerScrollState = rememberScrollState()
     val localContext = LocalContext.current
     val palette = com.kairo.agent.ui.theme.LocalKairoPalette.current
+
+    LaunchedEffect(drawerState.isOpen) {
+        if (drawerState.isOpen) {
+            drawerScrollState.scrollTo(0)
+        }
+    }
 
     LaunchedEffect(partialTranscript) { if (partialTranscript.isNotEmpty()) draft = partialTranscript }
     LaunchedEffect(state.activeTurns.size, state.activeTurns.lastOrNull()?.response?.length) {
@@ -777,7 +784,7 @@ internal fun MainScreenContent(
                         modifier = Modifier
                             .weight(1f)
                             .fillMaxWidth()
-                            .verticalScroll(rememberScrollState())
+                            .verticalScroll(drawerScrollState)
                     ) {
                     Row(
                         modifier = Modifier.fillMaxWidth(),
@@ -2328,6 +2335,7 @@ private fun ConversationTurnItem(
                         RichResponseText(
                             text = if (turn.isStreaming) "${turn.response} ▌" else turn.response,
                             textColor = GeminiTextPrimary,
+                            isStreaming = turn.isStreaming,
                             modifier = Modifier.padding(horizontal = 4.dp, vertical = 2.dp)
                         )
                     }
