@@ -64,7 +64,13 @@ internal class LandingTitleView @JvmOverloads constructor(
     private var shapedLayout: StaticLayout? = null
     private var settled = true
     private var streamingMode = false
+    private var streamStartUptimeMs = 0L
     private var lastAssignedStartMs = 0f
+
+    private fun currentStreamElapsedMs(): Float {
+        if (streamStartUptimeMs == 0L) streamStartUptimeMs = android.os.SystemClock.uptimeMillis()
+        return (android.os.SystemClock.uptimeMillis() - streamStartUptimeMs).toFloat().coerceAtLeast(0f)
+    }
 
     private fun activeStaggerMs(): Float = if (streamingMode) STREAM_STAGGER_MS else LETTER_STAGGER_MS
     private fun activeFadeMs(): Float = if (streamingMode) STREAM_FADE_MS else FADE_DURATION_MS
@@ -87,17 +93,19 @@ internal class LandingTitleView @JvmOverloads constructor(
         titlePaint.color = color
         lettersLayer.updatePaint(titlePaint)
 
-        if (streaming && prevTitle.isNotEmpty() && value.startsWith(prevTitle) && !modeChanged) {
-            val prevGlyphs = geometry.glyphs
-            val currentElapsed = if (elapsedMs == Float.MAX_VALUE) 0f else elapsedMs.coerceAtLeast(0f)
-            if (elapsedMs == Float.MAX_VALUE) elapsedMs = 0f
-            title = value
-            requestLayout()
-            post {
-                if (!isAttachedToWindow) return@post
-                rebuildGeometryIncremental(width.coerceAtLeast(1), prevGlyphs, currentElapsed)
-                continueStreamingPlay()
+        if (streaming) {
+            if (prevTitle.isEmpty() || !value.startsWith(prevTitle) || modeChanged) {
+                streamStartUptimeMs = android.os.SystemClock.uptimeMillis()
+                lastAssignedStartMs = 0f
+                geometry = TitleGeometry.EMPTY
+                elapsedMs = 0f
             }
+            title = value
+            if (width > 0) {
+                rebuildGeometryIncremental(width, geometry.glyphs, currentStreamElapsedMs())
+                ensureStreamingTicker()
+            }
+            requestLayout()
             return
         }
 
@@ -180,37 +188,29 @@ internal class LandingTitleView @JvmOverloads constructor(
         }
     }
 
-    private fun continueStreamingPlay() {
+    private fun ensureStreamingTicker() {
         if (!ValueAnimator.areAnimatorsEnabled()) {
             finish()
             return
         }
         if (geometry.glyphs.isEmpty()) return
-        val currentElapsed = if (elapsedMs == Float.MAX_VALUE) 0f else elapsedMs.coerceAtLeast(0f)
-        val endTime = geometry.glyphs.maxOf { it.startTimeMs } + activeMovementMs()
-        val remaining = (endTime - currentElapsed).toLong().coerceAtLeast(16L)
-        cancel()
-        elapsedMs = currentElapsed
+        elapsedMs = currentStreamElapsedMs()
+        updateAnimationFrame()
+        if (settled) return
+        if (letterAnimator?.isRunning == true) return
         letterAnimator = ValueAnimator.ofFloat(0f, 1f).apply {
-            var cancelled = false
-            this.duration = remaining
+            duration = 60_000L
+            repeatCount = ValueAnimator.INFINITE
             interpolator = LinearInterpolator()
-            addUpdateListener { animator ->
-                elapsedMs = currentElapsed + animator.currentPlayTime.toFloat()
+            addUpdateListener {
+                elapsedMs = currentStreamElapsedMs()
                 updateAnimationFrame()
-            }
-            addListener(object : AnimatorListenerAdapter() {
-                override fun onAnimationCancel(animation: Animator) {
-                    cancelled = true
-                }
-
-                override fun onAnimationEnd(animation: Animator) {
-                    if (cancelled) return
-                    elapsedMs = currentElapsed + remaining.toFloat()
-                    updateAnimationFrame()
+                if (settled) {
+                    cancel()
+                    letterAnimator = null
                     onAnimationFinished?.invoke()
                 }
-            })
+            }
             start()
         }
     }
@@ -234,7 +234,11 @@ internal class LandingTitleView @JvmOverloads constructor(
 
     override fun onMeasure(widthMeasureSpec: Int, heightMeasureSpec: Int) {
         val availableWidth = MeasureSpec.getSize(widthMeasureSpec).coerceAtLeast(1)
-        rebuildGeometry(availableWidth)
+        if (streamingMode) {
+            rebuildGeometryIncremental(availableWidth, geometry.glyphs, currentStreamElapsedMs())
+        } else {
+            rebuildGeometry(availableWidth)
+        }
         val desiredHeight = geometry.height.coerceAtLeast(1)
         val measuredWidth = resolveSize(availableWidth, widthMeasureSpec)
         val measuredHeight = resolveSize(desiredHeight, heightMeasureSpec)
@@ -248,7 +252,11 @@ internal class LandingTitleView @JvmOverloads constructor(
 
     override fun onLayout(changed: Boolean, left: Int, top: Int, right: Int, bottom: Int) {
         for (index in 0 until childCount) getChildAt(index).layout(0, 0, width, height + dp(TITLE_BLUR_BOTTOM_INSET_DP).toInt())
-        updateAnimationFrame()
+        if (streamingMode) {
+            ensureStreamingTicker()
+        } else {
+            updateAnimationFrame()
+        }
     }
 
     private fun rebuildGeometry(width: Int) {
