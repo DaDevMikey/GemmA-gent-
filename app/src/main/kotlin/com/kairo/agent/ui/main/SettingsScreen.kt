@@ -1,6 +1,6 @@
 package com.kairo.agent.ui.main
 
-import androidx.activity.compose.BackHandler
+import androidx.activity.compose.PredictiveBackHandler
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.LargeTopAppBar
 import androidx.compose.material3.TopAppBarDefaults
@@ -44,10 +44,16 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableFloatStateOf
+import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.graphicsLayer
+import kotlin.coroutines.cancellation.CancellationException
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -71,7 +77,20 @@ fun SettingsScreen(
     onReplayTour: () -> Unit,
     onOpenUrl: (String) -> Unit
 ) {
-    BackHandler(onBack = onBack)
+    var backProgress by remember { mutableFloatStateOf(0f) }
+    var backSwipeEdge by remember { mutableIntStateOf(0) }
+    PredictiveBackHandler { progressFlow ->
+        try {
+            progressFlow.collect { backEvent ->
+                backProgress = backEvent.progress.coerceIn(0f, 1f)
+                backSwipeEdge = backEvent.swipeEdge
+            }
+            backProgress = 0f
+            onBack()
+        } catch (_: CancellationException) {
+            backProgress = 0f
+        }
+    }
     val palette = com.kairo.agent.ui.theme.LocalKairoPalette.current
     val oneUi = LocalSesl9Enabled.current
     val scrollBehavior = TopAppBarDefaults.exitUntilCollapsedScrollBehavior()
@@ -79,6 +98,14 @@ fun SettingsScreen(
     Column(
         modifier = Modifier
             .fillMaxSize()
+            .graphicsLayer {
+                val scale = 1f - (backProgress * 0.08f)
+                scaleX = scale
+                scaleY = scale
+                translationX = if (backSwipeEdge == 0) backProgress * 48f else -backProgress * 48f
+                alpha = 1f - (backProgress * 0.15f)
+            }
+            .clip(RoundedCornerShape((backProgress * 28f).dp))
             .background(palette.bg)
             .systemBarsPadding()
             .then(if (oneUi) Modifier.nestedScroll(scrollBehavior.nestedScrollConnection) else Modifier)
