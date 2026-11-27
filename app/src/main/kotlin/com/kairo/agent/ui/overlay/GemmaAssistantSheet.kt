@@ -39,6 +39,7 @@ import androidx.compose.foundation.layout.systemBarsPadding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
+import com.kairo.agent.ui.components.kairoCornerShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.text.KeyboardActions
@@ -61,12 +62,12 @@ import androidx.compose.material.icons.filled.Screenshot
 import androidx.compose.material.icons.filled.Stop
 import androidx.compose.material3.AssistChip
 import androidx.compose.material3.AssistChipDefaults
-import androidx.compose.material3.FilterChip
+import com.kairo.agent.ui.components.KairoFilterChip as FilterChip
 import androidx.compose.material3.FilterChipDefaults
-import androidx.compose.material3.Icon
+import com.kairo.agent.ui.components.KairoIcon as Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Surface
+import com.kairo.agent.ui.components.KairoSurface as Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.ripple
@@ -370,7 +371,7 @@ fun GemmaAssistantSheet(
                         }
 
                         if (actionSummary != null) {
-                            Surface(color = BadgeSurface, shape = RoundedCornerShape(12.dp)) {
+                            Surface(color = BadgeSurface, shape = kairoCornerShape(12.dp)) {
                                 Row(
                                     modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp),
                                     verticalAlignment = Alignment.CenterVertically,
@@ -408,7 +409,7 @@ fun GemmaAssistantSheet(
                                     .weight(1f, fill = false)
                                     .heightIn(max = if (isFullscreen) 560.dp else 240.dp)
                             ) {
-                                Box(modifier = Modifier.matchParentSize().clip(RoundedCornerShape(14.dp))) {
+                                Box(modifier = Modifier.matchParentSize().clip(kairoCornerShape(14.dp))) {
                                     if (isGenerating) {
                                         StarDustParticles(modifier = Modifier.matchParentSize())
                                     }
@@ -478,7 +479,7 @@ fun GemmaAssistantSheet(
                     }
 
                     if (attachedImage != null || (isScreenAttachment && hasScreenContext)) {
-                        Surface(color = BadgeSurface, shape = RoundedCornerShape(14.dp)) {
+                        Surface(color = BadgeSurface, shape = kairoCornerShape(14.dp)) {
                             Row(
                                 modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp),
                                 verticalAlignment = Alignment.CenterVertically,
@@ -532,7 +533,7 @@ fun GemmaAssistantSheet(
                         BasicTextField(
                             value = draft,
                             onValueChange = { draft = it },
-                            textStyle = TextStyle(color = Color.White, fontSize = 16.sp),
+                            textStyle = if (com.kairo.agent.ui.theme.LocalSesl9Enabled.current) MaterialTheme.typography.bodyLarge.copy(color = Color.White) else TextStyle(color = Color.White, fontSize = 16.sp),
                             cursorBrush = SolidColor(AccentBlue),
                             keyboardOptions = KeyboardOptions(imeAction = ImeAction.Send),
                             keyboardActions = KeyboardActions(onSend = { submitDraft() }),

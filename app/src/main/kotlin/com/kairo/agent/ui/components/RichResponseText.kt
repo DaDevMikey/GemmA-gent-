@@ -11,14 +11,15 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
+import com.kairo.agent.ui.components.kairoCornerShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.selection.SelectionContainer
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ContentCopy
-import androidx.compose.material3.Icon
+import com.kairo.agent.ui.components.KairoIcon as Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Surface
+import com.kairo.agent.ui.components.KairoSurface as Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
@@ -126,8 +127,8 @@ private fun CodeBlockCard(
     Surface(
         modifier = Modifier
             .fillMaxWidth()
-            .border(1.dp, Color(0xFF2B2D30), RoundedCornerShape(12.dp)),
-        shape = RoundedCornerShape(12.dp),
+            .border(1.dp, Color(0xFF2B2D30), kairoCornerShape(12.dp)),
+        shape = kairoCornerShape(12.dp),
         color = Color(0xFF141518)
     ) {
         Column(modifier = Modifier.fillMaxWidth()) {

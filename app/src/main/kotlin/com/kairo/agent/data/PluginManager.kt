@@ -18,8 +18,13 @@ data class KairoPlugin(
     val iconPack: String? = null,
     val cornerDp: Int? = null,
     val toolName: String? = null,
-    val toolDesc: String? = null
+    val toolDesc: String? = null,
+    val uiEngine: String? = null
 ) {
+    // A palette or icon-pack hint alone must never opt another theme into SESL controls.
+    val usesSesl9Controls: Boolean
+        get() = packageName == "com.kairo.plugin.oneui" && type == "theme" && uiEngine == "sesl9"
+
     fun accentColorInt(): Int? = accentColorHex?.let { runCatching { Color.parseColor(it) }.getOrNull() }
     fun bgColorInt(): Int? = bgColorHex?.let { runCatching { Color.parseColor(it) }.getOrNull() }
     fun surfaceColorInt(): Int? = surfaceColorHex?.let { runCatching { Color.parseColor(it) }.getOrNull() }
@@ -31,7 +36,7 @@ data class KairoPlugin(
  */
 object PluginManager {
     const val ACTION_KAIRO_PLUGIN = "com.kairo.agent.PLUGIN"
-    private const val PREFS = "kairo_plugins"
+    internal const val PREFS = "kairo_plugins"
     private const val KEY_ENABLED_THEME = "enabled_theme_pkg"
     private const val KEY_ENABLED_LANG_PREFIX = "enabled_lang_"
 
@@ -66,7 +71,8 @@ object PluginManager {
                 iconPack = meta.getString("kairo.plugin.icon_pack"),
                 cornerDp = meta.getInt("kairo.plugin.corner_dp", 0).takeIf { it > 0 },
                 toolName = meta.getString("kairo.plugin.tool_name"),
-                toolDesc = meta.getString("kairo.plugin.tool_desc")
+                toolDesc = meta.getString("kairo.plugin.tool_desc"),
+                uiEngine = meta.getString("kairo.plugin.ui_engine")
             )
         }
         val fromActivities = activities.mapNotNull { info ->
@@ -85,7 +91,8 @@ object PluginManager {
                 iconPack = meta.getString("kairo.plugin.icon_pack"),
                 cornerDp = meta.getInt("kairo.plugin.corner_dp", 0).takeIf { it > 0 },
                 toolName = meta.getString("kairo.plugin.tool_name"),
-                toolDesc = meta.getString("kairo.plugin.tool_desc")
+                toolDesc = meta.getString("kairo.plugin.tool_desc"),
+                uiEngine = meta.getString("kairo.plugin.ui_engine")
             )
         }
         return (fromServices + fromActivities).distinctBy { it.packageName }
@@ -100,6 +107,7 @@ object PluginManager {
             .edit()
             .putString(KEY_ENABLED_THEME, packageName)
             .apply()
+        com.kairo.agent.widget.refreshKairoWidgets(context)
     }
 
     fun isPluginEnabled(context: Context, plugin: KairoPlugin): Boolean =

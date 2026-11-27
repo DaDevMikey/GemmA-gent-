@@ -6,13 +6,14 @@ plugins {
 
 android {
   namespace = "com.kairo.agent"
-  compileSdk = 36
+  compileSdk = 37
   defaultConfig {
     applicationId = "com.kairo.agent"
     minSdk = 26
     targetSdk = 36
-    versionCode = 25
-    versionName = "1.3.0"
+    testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
+    versionCode = 29
+    versionName = "1.3.4-dev-sesl9"
   }
 
   buildTypes {
@@ -44,13 +45,55 @@ kotlin {
   jvmToolchain(17)
 }
 
+// SESL retains AndroidX class names. Resolve one implementation of each View module.
+// Compose Material and the app's window theme remain stock; native controls are plugin-gated.
+configurations.configureEach {
+  exclude(group = "androidx.core", module = "core")
+  exclude(group = "androidx.core", module = "core-ktx")
+  exclude(group = "androidx.customview", module = "customview")
+  exclude(group = "androidx.coordinatorlayout", module = "coordinatorlayout")
+  exclude(group = "androidx.drawerlayout", module = "drawerlayout")
+  exclude(group = "androidx.viewpager2", module = "viewpager2")
+  exclude(group = "androidx.viewpager", module = "viewpager")
+  exclude(group = "androidx.appcompat", module = "appcompat")
+  exclude(group = "androidx.fragment", module = "fragment")
+  exclude(group = "androidx.fragment", module = "fragment-ktx")
+  exclude(group = "androidx.preference", module = "preference")
+  exclude(group = "androidx.recyclerview", module = "recyclerview")
+  exclude(group = "androidx.swiperefreshlayout", module = "swiperefreshlayout")
+  exclude(group = "androidx.slidingpanelayout", module = "slidingpanelayout")
+  exclude(group = "sesl.androidx.core", module = "core-ktx")
+}
+
 dependencies {
+  implementation(libs.oneui.icons)
+  implementation(libs.sesl.appcompat)
+  implementation(libs.sesl.core)
+  constraints {
+    implementation(libs.sesl.appcompat)
+    implementation(libs.sesl.coordinatorlayout)
+    implementation(libs.sesl.core)
+    implementation(libs.sesl.customview)
+    implementation(libs.sesl.drawerlayout)
+    implementation(libs.sesl.fragment)
+    implementation(libs.sesl.indexscroll)
+    implementation(libs.sesl.material)
+    implementation(libs.sesl.picker.app)
+    implementation(libs.sesl.picker.basic)
+    implementation(libs.sesl.picker.color)
+    implementation(libs.sesl.preference)
+    implementation(libs.sesl.recyclerview)
+    implementation(libs.sesl.slidingpanelayout)
+    implementation(libs.sesl.swiperefreshlayout)
+    implementation(libs.sesl.viewpager)
+    implementation(libs.sesl.viewpager2)
+  }
+
   val composeBom = platform(libs.androidx.compose.bom)
   implementation(composeBom)
   androidTestImplementation(composeBom)
 
   // Core Android dependencies
-  implementation(libs.androidx.core.ktx)
   implementation(libs.androidx.lifecycle.runtime.ktx)
   implementation(libs.androidx.activity.compose)
 

@@ -12,11 +12,12 @@
             </intent-filter>
             <meta-data android:name="kairo.plugin.type" android:value="theme" />
             <meta-data android:name="kairo.plugin.name" android:value="One UI Design Theme" />
-            <meta-data android:name="kairo.plugin.description" android:value="Samsung One UI palette &amp; squircle icons (credits: tribalfs/oneui-design &amp; thatjoshguy67/oneui-icons)" />
+            <meta-data android:name="kairo.plugin.description" android:value="One UI Sans, SESL9 controls, cards, navigation &amp; One UI icons (credits: tribalfs/oneui-design &amp; thatjoshguy67/oneui-icons)" />
             <meta-data android:name="kairo.plugin.accent_color" android:value="#0381FE" />
             <meta-data android:name="kairo.plugin.bg_color" android:value="#010101" />
             <meta-data android:name="kairo.plugin.surface_color" android:value="#17171A" />
             <meta-data android:name="kairo.plugin.icon_pack" android:value="oneui-icons" />
+            <meta-data android:name="kairo.plugin.ui_engine" android:value="sesl9" />
             <meta-data android:name="kairo.plugin.corner_dp" android:value="22" />
         </service>
     </application>

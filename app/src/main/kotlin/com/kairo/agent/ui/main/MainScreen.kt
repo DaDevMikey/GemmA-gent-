@@ -65,6 +65,7 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
+import com.kairo.agent.ui.components.kairoCornerShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.text.KeyboardActions
@@ -102,25 +103,25 @@ import androidx.compose.material.icons.filled.Share
 import androidx.compose.material.icons.filled.Stop
 import androidx.compose.material3.AssistChip
 import androidx.compose.material3.AssistChipDefaults
-import androidx.compose.material3.Button
-import androidx.compose.material3.CircularProgressIndicator
+import com.kairo.agent.ui.components.KairoButton as Button
+import com.kairo.agent.ui.components.KairoCircularProgressIndicator as CircularProgressIndicator
 import androidx.compose.material3.DrawerValue
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.FilledTonalButton
-import androidx.compose.material3.FilterChip
+import com.kairo.agent.ui.components.KairoFilledTonalButton as FilledTonalButton
+import com.kairo.agent.ui.components.KairoFilterChip as FilterChip
 import androidx.compose.material3.FilterChipDefaults
 import androidx.compose.material3.HorizontalDivider
-import androidx.compose.material3.Icon
+import com.kairo.agent.ui.components.KairoIcon as Icon
 import androidx.compose.material3.IconButton
-import androidx.compose.material3.LinearProgressIndicator
+import com.kairo.agent.ui.components.KairoLinearProgressIndicator as LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.ModalDrawerSheet
 import androidx.compose.material3.ModalNavigationDrawer
-import androidx.compose.material3.OutlinedButton
+import com.kairo.agent.ui.components.KairoOutlinedButton as OutlinedButton
 import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.Surface
-import androidx.compose.material3.Switch
+import com.kairo.agent.ui.components.KairoSurface as Surface
+import com.kairo.agent.ui.components.KairoSwitch as Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.rememberDrawerState
@@ -637,9 +638,9 @@ internal fun MainScreenContent(
             showIntroTour = false
             introTourStep = 0
         }
-        androidx.compose.material3.AlertDialog(
+        com.kairo.agent.ui.components.KairoAlertDialog(
             onDismissRequest = dismissTour,
-            containerColor = GeminiDrawerBg,
+            containerColor = com.kairo.agent.ui.components.pluginSurfaceColor(GeminiDrawerBg),
             titleContentColor = GeminiTextPrimary,
             textContentColor = GeminiTextSecondary,
             icon = { GemmASparkleIcon(size = 36.dp, isAnimating = true) },
@@ -649,7 +650,7 @@ internal fun MainScreenContent(
                     Text(desc, style = MaterialTheme.typography.bodyMedium, color = GeminiTextPrimary)
                     Surface(
                         color = GeminiPillBg,
-                        shape = RoundedCornerShape(12.dp),
+                        shape = kairoCornerShape(12.dp),
                         modifier = Modifier.fillMaxWidth().clickable {
                             val clean = example.removePrefix("Try: \"").removeSuffix("\"")
                             if (!isLast) {
@@ -681,9 +682,9 @@ internal fun MainScreenContent(
     }
 
     if (showClearAllConfirm) {
-        androidx.compose.material3.AlertDialog(
+        com.kairo.agent.ui.components.KairoAlertDialog(
             onDismissRequest = { showClearAllConfirm = false },
-            containerColor = GeminiDrawerBg,
+            containerColor = com.kairo.agent.ui.components.pluginSurfaceColor(GeminiDrawerBg),
             titleContentColor = GeminiTextPrimary,
             textContentColor = GeminiTextSecondary,
             icon = { Icon(Icons.Default.DeleteOutline, contentDescription = null, tint = Color(0xFFF28B82)) },
@@ -702,9 +703,9 @@ internal fun MainScreenContent(
     }
 
     pendingDeleteChat?.let { chatToDelete ->
-        androidx.compose.material3.AlertDialog(
+        com.kairo.agent.ui.components.KairoAlertDialog(
             onDismissRequest = { pendingDeleteChat = null },
-            containerColor = GeminiDrawerBg,
+            containerColor = com.kairo.agent.ui.components.pluginSurfaceColor(GeminiDrawerBg),
             titleContentColor = GeminiTextPrimary,
             textContentColor = GeminiTextSecondary,
             icon = { Icon(Icons.Default.DeleteOutline, contentDescription = null, tint = Color(0xFFF28B82)) },
@@ -723,9 +724,9 @@ internal fun MainScreenContent(
     }
 
     state.pendingToolConfirmation?.let { pending ->
-        androidx.compose.material3.AlertDialog(
+        com.kairo.agent.ui.components.KairoAlertDialog(
             onDismissRequest = { pending.onDecision(false) },
-            containerColor = GeminiDrawerBg,
+            containerColor = com.kairo.agent.ui.components.pluginSurfaceColor(GeminiDrawerBg),
             titleContentColor = GeminiTextPrimary,
             textContentColor = GeminiTextSecondary,
             title = { Text("Confirm Action: ${pending.toolName}", fontWeight = FontWeight.SemiBold) },
@@ -763,6 +764,8 @@ internal fun MainScreenContent(
         drawerState = drawerState,
         drawerContent = {
             ModalDrawerSheet(
+                drawerShape = if (com.kairo.agent.ui.theme.LocalSesl9Enabled.current)
+                    RoundedCornerShape(topEnd = 28.dp, bottomEnd = 28.dp) else androidx.compose.material3.DrawerDefaults.shape,
                 drawerContainerColor = palette.surface,
                 drawerContentColor = GeminiTextPrimary
             ) {
@@ -784,7 +787,7 @@ internal fun MainScreenContent(
                     ) {
                         Text(
                             text = "Kairo",
-                            style = MaterialTheme.typography.titleLarge,
+                            style = if (com.kairo.agent.ui.theme.LocalSesl9Enabled.current) MaterialTheme.typography.headlineLarge else MaterialTheme.typography.titleLarge,
                             fontWeight = FontWeight.Medium,
                             color = GeminiTextPrimary,
                             modifier = Modifier.padding(start = 6.dp)
@@ -803,14 +806,21 @@ internal fun MainScreenContent(
                     }
 
                 AnimatedVisibility(visible = showDrawerSearch) {
+                        if (com.kairo.agent.ui.theme.LocalSesl9Enabled.current) {
+                            com.kairo.agent.ui.components.OneUiSearchField(
+                                value = drawerSearchQuery, onValueChange = { drawerSearchQuery = it },
+                                hint = "Search recent chats", modifier = Modifier.padding(bottom = 10.dp)
+                            )
+                        } else {
                         OutlinedTextField(
                             value = drawerSearchQuery,
                             onValueChange = { drawerSearchQuery = it },
                             placeholder = { Text("Search recent chats", color = GeminiTextSecondary) },
                             singleLine = true,
                             modifier = Modifier.fillMaxWidth().padding(bottom = 10.dp),
-                            shape = RoundedCornerShape(16.dp)
+                            shape = kairoCornerShape(16.dp)
                         )
+                        }
                     }
 
                     Spacer(Modifier.height(6.dp))
@@ -865,6 +875,20 @@ internal fun MainScreenContent(
 
                     Spacer(Modifier.height(8.dp))
 
+                    if (com.kairo.agent.ui.theme.LocalSesl9Enabled.current) {
+                        DrawerMenuRow(Icons.Default.Psychology, stringResource(R.string.memory_label, state.memories.size)) {
+                            scope.launch { drawerState.close() }
+                            showMemorySheet = true
+                        }
+                        DrawerMenuRow(Icons.Default.Hub, stringResource(R.string.connections_label)) {
+                            scope.launch { drawerState.close() }
+                            showConnectionsSheet = true
+                        }
+                        DrawerMenuRow(Icons.Default.Settings, stringResource(R.string.settings_title)) {
+                            scope.launch { drawerState.close() }
+                            showSettingsScreen = true
+                        }
+                    }
                     DrawerMenuRow(Icons.Default.NewReleases, "Release Notes") {
                         scope.launch { drawerState.close() }
                         onFetchReleaseNotes()
@@ -882,7 +906,7 @@ internal fun MainScreenContent(
                     Row(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .clip(RoundedCornerShape(12.dp))
+                            .clip(kairoCornerShape(12.dp))
                             .clickable { onToggleWakeWord(!wakeWordEnabled) }
                             .padding(horizontal = 14.dp, vertical = 6.dp),
                         verticalAlignment = Alignment.CenterVertically,
@@ -939,7 +963,7 @@ internal fun MainScreenContent(
                                 Row(
                                     modifier = Modifier
                                         .fillMaxWidth()
-                                        .clip(RoundedCornerShape(12.dp))
+                                        .clip(kairoCornerShape(12.dp))
                                         .clickable(
                                             interactionSource = remember { MutableInteractionSource() },
                                             indication = ripple(color = GeminiAccentBlue)
@@ -1177,9 +1201,11 @@ internal fun MainScreenContent(
                                         sparkleTaps >= 5 -> "All thoughts stay on-device ✦"
                                         else -> baseGreeting
                                     }
-                                    BlurIntoText(key = greeting) {
-                                        Text(greeting, color = GeminiTextPrimary, fontSize = 26.sp, fontWeight = FontWeight.Normal)
-                                    }
+                                    com.kairo.agent.ui.components.LandingBlurText(
+                                        text = greeting,
+                                        color = GeminiTextPrimary,
+                                        style = MaterialTheme.typography.bodyLarge.copy(fontSize = 26.sp, fontWeight = FontWeight.Normal)
+                                    )
 
                                     if (state.isGenerating || state.isThermallyThrottled) {
                     val tempStr = if (state.deviceTempC > 0f) "${"%.1f".format(state.deviceTempC)}°C • " else ""
@@ -1313,7 +1339,7 @@ internal fun MainScreenContent(
                 if (state.incognitoMode) {
                     Surface(
                         color = Color(0xFF282235),
-                        shape = RoundedCornerShape(14.dp),
+                        shape = kairoCornerShape(14.dp),
                         modifier = Modifier
                             .fillMaxWidth()
                             .padding(horizontal = 16.dp, vertical = 4.dp)
@@ -1452,7 +1478,7 @@ internal fun MainScreenContent(
                     Surface(
                         modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp),
                         color = GeminiChipBg,
-                        shape = RoundedCornerShape(14.dp)
+                        shape = kairoCornerShape(14.dp)
                     ) {
                         Row(
                             modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp),
@@ -1506,7 +1532,7 @@ internal fun MainScreenContent(
                         BasicTextField(
                             value = draft,
                             onValueChange = { draft = it },
-                            textStyle = TextStyle(color = GeminiTextPrimary, fontSize = 16.sp),
+                            textStyle = if (com.kairo.agent.ui.theme.LocalSesl9Enabled.current) MaterialTheme.typography.bodyLarge.copy(color = GeminiTextPrimary) else TextStyle(color = GeminiTextPrimary, fontSize = 16.sp),
                             cursorBrush = SolidColor(GeminiAccentBlue),
                             keyboardOptions = KeyboardOptions(imeAction = ImeAction.Send),
                             keyboardActions = KeyboardActions(onSend = { submitDraft() }),
@@ -1584,7 +1610,7 @@ internal fun MainScreenContent(
                 liveSheetFraction = 0f
                 showModelSheet = false
             },
-            containerColor = GeminiDrawerBg,
+            containerColor = com.kairo.agent.ui.components.pluginSurfaceColor(GeminiDrawerBg),
             contentColor = GeminiTextPrimary
         ) {
             Column(
@@ -1606,7 +1632,7 @@ internal fun MainScreenContent(
                 }
 
                 if (state.settings.backendMode == com.kairo.agent.data.EngineBackendMode.CLOUD_AI) {
-                    Surface(color = Color(0xFF4A1E24), shape = RoundedCornerShape(14.dp)) {
+                    Surface(color = Color(0xFF4A1E24), shape = kairoCornerShape(14.dp)) {
                         Column(modifier = Modifier.fillMaxWidth().padding(12.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                             Text("Cloud AI Active (${state.settings.cloudModelName})", color = Color(0xFFF28B82), style = MaterialTheme.typography.labelLarge, fontWeight = FontWeight.SemiBold)
                             Text("Privacy is not guaranteed while Cloud AI is enabled.", color = GeminiTextSecondary, style = MaterialTheme.typography.bodySmall)
@@ -1644,7 +1670,7 @@ internal fun MainScreenContent(
                 Text("AICore Model", color = GeminiAccentBlue, style = MaterialTheme.typography.labelLarge)
                 Surface(
                     color = Color(0xFF141619),
-                    shape = RoundedCornerShape(16.dp),
+                    shape = kairoCornerShape(16.dp),
                     modifier = Modifier.fillMaxWidth()
                 ) {
                     Column(modifier = Modifier.padding(10.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
@@ -1653,7 +1679,7 @@ internal fun MainScreenContent(
                         Row(
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .clip(RoundedCornerShape(12.dp))
+                                .clip(kairoCornerShape(12.dp))
                                 .background(if (autoSelected) Color(0xFF1E2A45) else Color.Transparent)
                                 .clickable {
                                     onUpdateSettings(state.settings.copy(aiCoreModelProfile = AiCoreModelProfile.AUTO))
@@ -1685,7 +1711,7 @@ internal fun MainScreenContent(
                             Row(
                                 modifier = Modifier
                                     .fillMaxWidth()
-                                    .clip(RoundedCornerShape(12.dp))
+                                    .clip(kairoCornerShape(12.dp))
                                     .background(if (isSelected) Color(0xFF1E2A45) else Color.Transparent)
                                     .clickable(enabled = isAvailable || isDownloadable || isSelected) {
                                         onUpdateSettings(state.settings.copy(aiCoreModelProfile = option.profile))
@@ -1767,9 +1793,9 @@ internal fun MainScreenContent(
 
         var pendingDisclosure by remember { mutableStateOf<Triple<String, String, () -> Unit>?>(null) }
         pendingDisclosure?.let { (title, body, proceed) ->
-            androidx.compose.material3.AlertDialog(
+            com.kairo.agent.ui.components.KairoAlertDialog(
                 onDismissRequest = { pendingDisclosure = null },
-                containerColor = GeminiDrawerBg,
+                containerColor = com.kairo.agent.ui.components.pluginSurfaceColor(GeminiDrawerBg),
                 titleContentColor = GeminiTextPrimary,
                 textContentColor = GeminiTextSecondary,
                 title = { Text(title, fontWeight = FontWeight.SemiBold) },
@@ -1797,7 +1823,7 @@ internal fun MainScreenContent(
                 }
             }
         }
-        ModalBottomSheet(sheetState = connSheetState, onDismissRequest = { liveSheetFraction = 0f; showConnectionsSheet = false }, containerColor = GeminiDrawerBg, contentColor = GeminiTextPrimary) {
+        ModalBottomSheet(sheetState = connSheetState, onDismissRequest = { liveSheetFraction = 0f; showConnectionsSheet = false }, containerColor = com.kairo.agent.ui.components.pluginSurfaceColor(GeminiDrawerBg), contentColor = GeminiTextPrimary) {
             Column(
                 modifier = Modifier.fillMaxWidth().padding(horizontal = 20.dp, vertical = 12.dp).verticalScroll(rememberScrollState()),
                 verticalArrangement = Arrangement.spacedBy(10.dp)
@@ -1889,7 +1915,7 @@ internal fun MainScreenContent(
                 liveSheetFraction = 0f
                 showReleaseNotesSheet = false
             },
-            containerColor = GeminiDrawerBg,
+            containerColor = com.kairo.agent.ui.components.pluginSurfaceColor(GeminiDrawerBg),
             contentColor = GeminiTextPrimary
         ) {
             Column(
@@ -1943,7 +1969,7 @@ internal fun MainScreenContent(
                         verticalArrangement = Arrangement.spacedBy(10.dp)
                     ) {
                         items(filteredNotes, key = { it.tagName }) { rel ->
-                            Surface(color = GeminiPillBg, shape = RoundedCornerShape(14.dp)) {
+                            Surface(color = GeminiPillBg, shape = kairoCornerShape(14.dp)) {
                                 Column(modifier = Modifier.fillMaxWidth().padding(14.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
                                     Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
                                         Text(rel.title, color = GeminiAccentBlue, style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.SemiBold)
@@ -1987,7 +2013,7 @@ internal fun MainScreenContent(
                 }
             }
         }
-        ModalBottomSheet(sheetState = memSheetState, onDismissRequest = { liveSheetFraction = 0f; showMemorySheet = false }, containerColor = GeminiDrawerBg, contentColor = GeminiTextPrimary) {
+        ModalBottomSheet(sheetState = memSheetState, onDismissRequest = { liveSheetFraction = 0f; showMemorySheet = false }, containerColor = com.kairo.agent.ui.components.pluginSurfaceColor(GeminiDrawerBg), contentColor = GeminiTextPrimary) {
             Column(modifier = Modifier.fillMaxWidth().padding(horizontal = 20.dp, vertical = 12.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
                 Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
                     Text("Kairo Memory", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
@@ -2003,7 +2029,7 @@ internal fun MainScreenContent(
                         placeholder = { Text("Add a memory...", color = GeminiTextSecondary) },
                         singleLine = true,
                         modifier = Modifier.weight(1f),
-                        shape = RoundedCornerShape(14.dp)
+                        shape = kairoCornerShape(14.dp)
                     )
                     FilledTonalButton(onClick = {
                         if (newMemoryText.isNotBlank()) {
@@ -2017,7 +2043,7 @@ internal fun MainScreenContent(
                 } else {
                     LazyColumn(modifier = Modifier.fillMaxWidth().heightIn(max = 260.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                         items(state.memories, key = { it.id }) { item ->
-                            Surface(color = GeminiPillBg, shape = RoundedCornerShape(12.dp)) {
+                            Surface(color = GeminiPillBg, shape = kairoCornerShape(12.dp)) {
                                 Row(
                                     modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 8.dp),
                                     verticalAlignment = Alignment.CenterVertically,
@@ -2049,7 +2075,7 @@ internal fun MainScreenContent(
                 }
             }
         }
-        ModalBottomSheet(sheetState = privSheetState, onDismissRequest = { liveSheetFraction = 0f; showPrivacySheet = false }, containerColor = GeminiDrawerBg, contentColor = GeminiTextPrimary) {
+        ModalBottomSheet(sheetState = privSheetState, onDismissRequest = { liveSheetFraction = 0f; showPrivacySheet = false }, containerColor = com.kairo.agent.ui.components.pluginSurfaceColor(GeminiDrawerBg), contentColor = GeminiTextPrimary) {
             Column(
                 modifier = Modifier.fillMaxWidth().verticalScroll(rememberScrollState()).padding(horizontal = 20.dp, vertical = 12.dp),
                 verticalArrangement = Arrangement.spacedBy(12.dp)
@@ -2115,7 +2141,7 @@ private fun ConnectionPermRow(
     granted: Boolean,
     onAction: () -> Unit
 ) {
-    Surface(color = GeminiPillBg, shape = RoundedCornerShape(14.dp)) {
+    Surface(color = GeminiPillBg, shape = kairoCornerShape(14.dp)) {
         Row(
             modifier = Modifier.fillMaxWidth().padding(horizontal = 14.dp, vertical = 10.dp),
             verticalAlignment = Alignment.CenterVertically,
@@ -2153,7 +2179,7 @@ private fun SetupSwitchRow(
             Text(title, style = MaterialTheme.typography.bodyMedium, color = GeminiTextPrimary)
             Text(subtitle, style = MaterialTheme.typography.labelSmall, color = GeminiTextSecondary)
         }
-        Switch(checked = checked, onCheckedChange = onCheckedChange)
+        Switch(checked = checked, onCheckedChange = onCheckedChange, label = title)
     }
 }
 
@@ -2166,12 +2192,16 @@ private fun DrawerMenuRow(
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .clip(RoundedCornerShape(12.dp))
+            .then(if (com.kairo.agent.ui.theme.LocalSesl9Enabled.current) Modifier.padding(vertical = 3.dp) else Modifier)
+            .clip(kairoCornerShape(12.dp))
             .clickable(
                 interactionSource = remember { MutableInteractionSource() },
                 indication = ripple(color = GeminiAccentBlue),
                 onClick = onClick
             )
+            .then(if (com.kairo.agent.ui.theme.LocalSesl9Enabled.current) Modifier
+                .background(MaterialTheme.colorScheme.surfaceContainerHigh, RoundedCornerShape(22.dp))
+                .heightIn(min = 52.dp) else Modifier)
             .padding(horizontal = 14.dp, vertical = 11.dp),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(14.dp)
@@ -2207,7 +2237,7 @@ private fun ConversationTurnItem(
                     bitmap = turn.image.asImageBitmap(),
                     contentDescription = "Uploaded image",
                     contentScale = ContentScale.Crop,
-                    modifier = Modifier.size(140.dp).clip(RoundedCornerShape(16.dp))
+                    modifier = Modifier.size(140.dp).clip(kairoCornerShape(16.dp))
                 )
             }
             Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
@@ -2220,7 +2250,7 @@ private fun ConversationTurnItem(
                 ) {
                     Icon(Icons.Default.ContentCopy, contentDescription = "Copy prompt", tint = GeminiTextSecondary, modifier = Modifier.size(14.dp))
                 }
-                Surface(color = GeminiChipBg, shape = RoundedCornerShape(20.dp), modifier = Modifier.widthIn(max = 280.dp)) {
+                Surface(color = GeminiChipBg, shape = kairoCornerShape(20.dp), modifier = Modifier.widthIn(max = 280.dp)) {
                     SelectionContainer {
                         Text(turn.prompt, color = GeminiTextPrimary, style = MaterialTheme.typography.bodyLarge, modifier = Modifier.padding(horizontal = 16.dp, vertical = 10.dp))
                     }
@@ -2237,7 +2267,7 @@ private fun ConversationTurnItem(
                     exit = shrinkVertically() + fadeOut()
                 ) {
                     turn.actionSummary?.let { summary ->
-                        Surface(color = GeminiChipBg, shape = RoundedCornerShape(12.dp)) {
+                        Surface(color = GeminiChipBg, shape = kairoCornerShape(12.dp)) {
                             Row(
                                 modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp),
                                 verticalAlignment = Alignment.CenterVertically,
@@ -2265,7 +2295,7 @@ private fun ConversationTurnItem(
                 }
 
                 Box(modifier = Modifier.fillMaxWidth()) {
-                    Box(modifier = Modifier.matchParentSize().clip(RoundedCornerShape(14.dp))) {
+                    Box(modifier = Modifier.matchParentSize().clip(kairoCornerShape(14.dp))) {
                         if (turn.isStreaming) {
                             StarDustParticles(modifier = Modifier.matchParentSize())
                         }
@@ -2290,7 +2320,7 @@ private fun ConversationTurnItem(
                         modifier = Modifier
                             .fillMaxWidth()
                             .heightIn(max = 260.dp)
-                            .clip(RoundedCornerShape(16.dp))
+                            .clip(kairoCornerShape(16.dp))
                     )
                 }
 
@@ -2363,6 +2393,13 @@ private fun ConversationTurnItem(
 
 @Composable
 private fun TwoLineMenuIcon() {
+    if (com.kairo.agent.ui.theme.LocalSesl9Enabled.current) {
+        androidx.compose.material3.Icon(
+            androidx.compose.ui.res.painterResource(dev.oneuiproject.oneui.R.drawable.ic_oui_drawer),
+            contentDescription = "Open navigation", tint = GeminiTextPrimary
+        )
+        return
+    }
     Column(verticalArrangement = Arrangement.spacedBy(5.dp), modifier = Modifier.padding(4.dp)) {
         Box(modifier = Modifier.width(18.dp).height(2.dp).background(GeminiTextPrimary, RoundedCornerShape(1.dp)))
         Box(modifier = Modifier.width(18.dp).height(2.dp).background(GeminiTextPrimary, RoundedCornerShape(1.dp)))
