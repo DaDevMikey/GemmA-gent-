@@ -1,6 +1,11 @@
 package com.kairo.agent.ui.main
 
 import androidx.activity.compose.BackHandler
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.LargeTopAppBar
+import androidx.compose.material3.TopAppBarDefaults
+import androidx.compose.ui.input.nestedscroll.nestedScroll
+import com.kairo.agent.ui.theme.LocalSesl9Enabled
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -15,6 +20,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.systemBarsPadding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
+import com.kairo.agent.ui.components.kairoCornerShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
@@ -24,16 +30,16 @@ import androidx.compose.material.icons.filled.FavoriteBorder
 import androidx.compose.material.icons.filled.Hub
 import androidx.compose.material.icons.filled.NewReleases
 import androidx.compose.material.icons.filled.Psychology
-import androidx.compose.material3.Button
-import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.FilledTonalButton
+import com.kairo.agent.ui.components.KairoButton as Button
+import com.kairo.agent.ui.components.KairoCircularProgressIndicator as CircularProgressIndicator
+import com.kairo.agent.ui.components.KairoFilledTonalButton as FilledTonalButton
 import androidx.compose.material3.HorizontalDivider
-import androidx.compose.material3.Icon
+import com.kairo.agent.ui.components.KairoIcon as Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
-import androidx.compose.material3.Surface
-import androidx.compose.material3.Switch
+import com.kairo.agent.ui.components.KairoOutlinedButton as OutlinedButton
+import com.kairo.agent.ui.components.KairoSurface as Surface
+import com.kairo.agent.ui.components.KairoSwitch as Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -45,10 +51,12 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import com.kairo.agent.ui.theme.oneUiSurfaceRim
 import com.kairo.agent.R
 import com.kairo.agent.data.AgentSettings
 import com.kairo.agent.update.UpdateCheckResult
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun SettingsScreen(
     state: GemmAHomeState,
@@ -65,13 +73,32 @@ fun SettingsScreen(
 ) {
     BackHandler(onBack = onBack)
     val palette = com.kairo.agent.ui.theme.LocalKairoPalette.current
+    val oneUi = LocalSesl9Enabled.current
+    val scrollBehavior = TopAppBarDefaults.exitUntilCollapsedScrollBehavior()
 
     Column(
         modifier = Modifier
             .fillMaxSize()
             .background(palette.bg)
             .systemBarsPadding()
+            .then(if (oneUi) Modifier.nestedScroll(scrollBehavior.nestedScrollConnection) else Modifier)
     ) {
+        if (oneUi) {
+            LargeTopAppBar(
+                title = { Text(stringResource(R.string.settings_title)) },
+                navigationIcon = {
+                    IconButton(onClick = onBack) {
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, stringResource(R.string.back))
+                    }
+                },
+                colors = TopAppBarDefaults.topAppBarColors(
+                    containerColor = palette.bg, scrolledContainerColor = palette.bg,
+                    navigationIconContentColor = MaterialTheme.colorScheme.onSurface,
+                    titleContentColor = MaterialTheme.colorScheme.onSurface
+                ),
+                scrollBehavior = scrollBehavior
+            )
+        } else {
         Row(
             modifier = Modifier
                 .fillMaxWidth()
@@ -91,6 +118,8 @@ fun SettingsScreen(
                 fontWeight = FontWeight.SemiBold,
                 color = Color(0xFFE3E3E3)
             )
+        }
+
         }
 
         Column(
@@ -177,7 +206,7 @@ fun SettingsScreen(
                 style = MaterialTheme.typography.labelLarge
             )
 
-            Surface(color = Color(0xFF1E2025), shape = RoundedCornerShape(16.dp)) {
+            Surface(color = Color(0xFF1E2025), shape = kairoCornerShape(16.dp)) {
                 Column(modifier = Modifier.fillMaxWidth().padding(14.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                     Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
                         Text(stringResource(R.string.updates_card_title), color = Color(0xFFE3E3E3), style = MaterialTheme.typography.titleSmall)
@@ -235,36 +264,13 @@ fun SettingsScreen(
 
             val ctx = androidx.compose.ui.platform.LocalContext.current
             val plugins = androidx.compose.runtime.remember { com.kairo.agent.data.PluginManager.discoverPlugins(ctx) }
-            var pendingThemeReload by androidx.compose.runtime.remember {
-                androidx.compose.runtime.mutableStateOf<String?>(null)
-            }
             var pendingLangInstant by androidx.compose.runtime.remember {
                 androidx.compose.runtime.mutableStateOf<com.kairo.agent.data.KairoPlugin?>(null)
             }
 
-            pendingThemeReload?.let { pluginName ->
-                androidx.compose.material3.AlertDialog(
-                    onDismissRequest = { pendingThemeReload = null },
-                    containerColor = palette.surface,
-                    titleContentColor = Color(0xFFE3E3E3),
-                    textContentColor = Color(0xFF9AA0A6),
-                    title = { Text(stringResource(R.string.plugin_reload_title), fontWeight = FontWeight.SemiBold) },
-                    text = { Text(stringResource(R.string.plugin_reload_body, pluginName)) },
-                    confirmButton = {
-                        Button(onClick = {
-                            pendingThemeReload = null
-                            (ctx as? android.app.Activity)?.recreate()
-                        }) { Text(stringResource(R.string.plugin_reload_now)) }
-                    },
-                    dismissButton = {
-                        TextButton(onClick = { pendingThemeReload = null }) { Text(stringResource(R.string.plugin_later), color = Color(0xFF9AA0A6)) }
-                    }
-                )
-            }
-
             pendingLangInstant?.let { langPlugin ->
                 val code = langPlugin.langCode ?: "en"
-                androidx.compose.material3.AlertDialog(
+                com.kairo.agent.ui.components.KairoAlertDialog(
                     onDismissRequest = { pendingLangInstant = null },
                     containerColor = palette.surface,
                     titleContentColor = Color(0xFFE3E3E3),
@@ -295,7 +301,8 @@ fun SettingsScreen(
                         )
                     } else {
                         plugins.forEach { plugin ->
-                            var isEnabled by androidx.compose.runtime.remember(plugin.packageName) {
+                            val activeThemePackage = com.kairo.agent.ui.theme.LocalActiveThemePackage.current
+                            var otherPluginEnabled by androidx.compose.runtime.remember(plugin.packageName) {
                                 androidx.compose.runtime.mutableStateOf(
                                     com.kairo.agent.data.PluginManager.isPluginEnabled(ctx, plugin)
                                 )
@@ -310,12 +317,12 @@ fun SettingsScreen(
                                     Text(plugin.description, color = Color(0xFF9AA0A6), style = MaterialTheme.typography.bodySmall)
                                 }
                                 Switch(
-                                    checked = isEnabled,
+                                    label = plugin.name,
+                                    checked = if (plugin.type == "theme") activeThemePackage == plugin.packageName else otherPluginEnabled,
                                     onCheckedChange = { checked ->
                                         com.kairo.agent.data.PluginManager.setPluginEnabled(ctx, plugin, checked)
-                                        isEnabled = checked
+                                        otherPluginEnabled = checked
                                         when (plugin.type) {
-                                            "theme" -> pendingThemeReload = if (checked) plugin.name else "Default Theme"
                                             "language" -> if (checked) pendingLangInstant = plugin
                                         }
                                     }
@@ -357,6 +364,10 @@ private fun SettingsToggleRow(
         modifier = Modifier
             .fillMaxWidth()
             .clickable { onCheckedChange(!checked) }
+            .then(if (LocalSesl9Enabled.current) Modifier
+                .background(com.kairo.agent.ui.theme.LocalKairoPalette.current.surface, RoundedCornerShape(22.dp))
+                .oneUiSurfaceRim(22.dp)
+                .padding(horizontal = 16.dp, vertical = 10.dp) else Modifier)
             .padding(vertical = 4.dp),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.SpaceBetween
@@ -365,6 +376,6 @@ private fun SettingsToggleRow(
             Text(title, color = Color(0xFFE3E3E3), style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.Medium)
             Text(subtitle, color = Color(0xFF9AA0A6), style = MaterialTheme.typography.bodySmall)
         }
-        Switch(checked = checked, onCheckedChange = onCheckedChange)
+        Switch(checked = checked, onCheckedChange = onCheckedChange, label = title)
     }
 }

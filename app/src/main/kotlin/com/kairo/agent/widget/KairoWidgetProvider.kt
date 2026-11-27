@@ -5,6 +5,7 @@ import android.appwidget.AppWidgetManager
 import android.appwidget.AppWidgetProvider
 import android.content.Context
 import android.content.Intent
+import android.os.Bundle
 import android.widget.RemoteViews
 import com.kairo.agent.AssistantOverlayActivity
 import com.kairo.agent.MainActivity
@@ -34,6 +35,24 @@ internal fun buildWidgetPendingIntent(
  * Standard Home Screen Widget for Kairo: quick-ask overlay, voice ask, and full chat launcher.
  */
 class KairoWidgetProvider : AppWidgetProvider() {
+    override fun onReceive(context: Context, intent: Intent) {
+        super.onReceive(context, intent)
+        if (intent.action == Intent.ACTION_MY_PACKAGE_REPLACED ||
+            (intent.action == Intent.ACTION_PACKAGE_FULLY_REMOVED &&
+                intent.data?.schemeSpecificPart == "com.kairo.plugin.oneui")) {
+            refreshKairoWidgets(context)
+        }
+    }
+
+    override fun onAppWidgetOptionsChanged(
+        context: Context,
+        appWidgetManager: AppWidgetManager,
+        appWidgetId: Int,
+        newOptions: Bundle
+    ) {
+        onUpdate(context, appWidgetManager, intArrayOf(appWidgetId))
+    }
+
     override fun onUpdate(context: Context, appWidgetManager: AppWidgetManager, appWidgetIds: IntArray) {
         val overlayIntent = buildWidgetPendingIntent(context, 101, AssistantOverlayActivity::class.java)
         val voiceIntent = buildWidgetPendingIntent(context, 102, AssistantOverlayActivity::class.java, startVoice = true)
@@ -41,6 +60,8 @@ class KairoWidgetProvider : AppWidgetProvider() {
 
         appWidgetIds.forEach { appWidgetId ->
             val views = RemoteViews(context.packageName, R.layout.widget_kairo_home).apply {
+                applyWidgetBackground(context)
+                applyWidgetIcons(context, cover = false)
                 setOnClickPendingIntent(R.id.widget_ask_area, overlayIntent)
                 setOnClickPendingIntent(R.id.widget_icon, overlayIntent)
                 setOnClickPendingIntent(R.id.widget_voice_btn, voiceIntent)
@@ -55,12 +76,23 @@ class KairoWidgetProvider : AppWidgetProvider() {
  * Compact Cover-Screen Widget for foldable cover displays and lock/cover launchers.
  */
 class KairoCoverWidgetProvider : AppWidgetProvider() {
+    override fun onAppWidgetOptionsChanged(
+        context: Context,
+        appWidgetManager: AppWidgetManager,
+        appWidgetId: Int,
+        newOptions: Bundle
+    ) {
+        onUpdate(context, appWidgetManager, intArrayOf(appWidgetId))
+    }
+
     override fun onUpdate(context: Context, appWidgetManager: AppWidgetManager, appWidgetIds: IntArray) {
         val overlayIntent = buildWidgetPendingIntent(context, 201, AssistantOverlayActivity::class.java)
         val voiceIntent = buildWidgetPendingIntent(context, 202, AssistantOverlayActivity::class.java, startVoice = true)
 
         appWidgetIds.forEach { appWidgetId ->
             val views = RemoteViews(context.packageName, R.layout.widget_kairo_cover).apply {
+                applyWidgetBackground(context)
+                applyWidgetIcons(context, cover = true)
                 setOnClickPendingIntent(R.id.cover_widget_root, overlayIntent)
                 setOnClickPendingIntent(R.id.cover_widget_ask, overlayIntent)
                 setOnClickPendingIntent(R.id.cover_widget_icon, overlayIntent)

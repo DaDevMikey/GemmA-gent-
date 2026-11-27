@@ -36,6 +36,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.systemBarsPadding
 import androidx.compose.foundation.rememberScrollState
+import com.kairo.agent.ui.components.kairoCornerShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
@@ -45,18 +46,18 @@ import androidx.compose.material.icons.filled.ErrorOutline
 import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.Memory
 import androidx.compose.material.icons.filled.Security
-import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.Button
-import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.FilledTonalButton
-import androidx.compose.material3.FilterChip
-import androidx.compose.material3.Icon
-import androidx.compose.material3.LinearProgressIndicator
+import com.kairo.agent.ui.components.KairoAlertDialog as AlertDialog
+import com.kairo.agent.ui.components.KairoButton as Button
+import com.kairo.agent.ui.components.KairoCircularProgressIndicator as CircularProgressIndicator
+import com.kairo.agent.ui.components.KairoFilledTonalButton as FilledTonalButton
+import com.kairo.agent.ui.components.KairoFilterChip as FilterChip
+import com.kairo.agent.ui.components.KairoIcon as Icon
+import com.kairo.agent.ui.components.KairoLinearProgressIndicator as LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
+import com.kairo.agent.ui.components.KairoOutlinedButton as OutlinedButton
 import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.Surface
-import androidx.compose.material3.Switch
+import com.kairo.agent.ui.components.KairoSurface as Surface
+import com.kairo.agent.ui.components.KairoSwitch as Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -207,11 +208,10 @@ fun OnboardingScreen(
                                 verticalArrangement = Arrangement.spacedBy(18.dp)
                             ) {
                                 GemmASparkleIcon(size = 68.dp, isAnimating = true)
-                                com.kairo.agent.ui.components.StaggeredBlurText(
+                                com.kairo.agent.ui.components.LandingBlurText(
                                     text = stringResource(R.string.welcome_title),
                                     style = MaterialTheme.typography.headlineMedium.copy(fontWeight = FontWeight.Bold),
-                                    color = TextPrimary,
-                                    key = "welcome_title"
+                                    color = TextPrimary
                                 )
                                 BlurIntoText(key = "sub_0", delayMs = 340L) {
                                     Text(
@@ -231,10 +231,10 @@ fun OnboardingScreen(
                                 OnDevicePrivacyBanner()
                                 Surface(
                                     color = FrostedCardBg,
-                                    shape = RoundedCornerShape(16.dp),
+                                    shape = kairoCornerShape(16.dp),
                                     modifier = Modifier
                                         .fillMaxWidth()
-                                        .border(1.dp, FrostedBorder, RoundedCornerShape(16.dp))
+                                        .border(1.dp, FrostedBorder, kairoCornerShape(16.dp))
                                         .clickable { privacyAccepted = !privacyAccepted }
                                 ) {
                                     Row(
@@ -296,8 +296,8 @@ fun OnboardingScreen(
 
                                 Surface(
                                     color = FrostedCardBg,
-                                    shape = RoundedCornerShape(18.dp),
-                                    modifier = Modifier.border(1.dp, FrostedBorder, RoundedCornerShape(18.dp))
+                                    shape = kairoCornerShape(18.dp),
+                                    modifier = Modifier.border(1.dp, FrostedBorder, kairoCornerShape(18.dp))
                                 ) {
                                     Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
                                         OutlinedTextField(
@@ -352,8 +352,8 @@ fun OnboardingScreen(
 
                                 Surface(
                                     color = FrostedCardBg,
-                                    shape = RoundedCornerShape(18.dp),
-                                    modifier = Modifier.border(1.dp, FrostedBorder, RoundedCornerShape(18.dp))
+                                    shape = kairoCornerShape(18.dp),
+                                    modifier = Modifier.border(1.dp, FrostedBorder, kairoCornerShape(18.dp))
                                 ) {
                                     Column(modifier = Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
                                         Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
@@ -445,7 +445,7 @@ fun OnboardingScreen(
                                 if (compatibilityReport != null && compatibilityReport.socAllowlisted && !compatibilityReport.aiCoreReady) {
                                     Surface(
                                         color = Color(0xFF1A2639),
-                                        shape = RoundedCornerShape(14.dp),
+                                        shape = kairoCornerShape(14.dp),
                                         modifier = Modifier.fillMaxWidth()
                                     ) {
                                         Column(modifier = Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
@@ -467,7 +467,7 @@ fun OnboardingScreen(
                                 if (compatibilityReport != null && !compatibilityReport.allCorePassed && !settings.bypassCompatibility) {
                                     Surface(
                                         color = Color(0xFF3E2226),
-                                        shape = RoundedCornerShape(14.dp),
+                                        shape = kairoCornerShape(14.dp),
                                         modifier = Modifier.fillMaxWidth()
                                     ) {
                                         Column(modifier = Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -727,15 +727,15 @@ fun OnboardingScreen(
 
 @Composable
 private fun AnimatedHeadline(text: String) {
-    BlurIntoText(key = text, delayMs = 60L) {
-        Text(
-            text = text,
-            color = TextPrimary,
+    com.kairo.agent.ui.components.LandingBlurText(
+        text = text,
+        color = TextPrimary,
+        style = MaterialTheme.typography.headlineMedium.copy(
             fontSize = 28.sp,
             fontWeight = FontWeight.SemiBold,
             textAlign = TextAlign.Center
         )
-    }
+    )
 }
 
 @Composable
@@ -754,7 +754,7 @@ private fun SetupToggle(
             Text(title, color = TextPrimary, style = MaterialTheme.typography.bodyMedium)
             Text(subtitle, color = TextSecondary, style = MaterialTheme.typography.labelSmall)
         }
-        Switch(checked = checked, onCheckedChange = onCheckedChange)
+        Switch(checked = checked, onCheckedChange = onCheckedChange, label = title)
     }
 }
 
@@ -769,8 +769,8 @@ private fun PermissionCard(
     val resolvedActionLabel = actionLabel.ifEmpty { stringResource(R.string.perm_allow) }
     Surface(
         color = FrostedCardBg,
-        shape = RoundedCornerShape(16.dp),
-        modifier = Modifier.border(1.dp, FrostedBorder, RoundedCornerShape(16.dp))
+        shape = kairoCornerShape(16.dp),
+        modifier = Modifier.border(1.dp, FrostedBorder, kairoCornerShape(16.dp))
     ) {
         Row(
             modifier = Modifier.fillMaxWidth().padding(horizontal = 14.dp, vertical = 12.dp),
@@ -807,10 +807,10 @@ private fun OnDevicePrivacyBanner(compact: Boolean = false) {
     )
     Surface(
         color = Color(0x9913221A),
-        shape = RoundedCornerShape(16.dp),
+        shape = kairoCornerShape(16.dp),
         modifier = Modifier
             .fillMaxWidth()
-            .border(1.dp, Color(0x4481C995), RoundedCornerShape(16.dp))
+            .border(1.dp, Color(0x4481C995), kairoCornerShape(16.dp))
     ) {
         Row(
             modifier = Modifier.padding(horizontal = 14.dp, vertical = if (compact) 10.dp else 14.dp),

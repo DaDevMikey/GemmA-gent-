@@ -54,6 +54,15 @@ fun GemmASparkleIcon(
     size: Dp = 36.dp,
     isAnimating: Boolean = false
 ) {
+    if (com.kairo.agent.ui.theme.LocalSesl9Enabled.current) {
+        androidx.compose.material3.Icon(
+            painter = androidx.compose.ui.res.painterResource(com.kairo.agent.R.drawable.oneui_tw_ic_ai_assistant),
+            contentDescription = null,
+            modifier = modifier.size(size),
+            tint = com.kairo.agent.ui.theme.LocalKairoPalette.current.accent
+        )
+        return
+    }
     val transition = rememberInfiniteTransition(label = "sparkle_anim")
     val shimmerAlpha by transition.animateFloat(
         initialValue = 0.78f,

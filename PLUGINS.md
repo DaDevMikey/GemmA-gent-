@@ -34,6 +34,13 @@ When enabled in **Settings → Plugins & Extensions**, Kairo prompts the user to
 <meta-data android:name="kairo.plugin.corner_dp" android:value="22" />
 ```
 
+One UI plugin 1.2.0 also declares `kairo.plugin.ui_engine=sesl9`. When that
+installed plugin is selected, Kairo uses One UI Sans, native SESL9 switches,
+progress and search, One UI icons, cards, buttons, chips, dialogs and navigation
+styling. Disabling or removing it restores
+the stock Material controls immediately. Other plugins do not enable SESL UI. See [One UI integration notes](docs/oneui-integration.md)
+for widget blur support and the SESL component assessment.
+
 ### 3. Tool / Feature Plugin
 ```xml
 <meta-data android:name="kairo.plugin.type" android:value="tool" />

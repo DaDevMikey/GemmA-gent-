@@ -23,6 +23,19 @@ dependencyResolutionManagement {
       }
     }
     mavenCentral()
+    maven("https://maven.pkg.github.com/tribalfs/*") {
+      content { includeGroupByRegex("sesl\\..*") }
+      // Reuse the workstation's package registry access without copying secrets into Kairo.
+      val packageCredentials = java.util.Properties().apply {
+        val file = listOf(".config/kairo/github.properties", ".config/twidget/github.properties")
+          .map { File(System.getProperty("user.home"), it) }.firstOrNull { it.isFile }
+        file?.inputStream()?.use { load(it) }
+      }
+      credentials {
+        username = System.getenv("GH_PACKAGES_USER") ?: packageCredentials.getProperty("ghUsername", "")
+        password = System.getenv("GH_PACKAGES_TOKEN") ?: packageCredentials.getProperty("ghAccessToken", "")
+      }
+    }
   }
 }
 

@@ -17,6 +17,19 @@
 package com.kairo.agent.ui.theme
 
 import android.os.Build
+import android.content.BroadcastReceiver
+import android.content.Context
+import android.content.Intent
+import android.content.IntentFilter
+import android.content.SharedPreferences
+import androidx.core.content.ContextCompat
+import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.setValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import com.kairo.agent.data.KairoPlugin
+import com.kairo.agent.data.PluginManager
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.darkColorScheme
@@ -38,6 +51,40 @@ data class KairoPalette(
     val isCustomTheme: Boolean = false,
     val iconPack: String? = null
 )
+
+val LocalSesl9Enabled = staticCompositionLocalOf { false }
+val LocalActiveThemePackage = staticCompositionLocalOf<String?> { null }
+
+@Composable
+private fun rememberActiveThemePlugin(): KairoPlugin? {
+    val context = LocalContext.current.applicationContext
+    var plugin by remember(context) { mutableStateOf(PluginManager.getActiveThemePlugin(context)) }
+    DisposableEffect(context) {
+        val preferences = context.getSharedPreferences(PluginManager.PREFS, Context.MODE_PRIVATE)
+        val listener = SharedPreferences.OnSharedPreferenceChangeListener { _, _ ->
+            plugin = PluginManager.getActiveThemePlugin(context)
+        }
+        val receiver = object : BroadcastReceiver() {
+            override fun onReceive(context: Context, intent: Intent) {
+                plugin = PluginManager.getActiveThemePlugin(context)
+            }
+        }
+        preferences.registerOnSharedPreferenceChangeListener(listener)
+        ContextCompat.registerReceiver(context, receiver, IntentFilter().apply {
+            addAction(Intent.ACTION_PACKAGE_ADDED)
+            addAction(Intent.ACTION_PACKAGE_REMOVED)
+            addAction(Intent.ACTION_PACKAGE_CHANGED)
+            addDataScheme("package")
+        }, ContextCompat.RECEIVER_NOT_EXPORTED)
+        // Close the gap between initial discovery and observer registration.
+        plugin = PluginManager.getActiveThemePlugin(context)
+        onDispose {
+            preferences.unregisterOnSharedPreferenceChangeListener(listener)
+            context.unregisterReceiver(receiver)
+        }
+    }
+    return plugin
+}
 
 val LocalKairoPalette = staticCompositionLocalOf { KairoPalette() }
 
@@ -63,9 +110,7 @@ fun GemmATheme(
     content: @Composable () -> Unit
 ) {
     val context = LocalContext.current
-    val activePlugin = androidx.compose.runtime.remember(context) {
-        com.kairo.agent.data.PluginManager.getActiveThemePlugin(context)
-    }
+    val activePlugin = rememberActiveThemePlugin()
     val baseScheme = when {
         dynamicColor && Build.VERSION.SDK_INT >= Build.VERSION_CODES.S -> {
             if (darkTheme) dynamicDarkColorScheme(context) else dynamicLightColorScheme(context)
@@ -73,6 +118,7 @@ fun GemmATheme(
         darkTheme -> DarkColorScheme
         else -> LightColorScheme
     }
+    val seslEnabled = activePlugin?.usesSesl9Controls == true
     val colorScheme = if (activePlugin != null) {
         baseScheme.copy(
             primary = activePlugin.accentColorInt()?.let { androidx.compose.ui.graphics.Color(it) } ?: baseScheme.primary,
@@ -82,6 +128,20 @@ fun GemmATheme(
     } else {
         baseScheme
     }
+    val resolvedScheme = if (seslEnabled) colorScheme.copy(
+        onPrimary = Color.White,
+        primaryContainer = colorScheme.primary.copy(alpha = 0.18f),
+        onPrimaryContainer = Color(0xFFB5D4FF),
+        secondaryContainer = Color(0xFF25252A),
+        onSecondaryContainer = Color(0xFFEDEDF0),
+        surfaceContainer = colorScheme.surface,
+        surfaceContainerLow = Color(0xFF111113),
+        surfaceContainerHigh = Color(0xFF25252A),
+        onSurface = Color(0xFFF2F2F2),
+        onSurfaceVariant = Color(0xFFB7B7BE),
+        outline = Color(0xFF53535B),
+        outlineVariant = Color(0xFF303034)
+    ) else colorScheme
 
     val palette = if (activePlugin != null) {
         KairoPalette(
@@ -97,10 +157,15 @@ fun GemmATheme(
         KairoPalette()
     }
 
-    CompositionLocalProvider(LocalKairoPalette provides palette) {
+    CompositionLocalProvider(
+        LocalKairoPalette provides palette,
+        LocalSesl9Enabled provides seslEnabled,
+        LocalActiveThemePackage provides activePlugin?.packageName
+    ) {
         MaterialTheme(
-            colorScheme = colorScheme,
-            typography = Typography,
+            colorScheme = resolvedScheme,
+            typography = if (seslEnabled) OneUiTypography else Typography,
+            shapes = if (seslEnabled) OneUiShapes else androidx.compose.material3.Shapes(),
             content = content
         )
     }

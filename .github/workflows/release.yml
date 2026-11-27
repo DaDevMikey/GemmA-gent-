@@ -16,11 +16,11 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Set up JDK 17
+      - name: Set up JDK 27
         uses: actions/setup-java@v4
         with:
           distribution: temurin
-          java-version: 17
+          java-version: 27
 
       - name: Set up Gradle
         uses: gradle/actions/setup-gradle@v4
@@ -29,6 +29,9 @@ jobs:
         run: chmod +x gradlew
 
       - name: Run unit tests and build release APK
+        env:
+          GH_PACKAGES_USER: ${{ secrets.GH_PACKAGES_USER }}
+          GH_PACKAGES_TOKEN: ${{ secrets.GH_PACKAGES_TOKEN }}
         run: ./gradlew testDebugUnitTest assembleRelease --no-daemon
 
       - name: Upload Release APK to Release
