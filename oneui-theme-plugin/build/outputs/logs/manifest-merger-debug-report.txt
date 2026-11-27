@@ -1,9 +1,9 @@
 -- Merging decision tree log ---
 manifest
-ADDED from /home/mikey/Downloads/personal-repos/GemmA/oneui-theme-plugin/src/main/AndroidManifest.xml:2:1-23:12
-INJECTED from /home/mikey/Downloads/personal-repos/GemmA/oneui-theme-plugin/src/main/AndroidManifest.xml:2:1-23:12
-INJECTED from /home/mikey/Downloads/personal-repos/GemmA/oneui-theme-plugin/src/main/AndroidManifest.xml:2:1-23:12
-INJECTED from /home/mikey/Downloads/personal-repos/GemmA/oneui-theme-plugin/src/main/AndroidManifest.xml:2:1-23:12
+ADDED from /home/mikey/Downloads/personal-repos/GemmA/oneui-theme-plugin/src/main/AndroidManifest.xml:2:1-24:12
+INJECTED from /home/mikey/Downloads/personal-repos/GemmA/oneui-theme-plugin/src/main/AndroidManifest.xml:2:1-24:12
+INJECTED from /home/mikey/Downloads/personal-repos/GemmA/oneui-theme-plugin/src/main/AndroidManifest.xml:2:1-24:12
+INJECTED from /home/mikey/Downloads/personal-repos/GemmA/oneui-theme-plugin/src/main/AndroidManifest.xml:2:1-24:12
 	package
 		INJECTED from /home/mikey/Downloads/personal-repos/GemmA/oneui-theme-plugin/src/main/AndroidManifest.xml
 	android:versionName
@@ -13,8 +13,8 @@ INJECTED from /home/mikey/Downloads/personal-repos/GemmA/oneui-theme-plugin/src/
 	xmlns:android
 		ADDED from /home/mikey/Downloads/personal-repos/GemmA/oneui-theme-plugin/src/main/AndroidManifest.xml:2:11-69
 application
-ADDED from /home/mikey/Downloads/personal-repos/GemmA/oneui-theme-plugin/src/main/AndroidManifest.xml:3:5-22:19
-INJECTED from /home/mikey/Downloads/personal-repos/GemmA/oneui-theme-plugin/src/main/AndroidManifest.xml:3:5-22:19
+ADDED from /home/mikey/Downloads/personal-repos/GemmA/oneui-theme-plugin/src/main/AndroidManifest.xml:3:5-23:19
+INJECTED from /home/mikey/Downloads/personal-repos/GemmA/oneui-theme-plugin/src/main/AndroidManifest.xml:3:5-23:19
 	android:extractNativeLibs
 		INJECTED from /home/mikey/Downloads/personal-repos/GemmA/oneui-theme-plugin/src/main/AndroidManifest.xml
 	android:label
@@ -22,7 +22,7 @@ INJECTED from /home/mikey/Downloads/personal-repos/GemmA/oneui-theme-plugin/src/
 	android:allowBackup
 		ADDED from /home/mikey/Downloads/personal-repos/GemmA/oneui-theme-plugin/src/main/AndroidManifest.xml:4:9-35
 service#com.kairo.plugin.oneui.OneUiThemePluginService
-ADDED from /home/mikey/Downloads/personal-repos/GemmA/oneui-theme-plugin/src/main/AndroidManifest.xml:6:9-21:19
+ADDED from /home/mikey/Downloads/personal-repos/GemmA/oneui-theme-plugin/src/main/AndroidManifest.xml:6:9-22:19
 	android:label
 		ADDED from /home/mikey/Downloads/personal-repos/GemmA/oneui-theme-plugin/src/main/AndroidManifest.xml:9:13-48
 	android:exported
@@ -48,9 +48,9 @@ ADDED from /home/mikey/Downloads/personal-repos/GemmA/oneui-theme-plugin/src/mai
 	android:name
 		ADDED from /home/mikey/Downloads/personal-repos/GemmA/oneui-theme-plugin/src/main/AndroidManifest.xml:14:24-56
 meta-data#kairo.plugin.description
-ADDED from /home/mikey/Downloads/personal-repos/GemmA/oneui-theme-plugin/src/main/AndroidManifest.xml:15:13-191
+ADDED from /home/mikey/Downloads/personal-repos/GemmA/oneui-theme-plugin/src/main/AndroidManifest.xml:15:13-213
 	android:value
-		ADDED from /home/mikey/Downloads/personal-repos/GemmA/oneui-theme-plugin/src/main/AndroidManifest.xml:15:64-188
+		ADDED from /home/mikey/Downloads/personal-repos/GemmA/oneui-theme-plugin/src/main/AndroidManifest.xml:15:64-210
 	android:name
 		ADDED from /home/mikey/Downloads/personal-repos/GemmA/oneui-theme-plugin/src/main/AndroidManifest.xml:15:24-63
 meta-data#kairo.plugin.accent_color
@@ -77,12 +77,18 @@ ADDED from /home/mikey/Downloads/personal-repos/GemmA/oneui-theme-plugin/src/mai
 		ADDED from /home/mikey/Downloads/personal-repos/GemmA/oneui-theme-plugin/src/main/AndroidManifest.xml:19:62-89
 	android:name
 		ADDED from /home/mikey/Downloads/personal-repos/GemmA/oneui-theme-plugin/src/main/AndroidManifest.xml:19:24-61
-meta-data#kairo.plugin.corner_dp
-ADDED from /home/mikey/Downloads/personal-repos/GemmA/oneui-theme-plugin/src/main/AndroidManifest.xml:20:13-83
+meta-data#kairo.plugin.ui_engine
+ADDED from /home/mikey/Downloads/personal-repos/GemmA/oneui-theme-plugin/src/main/AndroidManifest.xml:20:13-86
 	android:value
-		ADDED from /home/mikey/Downloads/personal-repos/GemmA/oneui-theme-plugin/src/main/AndroidManifest.xml:20:62-80
+		ADDED from /home/mikey/Downloads/personal-repos/GemmA/oneui-theme-plugin/src/main/AndroidManifest.xml:20:62-83
 	android:name
 		ADDED from /home/mikey/Downloads/personal-repos/GemmA/oneui-theme-plugin/src/main/AndroidManifest.xml:20:24-61
+meta-data#kairo.plugin.corner_dp
+ADDED from /home/mikey/Downloads/personal-repos/GemmA/oneui-theme-plugin/src/main/AndroidManifest.xml:21:13-83
+	android:value
+		ADDED from /home/mikey/Downloads/personal-repos/GemmA/oneui-theme-plugin/src/main/AndroidManifest.xml:21:62-80
+	android:name
+		ADDED from /home/mikey/Downloads/personal-repos/GemmA/oneui-theme-plugin/src/main/AndroidManifest.xml:21:24-61
 uses-sdk
 INJECTED from /home/mikey/Downloads/personal-repos/GemmA/oneui-theme-plugin/src/main/AndroidManifest.xml reason: use-sdk injection requested
 INJECTED from /home/mikey/Downloads/personal-repos/GemmA/oneui-theme-plugin/src/main/AndroidManifest.xml

@@ -66,81 +66,66 @@ fun RichResponseText(
                     is ResponseSegment.Prose -> {
                         if (segment.text.isNotBlank()) {
                             val lines = segment.text.lines()
-                            val hasMarkdownHeadingsOrBullets = lines.any {
-                                val t = it.trimStart()
-                                t.startsWith("# ") || t.startsWith("## ") || t.startsWith("### ") ||
-                                    t.startsWith("- ") || t.startsWith("* ")
-                            }
-
-                            // If there are no markdown headers/bullets and we are streaming the active segment,
-                            // render the entire prose block in LandingBlurText so multiple lines wrap and animate naturally together.
-                            if (isStreaming && isLastSegment && !hasMarkdownHeadingsOrBullets) {
-                                LandingBlurText(
-                                    text = formatInlineMarkdown(segment.text.removeSuffix(" ▌").removeSuffix("▌")).text,
-                                    color = textColor,
-                                    style = MaterialTheme.typography.bodyLarge,
-                                    streaming = true
-                                )
-                            } else {
-                                Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                                    lines.forEach { line ->
-                                        val trimmed = line.trimStart()
-                                        when {
-                                            trimmed.startsWith("### ") -> Text(
-                                                text = formatInlineMarkdown(trimmed.removePrefix("### ")),
-                                                color = textColor,
-                                                style = MaterialTheme.typography.titleSmall,
-                                                fontWeight = FontWeight.SemiBold,
-                                                modifier = Modifier.padding(top = 4.dp)
-                                            )
-                                            trimmed.startsWith("## ") -> Text(
-                                                text = formatInlineMarkdown(trimmed.removePrefix("## ")),
-                                                color = Color(0xFFA8C7FA),
-                                                style = MaterialTheme.typography.titleMedium,
-                                                fontWeight = FontWeight.Bold,
-                                                modifier = Modifier.padding(top = 6.dp)
-                                            )
-                                            trimmed.startsWith("# ") -> Text(
-                                                text = formatInlineMarkdown(trimmed.removePrefix("# ")),
-                                                color = Color(0xFFA8C7FA),
-                                                style = MaterialTheme.typography.titleLarge,
-                                                fontWeight = FontWeight.Bold,
-                                                modifier = Modifier.padding(top = 6.dp)
-                                            )
-                                            trimmed.startsWith("- ") || trimmed.startsWith("* ") -> {
-                                                val bulletText = "• " + trimmed.drop(2)
-                                                if (isStreaming && isLastSegment) {
-                                                    LandingBlurText(
-                                                        text = formatInlineMarkdown(bulletText.removeSuffix(" ▌").removeSuffix("▌")).text,
-                                                        color = textColor,
-                                                        style = MaterialTheme.typography.bodyMedium,
-                                                        streaming = true,
-                                                        modifier = Modifier.padding(start = 6.dp)
-                                                    )
-                                                } else {
-                                                    Text(
-                                                        text = formatInlineMarkdown(bulletText),
-                                                        color = textColor,
-                                                        style = MaterialTheme.typography.bodyMedium,
-                                                        modifier = Modifier.padding(start = 6.dp)
-                                                    )
-                                                }
+                            val lastNonEmptyLineIdx = lines.indexOfLast { it.trimStart().isNotEmpty() }
+                            Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                                lines.forEachIndexed { lineIdx, line ->
+                                    val trimmed = line.trimStart()
+                                    val isCurrentActiveStreamingLine = isStreaming && isLastSegment && lineIdx == lastNonEmptyLineIdx
+                                    when {
+                                        trimmed.startsWith("### ") -> Text(
+                                            text = formatInlineMarkdown(trimmed.removePrefix("### ")),
+                                            color = textColor,
+                                            style = MaterialTheme.typography.titleSmall,
+                                            fontWeight = FontWeight.SemiBold,
+                                            modifier = Modifier.padding(top = 4.dp)
+                                        )
+                                        trimmed.startsWith("## ") -> Text(
+                                            text = formatInlineMarkdown(trimmed.removePrefix("## ")),
+                                            color = Color(0xFFA8C7FA),
+                                            style = MaterialTheme.typography.titleMedium,
+                                            fontWeight = FontWeight.Bold,
+                                            modifier = Modifier.padding(top = 6.dp)
+                                        )
+                                        trimmed.startsWith("# ") -> Text(
+                                            text = formatInlineMarkdown(trimmed.removePrefix("# ")),
+                                            color = Color(0xFFA8C7FA),
+                                            style = MaterialTheme.typography.titleLarge,
+                                            fontWeight = FontWeight.Bold,
+                                            modifier = Modifier.padding(top = 6.dp)
+                                        )
+                                        trimmed.startsWith("- ") || trimmed.startsWith("* ") -> {
+                                            val bulletText = "• " + trimmed.drop(2)
+                                            if (isCurrentActiveStreamingLine) {
+                                                LandingBlurText(
+                                                    text = formatInlineMarkdown(bulletText.removeSuffix(" ▌").removeSuffix("▌")).text,
+                                                    color = textColor,
+                                                    style = MaterialTheme.typography.bodyMedium,
+                                                    streaming = true,
+                                                    modifier = Modifier.padding(start = 6.dp)
+                                                )
+                                            } else {
+                                                Text(
+                                                    text = formatInlineMarkdown(bulletText),
+                                                    color = textColor,
+                                                    style = MaterialTheme.typography.bodyMedium,
+                                                    modifier = Modifier.padding(start = 6.dp)
+                                                )
                                             }
-                                            trimmed.isNotEmpty() -> {
-                                                if (isStreaming && isLastSegment) {
-                                                    LandingBlurText(
-                                                        text = formatInlineMarkdown(line.removeSuffix(" ▌").removeSuffix("▌")).text,
-                                                        color = textColor,
-                                                        style = MaterialTheme.typography.bodyLarge,
-                                                        streaming = true
-                                                    )
-                                                } else {
-                                                    Text(
-                                                        text = formatInlineMarkdown(line),
-                                                        color = textColor,
-                                                        style = MaterialTheme.typography.bodyLarge
-                                                    )
-                                                }
+                                        }
+                                        trimmed.isNotEmpty() -> {
+                                            if (isCurrentActiveStreamingLine) {
+                                                LandingBlurText(
+                                                    text = formatInlineMarkdown(line.removeSuffix(" ▌").removeSuffix("▌")).text,
+                                                    color = textColor,
+                                                    style = MaterialTheme.typography.bodyLarge,
+                                                    streaming = true
+                                                )
+                                            } else {
+                                                Text(
+                                                    text = formatInlineMarkdown(line),
+                                                    color = textColor,
+                                                    style = MaterialTheme.typography.bodyLarge
+                                                )
                                             }
                                         }
                                     }

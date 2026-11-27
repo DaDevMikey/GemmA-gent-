@@ -1,8 +1,8 @@
 <?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     package="com.kairo.plugin.oneui"
-    android:versionCode="1"
-    android:versionName="1.0.0" >
+    android:versionCode="3"
+    android:versionName="1.2.0" >
 
     <uses-sdk
         android:minSdkVersion="26"
@@ -29,7 +29,7 @@
                 android:value="One UI Design Theme" />
             <meta-data
                 android:name="kairo.plugin.description"
-                android:value="Samsung One UI palette &amp; squircle icons (credits: tribalfs/oneui-design &amp; thatjoshguy67/oneui-icons)" />
+                android:value="One UI Sans, SESL9 controls, cards, navigation &amp; One UI icons (credits: tribalfs/oneui-design &amp; thatjoshguy67/oneui-icons)" />
             <meta-data
                 android:name="kairo.plugin.accent_color"
                 android:value="#0381FE" />
@@ -42,6 +42,9 @@
             <meta-data
                 android:name="kairo.plugin.icon_pack"
                 android:value="oneui-icons" />
+            <meta-data
+                android:name="kairo.plugin.ui_engine"
+                android:value="sesl9" />
             <meta-data
                 android:name="kairo.plugin.corner_dp"
                 android:value="22" />

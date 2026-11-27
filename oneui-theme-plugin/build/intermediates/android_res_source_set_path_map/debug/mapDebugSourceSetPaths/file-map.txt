@@ -5,3 +5,4 @@ com.kairo.plugin.oneui.oneui-theme-plugin-packageDebugResources-3 /home/mikey/Do
 com.kairo.plugin.oneui.oneui-theme-plugin-debug-4 /home/mikey/Downloads/personal-repos/GemmA/oneui-theme-plugin/build/intermediates/merged_res/debug/mergeDebugResources
 com.kairo.plugin.oneui.oneui-theme-plugin-debug-5 /home/mikey/Downloads/personal-repos/GemmA/oneui-theme-plugin/src/debug/res
 com.kairo.plugin.oneui.oneui-theme-plugin-main-6 /home/mikey/Downloads/personal-repos/GemmA/oneui-theme-plugin/src/main/res
+gradleHome-0 /home/mikey/.gradle
