@@ -102,6 +102,9 @@ class MainScreenViewModel(
         refreshStatus()
         refreshChats()
         refreshMemories()
+        if (_state.value.settings.checkUpdatesOnStartup) {
+            checkForUpdates()
+        }
     }
 
     fun selectPersona(persona: AgentPersona) {

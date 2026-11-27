@@ -32,6 +32,7 @@ data class AgentSettings(
     val cloudModelName: String = "gpt-4o-mini",
     val mcpServerUrls: String = "",
     val multiAgentEnabled: Boolean = false,
+    val checkUpdatesOnStartup: Boolean = false,
     val appLanguage: String = "en",
     val preferredLanguage: String = "en"
 )
@@ -63,6 +64,7 @@ class AgentSettingsStore(context: Context) {
         cloudModelName = prefs.getString(KEY_CLOUD_MODEL, "gpt-4o-mini") ?: "gpt-4o-mini",
         mcpServerUrls = prefs.getString(KEY_MCP_URLS, "") ?: "",
         multiAgentEnabled = prefs.getBoolean(KEY_MULTI_AGENT, false),
+        checkUpdatesOnStartup = prefs.getBoolean(KEY_CHECK_UPDATES_STARTUP, false),
         appLanguage = prefs.getString(KEY_APP_LANG, "en") ?: "en",
         preferredLanguage = prefs.getString(KEY_LANG, "en") ?: "en"
     )
@@ -83,6 +85,7 @@ class AgentSettingsStore(context: Context) {
             .putString(KEY_CLOUD_MODEL, settings.cloudModelName)
             .putString(KEY_MCP_URLS, settings.mcpServerUrls)
             .putBoolean(KEY_MULTI_AGENT, settings.multiAgentEnabled)
+            .putBoolean(KEY_CHECK_UPDATES_STARTUP, settings.checkUpdatesOnStartup)
             .putString(KEY_APP_LANG, settings.appLanguage)
             .putString(KEY_LANG, settings.preferredLanguage)
             .apply()
@@ -103,6 +106,7 @@ class AgentSettingsStore(context: Context) {
         const val KEY_CLOUD_MODEL = "cloud_model_name"
         const val KEY_MCP_URLS = "mcp_server_urls"
         const val KEY_MULTI_AGENT = "multi_agent_enabled"
+        const val KEY_CHECK_UPDATES_STARTUP = "check_updates_on_startup"
         const val KEY_APP_LANG = "app_language"
         const val KEY_LANG = "preferred_language"
     }

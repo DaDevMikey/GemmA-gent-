@@ -186,6 +186,12 @@ fun SettingsScreen(
                             else Text(stringResource(R.string.check_now), color = Color(0xFFA8C7FA))
                         }
                     }
+                    SettingsToggleRow(
+                        title = "Check for updates on startup",
+                        subtitle = "Automatically check GitHub for new releases when Kairo opens",
+                        checked = state.settings.checkUpdatesOnStartup,
+                        onCheckedChange = { onUpdateSettings(state.settings.copy(checkUpdatesOnStartup = it)) }
+                    )
                     when (val upd = state.updateStatus) {
                         is UpdateCheckResult.UpdateAvailable -> {
                             Text(stringResource(R.string.update_available_label, upd.latestVersion), color = Color(0xFF81C995), style = MaterialTheme.typography.bodySmall)
