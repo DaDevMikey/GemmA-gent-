@@ -881,20 +881,6 @@ internal fun MainScreenContent(
 
                     Spacer(Modifier.height(8.dp))
 
-                    if (com.kairo.agent.ui.theme.LocalSesl9Enabled.current) {
-                        DrawerMenuRow(Icons.Default.Psychology, stringResource(R.string.memory_label, state.memories.size)) {
-                            scope.launch { drawerState.close() }
-                            showMemorySheet = true
-                        }
-                        DrawerMenuRow(Icons.Default.Hub, stringResource(R.string.connections_label)) {
-                            scope.launch { drawerState.close() }
-                            showConnectionsSheet = true
-                        }
-                        DrawerMenuRow(Icons.Default.Settings, stringResource(R.string.settings_title)) {
-                            scope.launch { drawerState.close() }
-                            showSettingsScreen = true
-                        }
-                    }
                     DrawerMenuRow(Icons.Default.NewReleases, stringResource(R.string.drawer_release_notes)) {
                         scope.launch { drawerState.close() }
                         onFetchReleaseNotes()
