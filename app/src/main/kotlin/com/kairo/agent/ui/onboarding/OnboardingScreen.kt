@@ -18,6 +18,8 @@ import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
+import androidx.compose.animation.scaleIn
+import androidx.compose.animation.scaleOut
 import androidx.compose.animation.slideInHorizontally
 import androidx.compose.animation.slideOutHorizontally
 import androidx.compose.animation.togetherWith
@@ -159,8 +161,13 @@ fun OnboardingScreen(
                 .systemBarsPadding()
                 .padding(22.dp)
         ) {
+            val animatedProgress by animateFloatAsState(
+                targetValue = ((step + 1) / 6f).coerceIn(0f, 1f),
+                animationSpec = tween(420, easing = FastOutSlowInEasing),
+                label = "onboarding_progress"
+            )
             LinearProgressIndicator(
-                progress = { ((step + 1) / 5f).coerceIn(0f, 1f) },
+                progress = { animatedProgress },
                 modifier = Modifier.fillMaxWidth().padding(bottom = 16.dp),
                 color = AccentBlue,
                 trackColor = Color(0x33FFFFFF)
@@ -170,8 +177,20 @@ fun OnboardingScreen(
                 targetState = step,
                 modifier = Modifier.weight(1f),
                 transitionSpec = {
-                    (slideInHorizontally(spring(dampingRatio = Spring.DampingRatioLowBouncy)) { it / 3 } + fadeIn(tween(300))) togetherWith
-                        (slideOutHorizontally { -it / 3 } + fadeOut(tween(220)))
+                    val forward = targetState >= initialState
+                    val slideInOffset: (Int) -> Int = { fullWidth -> if (forward) fullWidth / 3 else -fullWidth / 3 }
+                    val slideOutOffset: (Int) -> Int = { fullWidth -> if (forward) -fullWidth / 3 else fullWidth / 3 }
+                    (slideInHorizontally(
+                        animationSpec = spring(
+                            dampingRatio = Spring.DampingRatioLowBouncy,
+                            stiffness = Spring.StiffnessMediumLow
+                        ),
+                        initialOffsetX = slideInOffset
+                    ) + scaleIn(initialScale = 0.96f, animationSpec = tween(320)) + fadeIn(tween(320))) togetherWith
+                        (slideOutHorizontally(
+                            animationSpec = tween(240, easing = FastOutSlowInEasing),
+                            targetOffsetX = slideOutOffset
+                        ) + scaleOut(targetScale = 0.96f, animationSpec = tween(240)) + fadeOut(tween(220)))
                 },
                 label = "onboarding_step"
             ) { currentStep ->
@@ -243,7 +262,7 @@ fun OnboardingScreen(
                                         TextButton(onClick = {
                                             runCatching {
                                                 context.startActivity(
-                                                    Intent(Intent.ACTION_VIEW, Uri.parse("https://dadevmikey.github.io/Kairo/privacy.html"))
+                                                    Intent(Intent.ACTION_VIEW, Uri.parse("https://kairo.mikeyslabs.xyz/privacy.html"))
                                                 )
                                             }
                                         }) {
@@ -491,6 +510,58 @@ fun OnboardingScreen(
 
                     3 -> {
                         val micGranted = ContextCompat.checkSelfPermission(context, Manifest.permission.RECORD_AUDIO) == PackageManager.PERMISSION_GRANTED
+
+                        Column(
+                            modifier = Modifier.fillMaxSize(),
+                            verticalArrangement = Arrangement.SpaceBetween
+                        ) {
+                            Column(
+                                modifier = Modifier.weight(1f).verticalScroll(rememberScrollState()),
+                                verticalArrangement = Arrangement.spacedBy(12.dp)
+                            ) {
+                                AnimatedHeadline("Core Assistant & Voice")
+                                OnDevicePrivacyBanner(compact = true)
+                                Text(
+                                    "Set up how you talk to Kairo and summon it over any app. Both are optional and run 100% on-device.",
+                                    color = TextSecondary,
+                                    style = MaterialTheme.typography.bodyMedium
+                                )
+
+                                PermissionCard(
+                                    title = "Microphone",
+                                    subtitle = "Enables voice prompts, hands-free dictation, and optional 'Hey Kairo' wake word detection. Audio is transcribed locally and never sent off-device.",
+                                    granted = micGranted,
+                                    onAction = {
+                                        pendingDisclosure = Triple(
+                                            "Microphone Access",
+                                            "Kairo uses your microphone strictly when you tap the mic or enable optional 'Hey Kairo' wake word detection. Audio is processed locally on your device and never uploaded.",
+                                            onGrantMic
+                                        )
+                                    }
+                                )
+                                PermissionCard(
+                                    title = "Default Digital Assistant",
+                                    subtitle = "Bind Kairo to your power button or corner swipe to open the floating overlay over any app and ask about your screen.",
+                                    granted = false,
+                                    onAction = {
+                                        pendingDisclosure = Triple(
+                                            "Default Digital Assistant",
+                                            "Setting Kairo as your Digital Assistant lets it capture transient screen text or screenshots only when you trigger 'Ask about screen'. Nothing is stored or uploaded.",
+                                            onOpenAssistantSettings
+                                        )
+                                    },
+                                    actionLabel = "Set Up"
+                                )
+                            }
+
+                            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                                OutlinedButton(onClick = { step = 2 }, modifier = Modifier.weight(1f).height(50.dp)) { Text("Back") }
+                                Button(onClick = { step = 4 }, modifier = Modifier.weight(1f).height(50.dp)) { Text("Next") }
+                            }
+                        }
+                    }
+
+                    4 -> {
                         val locationGranted = ContextCompat.checkSelfPermission(context, Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED ||
                             ContextCompat.checkSelfPermission(context, Manifest.permission.ACCESS_COARSE_LOCATION) == PackageManager.PERMISSION_GRANTED
                         val contactsGranted = ContextCompat.checkSelfPermission(context, Manifest.permission.READ_CONTACTS) == PackageManager.PERMISSION_GRANTED
@@ -505,21 +576,11 @@ fun OnboardingScreen(
                                 modifier = Modifier.weight(1f).verticalScroll(rememberScrollState()),
                                 verticalArrangement = Arrangement.spacedBy(10.dp)
                             ) {
-                                AnimatedHeadline("Permissions & Connections")
-                                OnDevicePrivacyBanner(compact = true)
-                                Text("Every permission is optional and processed 100% on-device. Here is what each one enables:", color = TextSecondary, style = MaterialTheme.typography.bodyMedium)
-
-                                PermissionCard(
-                                    title = "Microphone",
-                                    subtitle = "Enables voice prompts, hands-free dictation, and wake word detection. Audio is transcribed locally and never sent off-device.",
-                                    granted = micGranted,
-                                    onAction = {
-                                        pendingDisclosure = Triple(
-                                            "Microphone Access",
-                                            "Kairo uses your microphone strictly when you tap the mic or enable optional 'Hey Kairo' wake word detection. Audio is processed locally on your device and never uploaded.",
-                                            onGrantMic
-                                        )
-                                    }
+                                AnimatedHeadline("Smart Connections (Optional)")
+                                Text(
+                                    "Let Kairo connect with your local apps and data. You can skip any of these and enable them later in Settings.",
+                                    color = TextSecondary,
+                                    style = MaterialTheme.typography.bodyMedium
                                 )
                                 PermissionCard(
                                     title = "Location",
@@ -581,24 +642,11 @@ fun OnboardingScreen(
                                         )
                                     }
                                 )
-                                PermissionCard(
-                                    title = "Default Digital Assistant",
-                                    subtitle = "Bind Kairo to your power button or corner swipe to open the floating overlay over any app and ask about your screen.",
-                                    granted = false,
-                                    onAction = {
-                                        pendingDisclosure = Triple(
-                                            "Default Digital Assistant",
-                                            "Setting Kairo as your Digital Assistant lets it capture transient screen text or screenshots only when you trigger 'Ask about screen'. Nothing is stored or uploaded.",
-                                            onOpenAssistantSettings
-                                        )
-                                    },
-                                    actionLabel = "Set Up"
-                                )
                             }
 
                             Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                                OutlinedButton(onClick = { step = 2 }, modifier = Modifier.weight(1f).height(50.dp)) { Text("Back") }
-                                Button(onClick = { step = 4 }, modifier = Modifier.weight(1f).height(50.dp)) { Text("Continue") }
+                                OutlinedButton(onClick = { step = 3 }, modifier = Modifier.weight(1f).height(50.dp)) { Text("Back") }
+                                Button(onClick = { step = 5 }, modifier = Modifier.weight(1f).height(50.dp)) { Text("Continue") }
                             }
                         }
                     }
