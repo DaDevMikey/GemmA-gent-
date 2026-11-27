@@ -18,7 +18,7 @@ object OverlayHandoffHolder {
     private var pendingTurns: List<OverlayHandoffTurn>? = null
 
     fun setTurns(turns: List<OverlayHandoffTurn>) {
-        pendingTurns = turns.takeIf { it.isNotEmpty() }
+        pendingTurns = turns
     }
 
     fun consumeTurns(): List<OverlayHandoffTurn>? {
