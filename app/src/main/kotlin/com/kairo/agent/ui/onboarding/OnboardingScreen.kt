@@ -423,6 +423,28 @@ fun OnboardingScreen(
                                     onCheckedChange = { onUpdateSettings(settings.copy(bypassCompatibility = it)) }
                                 )
 
+                                if (compatibilityReport != null && compatibilityReport.socAllowlisted && !compatibilityReport.aiCoreReady) {
+                                    Surface(
+                                        color = Color(0xFF1A2639),
+                                        shape = RoundedCornerShape(14.dp),
+                                        modifier = Modifier.fillMaxWidth()
+                                    ) {
+                                        Column(modifier = Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                                            Text(
+                                                "AICore Supported — Additional Setup Needed",
+                                                color = AccentBlue,
+                                                style = MaterialTheme.typography.labelLarge,
+                                                fontWeight = FontWeight.SemiBold
+                                            )
+                                            Text(
+                                                "Your SoC (${compatibilityReport.socName}) supports AICore, but it isn't active yet. Open Developer Options → Debugging → AICore and enable the preview toggle, then tap Re-check.",
+                                                color = TextSecondary,
+                                                style = MaterialTheme.typography.bodySmall
+                                            )
+                                        }
+                                    }
+                                }
+
                                 if (compatibilityReport != null && !compatibilityReport.allCorePassed && !settings.bypassCompatibility) {
                                     Surface(
                                         color = Color(0xFF3E2226),

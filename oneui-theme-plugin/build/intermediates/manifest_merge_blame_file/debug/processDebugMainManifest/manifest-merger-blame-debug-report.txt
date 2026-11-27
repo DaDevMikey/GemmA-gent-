@@ -1,0 +1,85 @@
+1<?xml version="1.0" encoding="utf-8"?>
+2<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+3    package="com.kairo.plugin.oneui"
+4    android:versionCode="1"
+5    android:versionName="1.0.0" >
+6
+7    <uses-sdk
+8        android:minSdkVersion="26"
+9        android:targetSdkVersion="36" />
+10
+11    <application
+11-->/home/mikey/Downloads/personal-repos/GemmA/oneui-theme-plugin/src/main/AndroidManifest.xml:3:5-22:19
+12        android:allowBackup="true"
+12-->/home/mikey/Downloads/personal-repos/GemmA/oneui-theme-plugin/src/main/AndroidManifest.xml:4:9-35
+13        android:debuggable="true"
+14        android:extractNativeLibs="false"
+15        android:label="Kairo One UI Theme" >
+15-->/home/mikey/Downloads/personal-repos/GemmA/oneui-theme-plugin/src/main/AndroidManifest.xml:5:9-43
+16        <service
+16-->/home/mikey/Downloads/personal-repos/GemmA/oneui-theme-plugin/src/main/AndroidManifest.xml:6:9-21:19
+17            android:name="com.kairo.plugin.oneui.OneUiThemePluginService"
+17-->/home/mikey/Downloads/personal-repos/GemmA/oneui-theme-plugin/src/main/AndroidManifest.xml:7:13-52
+18            android:exported="true"
+18-->/home/mikey/Downloads/personal-repos/GemmA/oneui-theme-plugin/src/main/AndroidManifest.xml:8:13-36
+19            android:label="One UI Design Theme" >
+19-->/home/mikey/Downloads/personal-repos/GemmA/oneui-theme-plugin/src/main/AndroidManifest.xml:9:13-48
+20            <intent-filter>
+20-->/home/mikey/Downloads/personal-repos/GemmA/oneui-theme-plugin/src/main/AndroidManifest.xml:10:13-12:29
+21                <action android:name="com.kairo.agent.PLUGIN" />
+21-->/home/mikey/Downloads/personal-repos/GemmA/oneui-theme-plugin/src/main/AndroidManifest.xml:11:17-65
+21-->/home/mikey/Downloads/personal-repos/GemmA/oneui-theme-plugin/src/main/AndroidManifest.xml:11:25-62
+22            </intent-filter>
+23
+24            <meta-data
+24-->/home/mikey/Downloads/personal-repos/GemmA/oneui-theme-plugin/src/main/AndroidManifest.xml:13:13-81
+25                android:name="kairo.plugin.type"
+25-->/home/mikey/Downloads/personal-repos/GemmA/oneui-theme-plugin/src/main/AndroidManifest.xml:13:24-56
+26                android:value="theme" />
+26-->/home/mikey/Downloads/personal-repos/GemmA/oneui-theme-plugin/src/main/AndroidManifest.xml:13:57-78
+27            <meta-data
+27-->/home/mikey/Downloads/personal-repos/GemmA/oneui-theme-plugin/src/main/AndroidManifest.xml:14:13-95
+28                android:name="kairo.plugin.name"
+28-->/home/mikey/Downloads/personal-repos/GemmA/oneui-theme-plugin/src/main/AndroidManifest.xml:14:24-56
+29                android:value="One UI Design Theme" />
+29-->/home/mikey/Downloads/personal-repos/GemmA/oneui-theme-plugin/src/main/AndroidManifest.xml:14:57-92
+30            <meta-data
+30-->/home/mikey/Downloads/personal-repos/GemmA/oneui-theme-plugin/src/main/AndroidManifest.xml:15:13-191
+31                android:name="kairo.plugin.description"
+31-->/home/mikey/Downloads/personal-repos/GemmA/oneui-theme-plugin/src/main/AndroidManifest.xml:15:24-63
+32                android:value="Samsung One UI palette &amp; squircle icons (credits: tribalfs/oneui-design &amp; thatjoshguy67/oneui-icons)" />
+32-->/home/mikey/Downloads/personal-repos/GemmA/oneui-theme-plugin/src/main/AndroidManifest.xml:15:64-188
+33            <meta-data
+33-->/home/mikey/Downloads/personal-repos/GemmA/oneui-theme-plugin/src/main/AndroidManifest.xml:16:13-91
+34                android:name="kairo.plugin.accent_color"
+34-->/home/mikey/Downloads/personal-repos/GemmA/oneui-theme-plugin/src/main/AndroidManifest.xml:16:24-64
+35                android:value="#0381FE" />
+35-->/home/mikey/Downloads/personal-repos/GemmA/oneui-theme-plugin/src/main/AndroidManifest.xml:16:65-88
+36            <meta-data
+36-->/home/mikey/Downloads/personal-repos/GemmA/oneui-theme-plugin/src/main/AndroidManifest.xml:17:13-87
+37                android:name="kairo.plugin.bg_color"
+37-->/home/mikey/Downloads/personal-repos/GemmA/oneui-theme-plugin/src/main/AndroidManifest.xml:17:24-60
+38                android:value="#010101" />
+38-->/home/mikey/Downloads/personal-repos/GemmA/oneui-theme-plugin/src/main/AndroidManifest.xml:17:61-84
+39            <meta-data
+39-->/home/mikey/Downloads/personal-repos/GemmA/oneui-theme-plugin/src/main/AndroidManifest.xml:18:13-92
+40                android:name="kairo.plugin.surface_color"
+40-->/home/mikey/Downloads/personal-repos/GemmA/oneui-theme-plugin/src/main/AndroidManifest.xml:18:24-65
+41                android:value="#17171A" />
+41-->/home/mikey/Downloads/personal-repos/GemmA/oneui-theme-plugin/src/main/AndroidManifest.xml:18:66-89
+42            <meta-data
+42-->/home/mikey/Downloads/personal-repos/GemmA/oneui-theme-plugin/src/main/AndroidManifest.xml:19:13-92
+43                android:name="kairo.plugin.icon_pack"
+43-->/home/mikey/Downloads/personal-repos/GemmA/oneui-theme-plugin/src/main/AndroidManifest.xml:19:24-61
+44                android:value="oneui-icons" />
+44-->/home/mikey/Downloads/personal-repos/GemmA/oneui-theme-plugin/src/main/AndroidManifest.xml:19:62-89
+45            <meta-data
+45-->/home/mikey/Downloads/personal-repos/GemmA/oneui-theme-plugin/src/main/AndroidManifest.xml:20:13-83
+46                android:name="kairo.plugin.corner_dp"
+46-->/home/mikey/Downloads/personal-repos/GemmA/oneui-theme-plugin/src/main/AndroidManifest.xml:20:24-61
+47                android:value="22" />
+47-->/home/mikey/Downloads/personal-repos/GemmA/oneui-theme-plugin/src/main/AndroidManifest.xml:20:62-80
+48        </service>
+49    </application>
+50
+51</manifest>

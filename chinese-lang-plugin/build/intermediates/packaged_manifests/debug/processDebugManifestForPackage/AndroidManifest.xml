@@ -1,0 +1,39 @@
+<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    package="com.kairo.plugin.zh"
+    android:versionCode="1"
+    android:versionName="1.0.0" >
+
+    <uses-sdk
+        android:minSdkVersion="26"
+        android:targetSdkVersion="36" />
+
+    <application
+        android:allowBackup="true"
+        android:debuggable="true"
+        android:extractNativeLibs="false"
+        android:label="Kairo 中文语言包" >
+        <service
+            android:name="com.kairo.plugin.zh.ChineseLangPluginService"
+            android:exported="true"
+            android:label="中文语言包 (Chinese)" >
+            <intent-filter>
+                <action android:name="com.kairo.agent.PLUGIN" />
+            </intent-filter>
+
+            <meta-data
+                android:name="kairo.plugin.type"
+                android:value="language" />
+            <meta-data
+                android:name="kairo.plugin.name"
+                android:value="中文语言包 (Chinese)" />
+            <meta-data
+                android:name="kairo.plugin.description"
+                android:value="Adds Simplified Chinese (zh) UI and AI response language support to Kairo" />
+            <meta-data
+                android:name="kairo.plugin.lang_code"
+                android:value="zh" />
+        </service>
+    </application>
+
+</manifest>

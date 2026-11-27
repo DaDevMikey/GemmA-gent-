@@ -50,8 +50,10 @@ fun ReactiveAuroraBackground(
         label = "voice_boost"
     )
 
+    val palette = com.kairo.agent.ui.theme.LocalKairoPalette.current
     val primaryOrbColor by animateColorAsState(
         targetValue = when {
+            palette.isCustomTheme -> palette.accent.copy(alpha = if (isListening || isGenerating) 0.55f else 0.36f)
             isListening -> Color(0xFF1A56DB).copy(alpha = 0.48f)
             isGenerating -> Color(0xFF6D28D9).copy(alpha = 0.44f)
             else -> Color(0xFF0E2356).copy(alpha = 0.55f)
@@ -62,6 +64,7 @@ fun ReactiveAuroraBackground(
 
     val secondaryOrbColor by animateColorAsState(
         targetValue = when {
+            palette.isCustomTheme -> palette.accent.copy(alpha = 0.22f)
             isListening -> Color(0xFF0EA5E9).copy(alpha = 0.34f)
             isGenerating -> Color(0xFFDB2777).copy(alpha = 0.30f)
             else -> Color(0xFF1E1B4B).copy(alpha = 0.35f)
@@ -73,7 +76,7 @@ fun ReactiveAuroraBackground(
     Box(
         modifier = modifier
             .fillMaxSize()
-            .background(Color(0xFF000000))
+            .background(if (palette.isCustomTheme) palette.bg else Color(0xFF000000))
     ) {
         Canvas(
             modifier = Modifier

@@ -102,6 +102,7 @@ class AndroidAgentTools(
             "nl" -> "Dutch (Nederlands)"
             "de" -> "German (Deutsch)"
             "ru" -> "Russian (Русский)"
+            "zh" -> "Chinese (中文)"
             else -> "English"
         }
         appendLine("User's preferred language: $langLabel. Reply in $langLabel unless the user explicitly writes in another language.")

@@ -73,6 +73,17 @@ fun AppLanguagePickerRow(
         )
     }
 
+    val languages = remember(context) {
+        val base = KairoLanguages.toMutableList()
+        val langPlugins = com.kairo.agent.data.PluginManager.discoverPlugins(context)
+            .filter { it.type == "language" && !it.langCode.isNullOrBlank() && com.kairo.agent.data.PluginManager.isPluginEnabled(context, it) }
+        langPlugins.forEach { p ->
+            val code = p.langCode!!
+            if (base.none { it.first == code }) base.add(code to p.name)
+        }
+        base
+    }
+
     Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
         Text(stringResource(R.string.preferred_language), color = accentColor, style = MaterialTheme.typography.labelLarge)
         Row(
@@ -81,7 +92,7 @@ fun AppLanguagePickerRow(
                 .horizontalScroll(rememberScrollState()),
             horizontalArrangement = Arrangement.spacedBy(8.dp)
         ) {
-            KairoLanguages.forEach { (code, label) ->
+            languages.forEach { (code, label) ->
                 FilterChip(
                     selected = selectedAppLang == code,
                     onClick = { pendingChoice = code to label },
