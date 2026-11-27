@@ -120,9 +120,10 @@
   <header>
     <div class="brand">✦ Kairo <span>/kaj/roo/</span></div>
     <nav>
-      <a href="#download">Download</a>
+      <a href="/download">Download</a>
       <a href="#screenshots">Screenshots</a>
       <a href="#features">Features</a>
+      <a href="https://t.me/kairoassistant">Telegram</a>
       <a href="privacy.html">Privacy Policy</a>
       <a href="terms.html">Terms</a>
       <a href="https://github.com/DaDevMikey/Kairo">GitHub</a>
@@ -131,28 +132,29 @@
 
   <main>
     <div class="hero">
-      <div class="pill">Open Source (MIT) • v1.3.0 • 100% On-Device</div>
+      <div class="pill" id="version-pill">Open Source (MIT) • v1.4.0 • 100% On-Device</div>
       <h1>Your Private Android AI Agent, Powered by Gemma 4</h1>
-      <p>Kairo runs locally on your phone using Android AICore, with real Android actions, floating overlay, voice wake-up, widgets, and standalone APK plugins.</p>
+      <p>Kairo runs locally on your phone using Android AICore, with real Android actions, floating overlay, voice wake-up, blurred widgets, and standalone APK plugins.</p>
       <div class="cta-row">
-        <a class="btn btn-primary" href="https://github.com/DaDevMikey/Kairo/releases/download/v1.3.0/Kairo-v1.3.0-release.apk">Download Kairo v1.3.0 APK</a>
+        <a class="btn btn-primary" id="hero-download-btn" href="/download">Download Latest Kairo APK</a>
         <a class="btn btn-secondary" href="#download">Plugins &amp; All Downloads</a>
+        <a class="btn btn-secondary" href="https://t.me/kairoassistant">Join Telegram</a>
         <a class="btn btn-secondary" href="https://github.com/DaDevMikey/Kairo">Source Code</a>
       </div>
     </div>
 
     <section id="download">
-      <h2>Direct Downloads (v1.3.0)</h2>
+      <h2 id="downloads-heading">Direct Downloads (v1.4.0)</h2>
       <div class="grid">
         <div class="card">
-          <h3>Kairo App (v1.3.0)</h3>
-          <p style="margin-bottom: 14px;">Main Android app powered by Gemma 4 / AICore. Requires Android 8.0+ (AICore supported device recommended).</p>
-          <a class="btn btn-primary" style="display:inline-block; padding: 9px 16px; font-size: 0.88rem;" href="https://github.com/DaDevMikey/Kairo/releases/download/v1.3.0/Kairo-v1.3.0-release.apk">Download APK</a>
+          <h3 id="app-card-title">Kairo App (v1.4.0)</h3>
+          <p style="margin-bottom: 14px;">Main Android app powered by Gemma 4 / AICore. Requires Android 8.0+ (AICore supported device recommended; some devices need Developer Options → Debugging → AICore).</p>
+          <a class="btn btn-primary" id="card-download-btn" style="display:inline-block; padding: 9px 16px; font-size: 0.88rem;" href="/download">Download Latest APK</a>
         </div>
         <div class="card">
           <h3>One UI Design Theme Plugin</h3>
-          <p style="margin-bottom: 14px;">Standalone theme APK adding OLED black, One UI Blue, and squircle icons (credits: tribalfs &amp; thatjoshguy67).</p>
-          <a class="btn btn-secondary" style="display:inline-block; padding: 9px 16px; font-size: 0.88rem;" href="https://github.com/DaDevMikey/Kairo/releases/download/v1.3.0/Kairo-OneUI-Theme-Plugin.apk">Download Theme APK</a>
+          <p style="margin-bottom: 14px;">Reversible One UI SESL9 theme APK with live switching, One UI Sans typography, and blurred cover &amp; home widgets (credits: tribalfs &amp; thatjoshguy67).</p>
+          <a class="btn btn-secondary" style="display:inline-block; padding: 9px 16px; font-size: 0.88rem;" href="https://github.com/DaDevMikey/Kairo/releases/download/v1.4.0/Kairo-OneUI-Theme-Plugin.apk">Download Theme APK</a>
         </div>
         <div class="card">
           <h3>Chinese (中文) Language Pack</h3>
@@ -161,7 +163,7 @@
         </div>
       </div>
       <p style="color: var(--muted); font-size: 0.9rem; margin-top: 14px;">
-        Want to build your own theme, language pack, or tool plugin? Read the <a href="https://github.com/DaDevMikey/Kairo/blob/main/PLUGINS.md" style="color: var(--blue);">Plugin SDK Guide</a> or browse <a href="https://github.com/DaDevMikey/Kairo/releases/tag/v1.3.0" style="color: var(--blue);">all release assets on GitHub</a>.
+        Want to build your own theme, language pack, or tool plugin? Read the <a href="https://github.com/DaDevMikey/Kairo/blob/main/PLUGINS.md" style="color: var(--blue);">Plugin SDK Guide</a>, browse <a href="https://github.com/DaDevMikey/Kairo/releases/latest" style="color: var(--blue);">latest release assets on GitHub</a>, or join <a href="https://t.me/kairoassistant" style="color: var(--blue);">t.me/kairoassistant</a> for support &amp; updates.
       </p>
     </section>
 
@@ -220,7 +222,24 @@
 
   <footer>
     <div>Built by <a href="https://damanmikey.me/">DaManMikey</a> • MIT License</div>
-    <div><a href="privacy.html">Privacy Policy</a> • <a href="terms.html">Terms of Service</a></div>
+    <div><a href="https://t.me/kairoassistant">Telegram</a> • <a href="privacy.html">Privacy Policy</a> • <a href="terms.html">Terms of Service</a></div>
   </footer>
+  <script>
+    fetch("https://api.github.com/repos/DaDevMikey/Kairo/releases/latest")
+      .then(function(r) { return r.ok ? r.json() : null; })
+      .then(function(rel) {
+        if (!rel || !rel.tag_name) return;
+        var tag = rel.tag_name;
+        var pill = document.getElementById("version-pill");
+        var h2 = document.getElementById("downloads-heading");
+        var cardTitle = document.getElementById("app-card-title");
+        var heroBtn = document.getElementById("hero-download-btn");
+        if (pill) pill.textContent = "Open Source (MIT) • " + tag + " • 100% On-Device";
+        if (h2) h2.textContent = "Direct Downloads (" + tag + ")";
+        if (cardTitle) cardTitle.textContent = "Kairo App (" + tag + ")";
+        if (heroBtn) heroBtn.textContent = "Download Kairo " + tag + " APK";
+      })
+      .catch(function() {});
+  </script>
 </body>
 </html>

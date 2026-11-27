@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Downloading Latest Kairo APK…</title>
+  <style>
+    :root {
+      --bg: #07080d;
+      --card: #12151f;
+      --border: rgba(168, 199, 250, 0.16);
+      --text: #e8eaed;
+      --muted: #9aa0a6;
+      --blue: #a8c7fa;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      min-height: 100vh;
+      display: grid;
+      place-items: center;
+      padding: 24px;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      background: radial-gradient(circle at 20% 10%, rgba(66,133,244,0.16), transparent 45%),
+                  radial-gradient(circle at 80% 80%, rgba(155,114,203,0.16), transparent 45%),
+                  var(--bg);
+      color: var(--text);
+      text-align: center;
+    }
+    .card {
+      max-width: 460px;
+      width: 100%;
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 22px;
+      padding: 28px 24px;
+    }
+    h1 { font-size: 1.45rem; margin-bottom: 10px; }
+    p { color: var(--muted); font-size: 0.95rem; margin-bottom: 20px; line-height: 1.5; }
+    .btn {
+      display: inline-block;
+      padding: 11px 20px;
+      border-radius: 14px;
+      font-weight: 600;
+      text-decoration: none;
+      font-size: 0.92rem;
+      background: var(--blue);
+      color: #0a0d14;
+    }
+    .links {
+      margin-top: 16px;
+      font-size: 0.86rem;
+      color: var(--muted);
+    }
+    .links a { color: var(--blue); text-decoration: none; }
+  </style>
+</head>
+<body>
+  <div class="card">
+    <h1 id="status-title">Downloading Kairo…</h1>
+    <p id="status-body">Fetching the latest release APK from GitHub. Your download will start automatically.</p>
+    <a class="btn" id="manual-link" href="https://github.com/DaDevMikey/Kairo/releases/download/v1.4.0/Kairo-v1.4.0-release.apk">Download APK</a>
+    <div class="links">
+      <a href="/">Back to Home</a> • <a href="https://github.com/DaDevMikey/Kairo/releases/latest">GitHub Releases</a> • <a href="https://t.me/kairoassistant">Telegram</a>
+    </div>
+  </div>
+
+  <script>
+    (function() {
+      var fallbackUrl = "https://github.com/DaDevMikey/Kairo/releases/download/v1.4.0/Kairo-v1.4.0-release.apk";
+      var titleEl = document.getElementById("status-title");
+      var bodyEl = document.getElementById("status-body");
+      var linkEl = document.getElementById("manual-link");
+
+      function triggerDownload(url, tag) {
+        if (linkEl) linkEl.href = url;
+        if (tag && titleEl) titleEl.textContent = "Downloading Kairo " + tag + "…";
+        if (bodyEl) bodyEl.textContent = "If the download doesn't start automatically, tap the button below.";
+        window.location.replace(url);
+      }
+
+      fetch("https://api.github.com/repos/DaDevMikey/Kairo/releases/latest", { cache: "no-store" })
+        .then(function(res) {
+          if (!res.ok) throw new Error("GitHub API status " + res.status);
+          return res.json();
+        })
+        .then(function(release) {
+          var assets = Array.isArray(release.assets) ? release.assets : [];
+          var appApk = assets.find(function(a) {
+            return a.name && /^Kairo-v.*\.apk$/i.test(a.name) && !/Plugin/i.test(a.name);
+          }) || assets.find(function(a) {
+            return a.name && /\.apk$/i.test(a.name) && !/Plugin/i.test(a.name);
+          });
+          if (appApk && appApk.browser_download_url) {
+            triggerDownload(appApk.browser_download_url, release.tag_name || "");
+          } else {
+            triggerDownload(fallbackUrl, "v1.4.0");
+          }
+        })
+        .catch(function() {
+          triggerDownload(fallbackUrl, "v1.4.0");
+        });
+    })();
+  </script>
+</body>
+</html>
