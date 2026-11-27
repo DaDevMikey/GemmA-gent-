@@ -30,9 +30,15 @@
 
 ## 📱 Screenshots
 
-| Clean Home & Quick Prompts | On-Device Credits & Info | Assistant Overlay | Navigation Drawer |
-| :---: | :---: | :---: | :---: |
-| <img src="docs/screenshots/kairo_home.png" width="220" /> | <img src="docs/screenshots/kairo_models.png" width="220" /> | <img src="docs/screenshots/kairo_overlay.png" width="220" /> | <img src="docs/screenshots/kairo_drawer.png" width="220" /> |
+### Themes & Languages
+| English (One UI Theme) | English (Base Theme) | Dutch / Nederlands (Base Theme) |
+| :---: | :---: | :---: |
+| <img src="docs/screenshots/kairo_english_oneui.png" width="220" /> | <img src="docs/screenshots/kairo_english_base.png" width="220" /> | <img src="docs/screenshots/kairo_dutch_base.png" width="220" /> |
+
+### System Features
+| Assistant Overlay | Navigation Drawer | Credits & Settings Info |
+| :---: | :---: | :---: |
+| <img src="docs/screenshots/kairo_overlay.png" width="220" /> | <img src="docs/screenshots/kairo_drawer.png" width="220" /> | <img src="docs/screenshots/kairo_models.png" width="220" /> |
 
 ---
 
