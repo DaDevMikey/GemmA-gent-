@@ -589,8 +589,12 @@ internal fun MainScreenContent(
     }
 
     if (showWhatsNewDialog) {
-        val latestNotes = state.releaseNotes.firstOrNull()?.body?.takeIf { it.isNotBlank() }
-            ?: "## v$currentVersionName\n- Response version switcher (scroll between regenerated answers)\n- Multi-Agent Collaboration mode in Settings\n- Exact popup-to-fullscreen chat handoff\n- Incognito Chat directly in New Chat (24h auto-expire, no memory)\n- Multi-language support (English, Dutch, German, Russian)\n- User-friendly action confirmations"
+        val matchingRemoteNotes = state.releaseNotes
+            .firstOrNull { it.tagName.equals("v$currentVersionName", ignoreCase = true) }
+            ?.body
+            ?.takeIf { it.isNotBlank() }
+        val latestNotes = matchingRemoteNotes
+            ?: "## v$currentVersionName\n- Reversible One UI SESL9 theme plugin with live theme switching, One UI Sans typography, and blurred cover/home widgets (credit: ThatJoshGuy)\n- Predictive back gesture animation in Settings\n- Full multi-language localization across welcome greetings, example prompts, modes, setup, About, and Settings (EN, NL, DE, RU, ZH)\n- Redesigned 6-step Setup Wizard with directional animations\n- Dedicated About Kairo page with credits and links\n- Optional automatic update check on startup in Settings"
         WhatsNewChangelogDialog(
             versionName = currentVersionName,
             changelogMarkdown = latestNotes,
