@@ -22,7 +22,13 @@ import androidx.compose.material3.MaterialTheme
 import com.kairo.agent.ui.components.KairoSurface as Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateMapOf
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
+import kotlinx.coroutines.delay
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -54,6 +60,40 @@ fun RichResponseText(
     isStreaming: Boolean = false
 ) {
     val segments = remember(text) { parseSegments(text) }
+    var revealSettled by remember { mutableStateOf(!isStreaming) }
+    val finishedLines = remember { mutableStateMapOf<Pair<Int, Int>, Boolean>() }
+    val activeLineKeys = remember(segments) {
+        buildList {
+            segments.forEachIndexed { segIndex, segment ->
+                if (segment is ResponseSegment.Prose && segment.text.isNotBlank()) {
+                    segment.text.lines().forEachIndexed { lineIdx, line ->
+                        if (line.trimStart().isNotEmpty()) add(segIndex to lineIdx)
+                    }
+                }
+            }
+        }
+    }
+    LaunchedEffect(isStreaming) {
+        if (isStreaming) {
+            revealSettled = false
+            finishedLines.clear()
+        } else if (!revealSettled) {
+            if (activeLineKeys.isEmpty()) {
+                revealSettled = true
+            } else {
+                // Generous fallback only if OS animators are off or view detaches;
+                // normally onAnimationFinished settles revealSettled right after the last glyph.
+                delay(10_000L)
+                revealSettled = true
+            }
+        }
+    }
+    LaunchedEffect(isStreaming, finishedLines.size, activeLineKeys) {
+        if (!isStreaming && !revealSettled && activeLineKeys.isNotEmpty() && activeLineKeys.all { finishedLines[it] == true }) {
+            revealSettled = true
+        }
+    }
+    val animateLines = isStreaming || !revealSettled
 
     SelectionContainer(modifier = modifier) {
         Column(
@@ -61,46 +101,95 @@ fun RichResponseText(
             verticalArrangement = Arrangement.spacedBy(10.dp)
         ) {
             segments.forEachIndexed { segIndex, segment ->
-                val isLastSegment = segIndex == segments.lastIndex
                 when (segment) {
                     is ResponseSegment.Prose -> {
                         if (segment.text.isNotBlank()) {
                             val lines = segment.text.lines()
-                            val lastNonEmptyLineIdx = lines.indexOfLast { it.trimStart().isNotEmpty() }
                             Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
                                 lines.forEachIndexed { lineIdx, line ->
                                     val trimmed = line.trimStart()
-                                    val isCurrentActiveStreamingLine = isStreaming && isLastSegment && lineIdx == lastNonEmptyLineIdx
+                                    val cleanLine = formatInlineMarkdown(line.removeSuffix(" ▌").removeSuffix("▌")).text
+                                    remember(segIndex, lineIdx, cleanLine) {
+                                        if (animateLines) finishedLines[segIndex to lineIdx] = false
+                                    }
+                                    val finishCallback: (() -> Unit)? = if (animateLines) {
+                                        { finishedLines[segIndex to lineIdx] = true }
+                                    } else {
+                                        null
+                                    }
                                     when {
-                                        trimmed.startsWith("### ") -> Text(
-                                            text = formatInlineMarkdown(trimmed.removePrefix("### ")),
-                                            color = textColor,
-                                            style = MaterialTheme.typography.titleSmall,
-                                            fontWeight = FontWeight.SemiBold,
-                                            modifier = Modifier.padding(top = 4.dp)
-                                        )
-                                        trimmed.startsWith("## ") -> Text(
-                                            text = formatInlineMarkdown(trimmed.removePrefix("## ")),
-                                            color = Color(0xFFA8C7FA),
-                                            style = MaterialTheme.typography.titleMedium,
-                                            fontWeight = FontWeight.Bold,
-                                            modifier = Modifier.padding(top = 6.dp)
-                                        )
-                                        trimmed.startsWith("# ") -> Text(
-                                            text = formatInlineMarkdown(trimmed.removePrefix("# ")),
-                                            color = Color(0xFFA8C7FA),
-                                            style = MaterialTheme.typography.titleLarge,
-                                            fontWeight = FontWeight.Bold,
-                                            modifier = Modifier.padding(top = 6.dp)
-                                        )
+                                        trimmed.startsWith("### ") -> {
+                                            val clean = trimmed.removePrefix("### ").removeSuffix(" ▌").removeSuffix("▌")
+                                            if (animateLines) {
+                                                LandingBlurText(
+                                                    text = formatInlineMarkdown(clean).text,
+                                                    color = textColor,
+                                                    style = MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.SemiBold),
+                                                    streaming = true,
+                                                    onAnimationFinished = finishCallback,
+                                                    modifier = Modifier.padding(top = 4.dp)
+                                                )
+                                            } else {
+                                                Text(
+                                                    text = formatInlineMarkdown(trimmed.removePrefix("### ")),
+                                                    color = textColor,
+                                                    style = MaterialTheme.typography.titleSmall,
+                                                    fontWeight = FontWeight.SemiBold,
+                                                    modifier = Modifier.padding(top = 4.dp)
+                                                )
+                                            }
+                                        }
+                                        trimmed.startsWith("## ") -> {
+                                            val clean = trimmed.removePrefix("## ").removeSuffix(" ▌").removeSuffix("▌")
+                                            if (animateLines) {
+                                                LandingBlurText(
+                                                    text = formatInlineMarkdown(clean).text,
+                                                    color = Color(0xFFA8C7FA),
+                                                    style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
+                                                    streaming = true,
+                                                    onAnimationFinished = finishCallback,
+                                                    modifier = Modifier.padding(top = 6.dp)
+                                                )
+                                            } else {
+                                                Text(
+                                                    text = formatInlineMarkdown(trimmed.removePrefix("## ")),
+                                                    color = Color(0xFFA8C7FA),
+                                                    style = MaterialTheme.typography.titleMedium,
+                                                    fontWeight = FontWeight.Bold,
+                                                    modifier = Modifier.padding(top = 6.dp)
+                                                )
+                                            }
+                                        }
+                                        trimmed.startsWith("# ") -> {
+                                            val clean = trimmed.removePrefix("# ").removeSuffix(" ▌").removeSuffix("▌")
+                                            if (animateLines) {
+                                                LandingBlurText(
+                                                    text = formatInlineMarkdown(clean).text,
+                                                    color = Color(0xFFA8C7FA),
+                                                    style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.Bold),
+                                                    streaming = true,
+                                                    onAnimationFinished = finishCallback,
+                                                    modifier = Modifier.padding(top = 6.dp)
+                                                )
+                                            } else {
+                                                Text(
+                                                    text = formatInlineMarkdown(trimmed.removePrefix("# ")),
+                                                    color = Color(0xFFA8C7FA),
+                                                    style = MaterialTheme.typography.titleLarge,
+                                                    fontWeight = FontWeight.Bold,
+                                                    modifier = Modifier.padding(top = 6.dp)
+                                                )
+                                            }
+                                        }
                                         trimmed.startsWith("- ") || trimmed.startsWith("* ") -> {
                                             val bulletText = "• " + trimmed.drop(2)
-                                            if (isCurrentActiveStreamingLine) {
+                                            if (animateLines) {
                                                 LandingBlurText(
                                                     text = formatInlineMarkdown(bulletText.removeSuffix(" ▌").removeSuffix("▌")).text,
                                                     color = textColor,
                                                     style = MaterialTheme.typography.bodyMedium,
                                                     streaming = true,
+                                                    onAnimationFinished = finishCallback,
                                                     modifier = Modifier.padding(start = 6.dp)
                                                 )
                                             } else {
@@ -113,12 +202,13 @@ fun RichResponseText(
                                             }
                                         }
                                         trimmed.isNotEmpty() -> {
-                                            if (isCurrentActiveStreamingLine) {
+                                            if (animateLines) {
                                                 LandingBlurText(
                                                     text = formatInlineMarkdown(line.removeSuffix(" ▌").removeSuffix("▌")).text,
                                                     color = textColor,
                                                     style = MaterialTheme.typography.bodyLarge,
-                                                    streaming = true
+                                                    streaming = true,
+                                                    onAnimationFinished = finishCallback
                                                 )
                                             } else {
                                                 Text(

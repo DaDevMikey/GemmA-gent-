@@ -234,7 +234,11 @@ fun OnboardingScreen(
                                     shape = kairoCornerShape(16.dp),
                                     modifier = Modifier
                                         .fillMaxWidth()
-                                        .border(1.dp, FrostedBorder, kairoCornerShape(16.dp))
+                                        .border(
+                                            1.dp,
+                                            if (!privacyAccepted) AccentBlue.copy(alpha = 0.55f) else FrostedBorder,
+                                            kairoCornerShape(16.dp)
+                                        )
                                         .clickable { privacyAccepted = !privacyAccepted }
                                 ) {
                                     Row(
@@ -271,13 +275,26 @@ fun OnboardingScreen(
                                     }
                                 }
                             }
-                            Button(
-                                onClick = { step = 1 },
-                                enabled = privacyAccepted,
-                                modifier = Modifier.fillMaxWidth().height(56.dp),
-                                shape = RoundedCornerShape(50)
+                            Column(
+                                horizontalAlignment = Alignment.CenterHorizontally,
+                                verticalArrangement = Arrangement.spacedBy(8.dp)
                             ) {
-                                Text(stringResource(R.string.get_started), fontSize = 16.sp, fontWeight = FontWeight.SemiBold)
+                                Button(
+                                    onClick = { step = 1 },
+                                    enabled = privacyAccepted,
+                                    modifier = Modifier.fillMaxWidth().height(56.dp),
+                                    shape = RoundedCornerShape(50)
+                                ) {
+                                    Text(stringResource(R.string.get_started), fontSize = 16.sp, fontWeight = FontWeight.SemiBold)
+                                }
+                                if (!privacyAccepted) {
+                                    Text(
+                                        text = stringResource(R.string.setup_privacy_hint),
+                                        color = AccentBlue,
+                                        style = MaterialTheme.typography.labelSmall,
+                                        textAlign = TextAlign.Center
+                                    )
+                                }
                             }
                         }
                     }
@@ -318,6 +335,12 @@ fun OnboardingScreen(
                                             subtitle = stringResource(R.string.setting_mini_mode_sub),
                                             checked = settings.miniModeOverlay,
                                             onCheckedChange = { onUpdateSettings(settings.copy(miniModeOverlay = it)) }
+                                        )
+                                        SetupToggle(
+                                            title = stringResource(R.string.check_updates_startup_title),
+                                            subtitle = stringResource(R.string.check_updates_startup_sub),
+                                            checked = settings.checkUpdatesOnStartup,
+                                            onCheckedChange = { onUpdateSettings(settings.copy(checkUpdatesOnStartup = it)) }
                                         )
                                         com.kairo.agent.ui.main.AppLanguagePickerRow(
                                             selectedAppLang = settings.appLanguage,
@@ -389,11 +412,15 @@ fun OnboardingScreen(
 
                                 Text(stringResource(R.string.setup_backend_mode), color = AccentBlue, style = MaterialTheme.typography.labelLarge)
                                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                                    listOf(EngineBackendMode.AUTO, EngineBackendMode.AICORE, EngineBackendMode.LOCAL_HTTP).forEach { mode ->
+                                    listOf(
+                                        EngineBackendMode.AUTO to stringResource(R.string.setup_backend_auto),
+                                        EngineBackendMode.AICORE to stringResource(R.string.setup_backend_aicore),
+                                        EngineBackendMode.LOCAL_HTTP to stringResource(R.string.setup_backend_local)
+                                    ).forEach { (mode, label) ->
                                         FilterChip(
                                             selected = settings.backendMode == mode,
                                             onClick = { onUpdateSettings(settings.copy(backendMode = mode)) },
-                                            label = { Text(mode.name) }
+                                            label = { Text(label) }
                                         )
                                     }
                                 }
@@ -422,7 +449,7 @@ fun OnboardingScreen(
                                     }
                                 }
 
-                                if (settings.backendMode != EngineBackendMode.AICORE) {
+                                if (settings.backendMode == EngineBackendMode.LOCAL_HTTP) {
                                     OutlinedTextField(
                                         value = endpointDraft,
                                         onValueChange = {
@@ -497,13 +524,24 @@ fun OnboardingScreen(
                             }
 
                             val canContinueCompat = (compatibilityReport?.allCorePassed == true) || settings.bypassCompatibility
-                            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                                OutlinedButton(onClick = { step = 1 }, modifier = Modifier.weight(1f).height(50.dp)) { Text(stringResource(R.string.back)) }
-                                Button(
-                                    onClick = { step = 3 },
-                                    enabled = canContinueCompat,
-                                    modifier = Modifier.weight(1f).height(50.dp)
-                                ) { Text(stringResource(R.string.next)) }
+                            Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                                if (!canContinueCompat) {
+                                    Text(
+                                        text = stringResource(R.string.setup_compat_locked_hint),
+                                        color = AccentBlue,
+                                        style = MaterialTheme.typography.labelSmall,
+                                        textAlign = TextAlign.Center,
+                                        modifier = Modifier.fillMaxWidth()
+                                    )
+                                }
+                                Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                                    OutlinedButton(onClick = { step = 1 }, modifier = Modifier.weight(1f).height(50.dp)) { Text(stringResource(R.string.back)) }
+                                    Button(
+                                        onClick = { step = 3 },
+                                        enabled = canContinueCompat,
+                                        modifier = Modifier.weight(1f).height(50.dp)
+                                    ) { Text(stringResource(R.string.next)) }
+                                }
                             }
                         }
                     }
@@ -529,6 +567,11 @@ fun OnboardingScreen(
                                     stringResource(R.string.onboarding_voice_body),
                                     color = TextSecondary,
                                     style = MaterialTheme.typography.bodyMedium
+                                )
+                                Text(
+                                    stringResource(R.string.setup_perms_optional_hint),
+                                    color = AccentBlue,
+                                    style = MaterialTheme.typography.labelSmall
                                 )
 
                                 PermissionCard(
@@ -595,6 +638,11 @@ fun OnboardingScreen(
                                     stringResource(R.string.onboarding_connections_body),
                                     color = TextSecondary,
                                     style = MaterialTheme.typography.bodyMedium
+                                )
+                                Text(
+                                    stringResource(R.string.setup_perms_optional_hint),
+                                    color = AccentBlue,
+                                    style = MaterialTheme.typography.labelSmall
                                 )
                                 PermissionCard(
                                     title = stringResource(R.string.perm_location),
@@ -770,7 +818,9 @@ private fun PermissionCard(
     Surface(
         color = FrostedCardBg,
         shape = kairoCornerShape(16.dp),
-        modifier = Modifier.border(1.dp, FrostedBorder, kairoCornerShape(16.dp))
+        modifier = Modifier
+            .border(1.dp, FrostedBorder, kairoCornerShape(16.dp))
+            .then(if (!granted) Modifier.clickable(onClick = onAction) else Modifier)
     ) {
         Row(
             modifier = Modifier.fillMaxWidth().padding(horizontal = 14.dp, vertical = 12.dp),

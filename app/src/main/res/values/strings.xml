@@ -97,6 +97,12 @@
     <string name="setup_incompat_title">Device reported as incompatible</string>
     <string name="setup_bypass_btn">Bypass &amp; Continue Anyway</string>
     <string name="setup_final_sub">Gemma 4 is configured locally on your NPU with zero cloud telemetry.</string>
+    <string name="setup_privacy_hint">Tap the checkbox above to accept and continue</string>
+    <string name="setup_backend_auto">Auto (Recommended)</string>
+    <string name="setup_backend_aicore">On-Device AI</string>
+    <string name="setup_backend_local">Local Server</string>
+    <string name="setup_compat_locked_hint">Run checks or tap “Bypass &amp; Continue Anyway” above to proceed.</string>
+    <string name="setup_perms_optional_hint">All permissions below are optional — you can skip any and enable them later in Settings.</string>
 
     <!-- Check updates on startup -->
     <string name="check_updates_startup_title">Check for updates on startup</string>

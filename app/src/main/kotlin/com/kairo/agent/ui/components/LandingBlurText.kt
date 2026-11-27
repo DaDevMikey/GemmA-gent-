@@ -25,7 +25,8 @@ fun LandingBlurText(
     color: Color,
     modifier: Modifier = Modifier,
     style: TextStyle = MaterialTheme.typography.bodyLarge,
-    streaming: Boolean = false
+    streaming: Boolean = false,
+    onAnimationFinished: (() -> Unit)? = null
 ) {
     val typeface = LocalFontFamilyResolver.current.resolve(
         style.fontFamily, style.fontWeight ?: FontWeight.Normal,
@@ -35,7 +36,13 @@ fun LandingBlurText(
     AndroidView(
         modifier = modifier.fillMaxWidth().semantics { this.text = AnnotatedString(text) },
         factory = { LandingTitleView(it) },
-        update = { it.bind(text, typeface, size, color.toArgb(), streaming = streaming) },
-        onRelease = { it.cancel() }
+        update = { view ->
+            view.onAnimationFinished = onAnimationFinished
+            view.bind(text, typeface, size, color.toArgb(), streaming = streaming)
+        },
+        onRelease = {
+            it.onAnimationFinished = null
+            it.cancel()
+        }
     )
 }

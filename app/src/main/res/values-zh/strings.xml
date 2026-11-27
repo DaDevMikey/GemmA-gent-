@@ -97,6 +97,12 @@
     <string name="setup_incompat_title">设备报告不兼容</string>
     <string name="setup_bypass_btn">跳过并继续</string>
     <string name="setup_final_sub">Gemma 4 已在您的 NPU 上完成本地配置，零云端遥测。</string>
+    <string name="setup_privacy_hint">点击上方勾选框以同意并继续</string>
+    <string name="setup_backend_auto">自动（推荐）</string>
+    <string name="setup_backend_aicore">本地设备 AI</string>
+    <string name="setup_backend_local">本地服务器</string>
+    <string name="setup_compat_locked_hint">请运行检查或点击上方的“跳过并继续”。</string>
+    <string name="setup_perms_optional_hint">以下所有权限均为可选，您可以先跳过，稍后再在设置中开启。</string>
 
     <string name="check_updates_startup_title">启动时检查更新</string>
     <string name="check_updates_startup_sub">Kairo 打开时自动检查 GitHub 是否有新版本</string>

@@ -267,7 +267,10 @@ fun GemmaAssistantSheet(
                     .fillMaxWidth()
                     .then(if (isFullscreen) Modifier.fillMaxSize() else Modifier)
                     .padding(horizontal = horizPad, vertical = vertPad)
-                    .animateContentSize(spring(dampingRatio = Spring.DampingRatioMediumBouncy, stiffness = Spring.StiffnessMediumLow))
+                    .then(
+                        if (!isGenerating) Modifier.animateContentSize(spring(dampingRatio = Spring.DampingRatioMediumBouncy, stiffness = Spring.StiffnessMediumLow))
+                        else Modifier
+                    )
                     .clip(sheetShape)
                     .border(width = borderWidth, brush = rimBrush, shape = sheetShape)
                     .pointerInput(isFullscreen) {

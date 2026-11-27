@@ -97,6 +97,12 @@
     <string name="setup_incompat_title">Устройство несовместимо</string>
     <string name="setup_bypass_btn">Пропустить и продолжить</string>
     <string name="setup_final_sub">Gemma 4 настроена локально на вашем NPU без облачной телеметрии.</string>
+    <string name="setup_privacy_hint">Нажмите на флажок выше, чтобы принять условия и продолжить</string>
+    <string name="setup_backend_auto">Авто (Рекомендуется)</string>
+    <string name="setup_backend_aicore">На устройстве</string>
+    <string name="setup_backend_local">Локальный сервер</string>
+    <string name="setup_compat_locked_hint">Выполните проверку или нажмите «Пропустить и продолжить» выше.</string>
+    <string name="setup_perms_optional_hint">Все разрешения ниже необязательны — их можно пропустить и включить позже в настройках.</string>
 
     <string name="check_updates_startup_title">Проверять обновления при запуске</string>
     <string name="check_updates_startup_sub">Автоматически проверять GitHub на наличие новых версий при открытии Kairo</string>

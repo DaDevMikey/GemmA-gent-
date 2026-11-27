@@ -123,13 +123,22 @@ class UpdateChecker(private val context: Context) {
         var apkUrl: String? = null
         val assets = json.optJSONArray("assets")
         if (assets != null) {
-            for (i in 0 until assets.length()) {
-                val asset = assets.getJSONObject(i)
-                if (asset.optString("name").endsWith(".apk", ignoreCase = true)) {
-                    apkUrl = asset.optString("browser_download_url")
-                    break
+            val apkAssets = buildList {
+                for (i in 0 until assets.length()) {
+                    val asset = assets.getJSONObject(i)
+                    val name = asset.optString("name")
+                    if (name.endsWith(".apk", ignoreCase = true)) {
+                        add(name to asset.optString("browser_download_url"))
+                    }
                 }
             }
+            apkUrl = (
+                apkAssets.firstOrNull { (name, _) ->
+                    name.startsWith("Kairo-v", ignoreCase = true) && !name.contains("plugin", ignoreCase = true)
+                }
+                    ?: apkAssets.firstOrNull { (name, _) -> !name.contains("plugin", ignoreCase = true) }
+                    ?: apkAssets.firstOrNull()
+                )?.second
         }
 
         return GitHubReleaseNote(

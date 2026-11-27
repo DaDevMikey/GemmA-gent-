@@ -132,24 +132,24 @@ fun GemmATheme(
         onPrimary = Color.White,
         primaryContainer = colorScheme.primary.copy(alpha = 0.18f),
         onPrimaryContainer = Color(0xFFB5D4FF),
-        secondaryContainer = Color(0xFF25252A),
-        onSecondaryContainer = Color(0xFFEDEDF0),
+        secondaryContainer = Color(0xFF303033),
+        onSecondaryContainer = Color(0xFFFFFFFF),
         surfaceContainer = colorScheme.surface,
-        surfaceContainerLow = Color(0xFF111113),
-        surfaceContainerHigh = Color(0xFF25252A),
-        onSurface = Color(0xFFF2F2F2),
-        onSurfaceVariant = Color(0xFFB7B7BE),
+        surfaceContainerLow = Color(0xFF101012),
+        surfaceContainerHigh = Color(0xFF303033),
+        onSurface = Color(0xFFFFFFFF),
+        onSurfaceVariant = Color(0xFFA3A3A7),
         outline = Color(0xFF53535B),
-        outlineVariant = Color(0xFF303034)
+        outlineVariant = Color(0xFF3A3A3D)
     ) else colorScheme
 
     val palette = if (activePlugin != null) {
         KairoPalette(
-            bg = activePlugin.bgColorInt()?.let { Color(it) } ?: Color(0xFF0B0C0E),
-            surface = activePlugin.surfaceColorInt()?.let { Color(it) } ?: Color(0xFF17191C),
-            pill = activePlugin.surfaceColorInt()?.let { Color(it) } ?: Color(0xFF1E2025),
-            accent = activePlugin.accentColorInt()?.let { Color(it) } ?: Color(0xFFA8C7FA),
-            cornerDp = activePlugin.cornerDp ?: 24,
+            bg = activePlugin.bgColorInt()?.let { Color(it) } ?: Color(0xFF010102),
+            surface = activePlugin.surfaceColorInt()?.let { Color(it) } ?: Color(0xFF17171A),
+            pill = activePlugin.surfaceColorInt()?.let { Color(it) } ?: Color(0xFF17171A),
+            accent = activePlugin.accentColorInt()?.let { Color(it) } ?: Color(0xFF387AFF),
+            cornerDp = activePlugin.cornerDp ?: 26,
             isCustomTheme = true,
             iconPack = activePlugin.iconPack
         )

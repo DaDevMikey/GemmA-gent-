@@ -22,7 +22,8 @@ internal fun oneUiIconResource(vectorName: String, enabled: Boolean): Int? {
     "Close" -> OneUiR.drawable.ic_oui_close
     "Mic" -> R.drawable.oneui_ic_foldable_voice
     "ArrowUpward" -> R.drawable.oneui_ic_foldable_send
-    "AutoAwesome", "Psychology" -> R.drawable.oneui_tw_ic_ai_assistant
+    "AutoAwesome" -> R.drawable.kairo_oneui_sparkle
+    "Psychology" -> R.drawable.oneui_tw_ic_ai_assistant
     "Policy", "Security" -> R.drawable.oneui_security_glyph
     "Hearing" -> R.drawable.oneui_ic_audio_bixby
     "ArrowBack" -> OneUiR.drawable.ic_oui_back

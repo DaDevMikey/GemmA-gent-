@@ -77,7 +77,7 @@ internal class LandingTitleView @JvmOverloads constructor(
     private fun activeMovementMs(): Long = if (streamingMode) STREAM_MOVEMENT_MS else MOVEMENT_DURATION_MS
     private fun activeMaxBlurPx(): Float = if (streamingMode) STREAM_BLUR_RADIUS_PX else GLYPH_BLUR_RADIUS_PX
     private fun activeSlideDistance(): Float = if (streamingMode) {
-        (width * 0.06f).coerceAtMost(dp(18f))
+        (width * 0.10f).coerceAtMost(dp(36f))
     } else {
         (width * 0.16f).coerceAtMost(dp(80f))
     }
@@ -94,7 +94,9 @@ internal class LandingTitleView @JvmOverloads constructor(
         lettersLayer.updatePaint(titlePaint)
 
         if (streaming) {
-            if (prevTitle.isEmpty() || !value.startsWith(prevTitle) || modeChanged) {
+            val commonPrefix = prevTitle.commonPrefixWith(value).length
+            val isAppending = prevTitle.isNotEmpty() && commonPrefix >= (prevTitle.length - 4).coerceAtLeast(1)
+            if (!isAppending || modeChanged) {
                 streamStartUptimeMs = android.os.SystemClock.uptimeMillis()
                 lastAssignedStartMs = 0f
                 geometry = TitleGeometry.EMPTY
@@ -104,6 +106,9 @@ internal class LandingTitleView @JvmOverloads constructor(
             if (width > 0) {
                 rebuildGeometryIncremental(width, geometry.glyphs, currentStreamElapsedMs())
                 ensureStreamingTicker()
+                if (geometry.height != height) {
+                    post { if (!isInLayout) requestLayout() }
+                }
             }
             requestLayout()
             return
@@ -196,7 +201,12 @@ internal class LandingTitleView @JvmOverloads constructor(
         if (geometry.glyphs.isEmpty()) return
         elapsedMs = currentStreamElapsedMs()
         updateAnimationFrame()
-        if (settled) return
+        if (settled) {
+            letterAnimator?.cancel()
+            letterAnimator = null
+            onAnimationFinished?.invoke()
+            return
+        }
         if (letterAnimator?.isRunning == true) return
         letterAnimator = ValueAnimator.ofFloat(0f, 1f).apply {
             duration = 60_000L
@@ -502,17 +512,30 @@ internal class LandingTitleView @JvmOverloads constructor(
             super.onDraw(canvas)
             if (geometry.glyphs.isEmpty()) return
             val horizontalDistance = activeSlideDistance()
+            val fadeDur = activeFadeMs()
+            val moveDur = activeMovementMs().toFloat()
+            val maxBlur = activeMaxBlurPx()
             geometry.glyphs.forEach { glyph ->
                 val localTime = elapsedMs - glyph.startTimeMs
                 if (localTime < 0f) return@forEach
+                if (localTime >= fadeDur && localTime >= moveDur) {
+                    paint.alpha = 255
+                    paint.maskFilter = null
+                    canvas.drawTextRun(
+                        geometry.text, glyph.start, glyph.end,
+                        glyph.contextStart, glyph.contextEnd,
+                        glyph.x, glyph.baseline, glyph.isRtl, paint
+                    )
+                    return@forEach
+                }
                 val alpha = fadeInterpolator.getInterpolation(
-                    (localTime / activeFadeMs()).coerceIn(0f, 1f),
+                    (localTime / fadeDur).coerceIn(0f, 1f),
                 )
                 val movement = movementInterpolator.getInterpolation(
-                    (localTime / activeMovementMs()).coerceIn(0f, 1f),
+                    (localTime / moveDur).coerceIn(0f, 1f),
                 )
                 paint.alpha = (alpha * 255).toInt()
-                val blurRadius = (activeMaxBlurPx() * (1f - movement)).coerceAtLeast(0f)
+                val blurRadius = (maxBlur * (1f - movement)).coerceAtLeast(0f)
                 paint.maskFilter = if (blurRadius > BLUR_REMOVE_PX) {
                     maskFor(blurRadius)
                 } else {
@@ -532,10 +555,10 @@ internal class LandingTitleView @JvmOverloads constructor(
         const val LETTER_STAGGER_MS = TitleRevealTiming.STAGGER_MS
         const val FADE_DURATION_MS = TitleRevealTiming.FADE_MS
         const val MOVEMENT_DURATION_MS = TitleRevealTiming.MOVEMENT_MS
-        const val STREAM_STAGGER_MS = 12f
-        const val STREAM_FADE_MS = 150f
-        const val STREAM_MOVEMENT_MS = 220L
-        const val STREAM_BLUR_RADIUS_PX = 32f
+        const val STREAM_STAGGER_MS = 16f
+        const val STREAM_FADE_MS = 320f
+        const val STREAM_MOVEMENT_MS = 480L
+        const val STREAM_BLUR_RADIUS_PX = 64f
         const val GLYPH_BLUR_RADIUS_PX = 100f
         const val BLUR_RADIUS_STEP_PX = 1f
         const val BLUR_BUCKET_COUNT = (GLYPH_BLUR_RADIUS_PX / BLUR_RADIUS_STEP_PX).toInt()

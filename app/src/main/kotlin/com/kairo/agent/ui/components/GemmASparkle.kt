@@ -54,15 +54,8 @@ fun GemmASparkleIcon(
     size: Dp = 36.dp,
     isAnimating: Boolean = false
 ) {
-    if (com.kairo.agent.ui.theme.LocalSesl9Enabled.current) {
-        androidx.compose.material3.Icon(
-            painter = androidx.compose.ui.res.painterResource(com.kairo.agent.R.drawable.oneui_tw_ic_ai_assistant),
-            contentDescription = null,
-            modifier = modifier.size(size),
-            tint = com.kairo.agent.ui.theme.LocalKairoPalette.current.accent
-        )
-        return
-    }
+    val oneUi = com.kairo.agent.ui.theme.LocalSesl9Enabled.current
+    val oneUiAccent = com.kairo.agent.ui.theme.LocalKairoPalette.current.accent
     val transition = rememberInfiniteTransition(label = "sparkle_anim")
     val shimmerAlpha by transition.animateFloat(
         initialValue = 0.78f,
@@ -104,32 +97,70 @@ fun GemmASparkleIcon(
     ) {
         val w = this.size.width
         val h = this.size.height
-        val cx = w / 2f
-        val cy = h / 2f
-
-        val path = Path().apply {
-            moveTo(cx, 0f)
-            quadraticTo(cx, cy, w, cy)
-            quadraticTo(cx, cy, cx, h)
-            quadraticTo(cx, cy, 0f, cy)
-            quadraticTo(cx, cy, cx, 0f)
-            close()
-        }
 
         val shift = if (isAnimating) (gradientPhase - 0.5f) * w * 0.9f else 0f
-        val brush = Brush.linearGradient(
-            colors = listOf(
+        val gradientColors = if (oneUi) {
+            listOf(
+                Color(0xFF7CC0FF),
+                oneUiAccent,
+                Color(0xFF00C2FF),
+                Color(0xFF6B8AFF),
+                Color(0xFFAAD4FF)
+            )
+        } else {
+            listOf(
                 Color(0xFFEA4335),
                 Color(0xFFFBBC05),
                 Color(0xFF34A853),
                 Color(0xFF4285F4),
                 Color(0xFFA8C7FA)
-            ),
+            )
+        }
+        val brush = Brush.linearGradient(
+            colors = gradientColors,
             start = Offset(shift, 0f),
             end = Offset(w + shift, h)
         )
 
-        drawPath(path = path, brush = brush)
+        if (oneUi) {
+            // One UI Galaxy-AI spin on Kairo's signature 4-point sparkle + mini companion star
+            val mc = w * 0.45f
+            val mr = w * 0.43f
+            val mainPath = Path().apply {
+                moveTo(mc, mc - mr)
+                quadraticTo(mc, mc, mc + mr, mc)
+                quadraticTo(mc, mc, mc, mc + mr)
+                quadraticTo(mc, mc, mc - mr, mc)
+                quadraticTo(mc, mc, mc, mc - mr)
+                close()
+            }
+            drawPath(path = mainPath, brush = brush)
+
+            val scx = w * 0.80f
+            val scy = h * 0.80f
+            val sr = w * 0.16f
+            val subPath = Path().apply {
+                moveTo(scx, scy - sr)
+                quadraticTo(scx, scy, scx + sr, scy)
+                quadraticTo(scx, scy, scx, scy + sr)
+                quadraticTo(scx, scy, scx - sr, scy)
+                quadraticTo(scx, scy, scx, scy - sr)
+                close()
+            }
+            drawPath(path = subPath, brush = brush)
+        } else {
+            val cx = w / 2f
+            val cy = h / 2f
+            val path = Path().apply {
+                moveTo(cx, 0f)
+                quadraticTo(cx, cy, w, cy)
+                quadraticTo(cx, cy, cx, h)
+                quadraticTo(cx, cy, 0f, cy)
+                quadraticTo(cx, cy, cx, 0f)
+                close()
+            }
+            drawPath(path = path, brush = brush)
+        }
     }
 }
 

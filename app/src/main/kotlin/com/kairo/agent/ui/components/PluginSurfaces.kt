@@ -25,8 +25,8 @@ import com.kairo.agent.ui.theme.LocalSesl9Enabled
 internal fun pluginSurfaceColor(stock: Color): Color {
     if (!LocalSesl9Enabled.current) return stock
     return when (stock.toArgb().toLong() and 0xffffffffL) {
-        0xFF0E0F11L, 0xFF0B0C0EL -> LocalKairoPalette.current.bg
-        0xFF17191CL, 0xFF1E1F20L, 0xFF1E2025L, 0xFF17171AL -> LocalKairoPalette.current.surface
+        0xFF0E0F11L, 0xFF0B0C0EL, 0xFF010101L -> LocalKairoPalette.current.bg
+        0xFF17191CL, 0xFF1E1F20L, 0xFF1E2025L, 0xFF17171AL, 0xFF1A1D24L, 0xFF141518L -> LocalKairoPalette.current.surface
         0xFF232528L, 0xFF282A2CL -> MaterialTheme.colorScheme.surfaceContainerHigh
         else -> stock
     }

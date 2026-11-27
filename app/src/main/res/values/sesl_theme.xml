@@ -2,11 +2,11 @@
 <resources>
     <!-- Used only by native Views inside an enabled One UI plugin branch. -->
     <style name="Theme.Kairo.Sesl9" parent="Theme.AppCompat">
-        <item name="colorAccent">#0381FE</item>
-        <item name="colorControlActivated">#0381FE</item>
+        <item name="colorAccent">#387AFF</item>
+        <item name="colorControlActivated">#387AFF</item>
         <item name="android:fontFamily">@font/one_ui_sans</item>
         <item name="fontFamily">@font/one_ui_sans</item>
-        <item name="android:colorAccent">#0381FE</item>
+        <item name="android:colorAccent">#387AFF</item>
         <item name="android:progressBarStyleHorizontal">@style/Widget.AppCompat.ProgressBar.Horizontal</item>
         <item name="android:windowLightStatusBar">false</item>
     </style>

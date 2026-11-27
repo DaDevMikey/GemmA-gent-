@@ -21,7 +21,7 @@ fun Modifier.oneUiSurfaceRim(radius: Dp): Modifier {
         val width = 1.dp.toPx()
         if (size.width > width && size.height > width) {
             drawRoundRect(
-                brush = Brush.verticalGradient(listOf(Color.White.copy(alpha = 0.10f), Color.Transparent)),
+                brush = Brush.verticalGradient(listOf(Color.White.copy(alpha = 0.12f), Color.White.copy(alpha = 0.02f))),
                 topLeft = Offset(width / 2, width / 2),
                 size = Size(size.width - width, size.height - width),
                 cornerRadius = CornerRadius((radius.toPx() - width / 2).coerceAtLeast(0f)),

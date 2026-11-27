@@ -58,7 +58,7 @@
   <div class="card">
     <h1 id="status-title">Downloading Kairo…</h1>
     <p id="status-body">Fetching the latest release APK from GitHub. Your download will start automatically.</p>
-    <a class="btn" id="manual-link" href="https://github.com/DaDevMikey/Kairo/releases/download/v1.4.0/Kairo-v1.4.0-release.apk">Download APK</a>
+    <a class="btn" id="manual-link" href="https://github.com/DaDevMikey/Kairo/releases/download/v1.4.1/Kairo-v1.4.1.apk">Download APK</a>
     <div class="links">
       <a href="/">Back to Home</a> • <a href="https://github.com/DaDevMikey/Kairo/releases/latest">GitHub Releases</a> • <a href="https://t.me/kairoassistant">Telegram</a>
     </div>
@@ -66,7 +66,7 @@
 
   <script>
     (function() {
-      var fallbackUrl = "https://github.com/DaDevMikey/Kairo/releases/download/v1.4.0/Kairo-v1.4.0-release.apk";
+      var fallbackUrl = "https://github.com/DaDevMikey/Kairo/releases/download/v1.4.1/Kairo-v1.4.1.apk";
       var titleEl = document.getElementById("status-title");
       var bodyEl = document.getElementById("status-body");
       var linkEl = document.getElementById("manual-link");
@@ -93,11 +93,11 @@
           if (appApk && appApk.browser_download_url) {
             triggerDownload(appApk.browser_download_url, release.tag_name || "");
           } else {
-            triggerDownload(fallbackUrl, "v1.4.0");
+            triggerDownload(fallbackUrl, "v1.4.1");
           }
         })
         .catch(function() {
-          triggerDownload(fallbackUrl, "v1.4.0");
+          triggerDownload(fallbackUrl, "v1.4.1");
         });
     })();
   </script>

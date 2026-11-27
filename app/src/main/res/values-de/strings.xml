@@ -97,6 +97,12 @@
     <string name="setup_incompat_title">Gerät als inkompatibel gemeldet</string>
     <string name="setup_bypass_btn">Umgehen &amp; Trotzdem fortfahren</string>
     <string name="setup_final_sub">Gemma 4 ist lokal auf deiner NPU eingerichtet – ganz ohne Cloud-Telemetrie.</string>
+    <string name="setup_privacy_hint">Tippe oben auf das Kästchen, um zuzustimmen und fortzufahren</string>
+    <string name="setup_backend_auto">Auto (Empfohlen)</string>
+    <string name="setup_backend_aicore">Geräte-KI</string>
+    <string name="setup_backend_local">Lokaler Server</string>
+    <string name="setup_compat_locked_hint">Führe die Prüfung aus oder tippe oben auf „Überspringen &amp; fortfahren“.</string>
+    <string name="setup_perms_optional_hint">Alle Berechtigungen sind optional — du kannst sie überspringen und später in den Einstellungen aktivieren.</string>
 
     <string name="check_updates_startup_title">Beim Start nach Updates suchen</string>
     <string name="check_updates_startup_sub">Beim Öffnen von Kairo automatisch auf GitHub nach neuen Versionen suchen</string>

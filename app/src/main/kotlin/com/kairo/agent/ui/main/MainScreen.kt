@@ -594,7 +594,7 @@ internal fun MainScreenContent(
             ?.body
             ?.takeIf { it.isNotBlank() }
         val latestNotes = matchingRemoteNotes
-            ?: "## v$currentVersionName\n- Reversible One UI SESL9 theme plugin with live theme switching, One UI Sans typography, and blurred cover/home widgets (credit: ThatJoshGuy)\n- Predictive back gesture animation in Settings\n- Full multi-language localization across welcome greetings, example prompts, modes, setup, About, and Settings (EN, NL, DE, RU, ZH)\n- Redesigned 6-step Setup Wizard with directional animations\n- Dedicated About Kairo page with credits and links\n- Optional automatic update check on startup in Settings"
+            ?: "## v$currentVersionName\n- Smooth character-by-character blur reveal across multi-line & soft-wrapped chat responses\n- One UI 9.5 Design refresh matching Twidget tokens with Kairo Galaxy sparkle icon\n- Foolproof setup wizard with optional update-check toggle, clearer labels, and hints\n- Fixed GitHub updater APK asset selection when plugin APKs are attached"
         WhatsNewChangelogDialog(
             versionName = currentVersionName,
             changelogMarkdown = latestNotes,
@@ -2274,7 +2274,7 @@ private fun ConversationTurnItem(
 
         Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp), verticalAlignment = Alignment.Top) {
             GemmASparkleIcon(size = 22.dp, isAnimating = turn.isStreaming, modifier = sparkleModifier.padding(top = 2.dp))
-            Column(modifier = Modifier.weight(1f).animateContentSize(), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 AnimatedVisibility(
                     visible = turn.actionSummary != null,
                     enter = expandVertically() + fadeIn(),
