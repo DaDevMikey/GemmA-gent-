@@ -266,6 +266,8 @@
     <string name="about_credit_tribalfs_role">One UI 设计系统参考 (oneui-design)</string>
     <string name="about_link_website">官网与直接下载</string>
     <string name="about_link_website_sub">kairo.mikeyslabs.xyz</string>
+    <string name="about_link_telegram">Telegram 交流与支持群</string>
+    <string name="about_link_telegram_sub">t.me/kairoassistant</string>
     <string name="about_link_github">GitHub 源代码 (MIT)</string>
     <string name="about_link_github_sub">github.com/DaDevMikey/Kairo</string>
     <string name="about_link_releases">版本和插件</string>

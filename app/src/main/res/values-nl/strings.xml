@@ -266,6 +266,8 @@
     <string name="about_credit_tribalfs_role">One UI ontwerpsysteemreferentie (oneui-design)</string>
     <string name="about_link_website">Website &amp; Directe Downloads</string>
     <string name="about_link_website_sub">kairo.mikeyslabs.xyz</string>
+    <string name="about_link_telegram">Telegram Groep &amp; Support</string>
+    <string name="about_link_telegram_sub">t.me/kairoassistant</string>
     <string name="about_link_github">GitHub Broncode (MIT)</string>
     <string name="about_link_github_sub">github.com/DaDevMikey/Kairo</string>
     <string name="about_link_releases">Releases &amp; Plug-ins</string>

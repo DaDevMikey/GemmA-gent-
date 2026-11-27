@@ -266,6 +266,8 @@
     <string name="about_credit_tribalfs_role">Эталонная дизайн-система One UI (oneui-design)</string>
     <string name="about_link_website">Сайт и прямые загрузки</string>
     <string name="about_link_website_sub">kairo.mikeyslabs.xyz</string>
+    <string name="about_link_telegram">Группа Telegram и поддержка</string>
+    <string name="about_link_telegram_sub">t.me/kairoassistant</string>
     <string name="about_link_github">Исходный код на GitHub (MIT)</string>
     <string name="about_link_github_sub">github.com/DaDevMikey/Kairo</string>
     <string name="about_link_releases">Релизы и плагины</string>

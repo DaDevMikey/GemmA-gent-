@@ -29,6 +29,7 @@ import androidx.compose.material.icons.filled.Code
 import androidx.compose.material.icons.filled.Download
 import androidx.compose.material.icons.filled.Extension
 import androidx.compose.material.icons.filled.Favorite
+import androidx.compose.material.icons.filled.Forum
 import androidx.compose.material.icons.filled.Language
 import androidx.compose.material.icons.filled.Policy
 import com.kairo.agent.ui.components.KairoIcon as Icon
@@ -203,6 +204,9 @@ private fun AboutScreen(
                     )
                     AboutLinkRow(Icons.Default.Language, stringResource(R.string.about_link_website), stringResource(R.string.about_link_website_sub)) {
                         openUrl("https://kairo.mikeyslabs.xyz/")
+                    }
+                    AboutLinkRow(Icons.Default.Forum, stringResource(R.string.about_link_telegram), stringResource(R.string.about_link_telegram_sub)) {
+                        openUrl("https://t.me/kairoassistant")
                     }
                     AboutLinkRow(Icons.Default.Code, stringResource(R.string.about_link_github), stringResource(R.string.about_link_github_sub)) {
                         openUrl("https://github.com/DaDevMikey/Kairo")
