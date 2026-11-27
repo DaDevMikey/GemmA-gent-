@@ -37,6 +37,8 @@ import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -62,11 +64,12 @@ fun SettingsScreen(
     onOpenUrl: (String) -> Unit
 ) {
     BackHandler(onBack = onBack)
+    val palette = com.kairo.agent.ui.theme.LocalKairoPalette.current
 
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .background(Color(0xFF0B0C0E))
+            .background(palette.bg)
             .systemBarsPadding()
     ) {
         Row(
@@ -181,6 +184,109 @@ fun SettingsScreen(
 
             OutlinedButton(onClick = onReplayTour, modifier = Modifier.fillMaxWidth()) {
                 Text(stringResource(R.string.replay_tour), color = Color(0xFFE3E3E3))
+            }
+
+            OutlinedButton(
+                onClick = {
+                    onUpdateSettings(state.settings.copy(hasCompletedOnboarding = false))
+                    onBack()
+                },
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Text("Re-run Setup Wizard", color = palette.accent)
+            }
+
+            val ctx = androidx.compose.ui.platform.LocalContext.current
+            val plugins = androidx.compose.runtime.remember { com.kairo.agent.data.PluginManager.discoverPlugins(ctx) }
+            var pendingThemeReload by androidx.compose.runtime.remember {
+                androidx.compose.runtime.mutableStateOf<String?>(null)
+            }
+            var pendingLangInstant by androidx.compose.runtime.remember {
+                androidx.compose.runtime.mutableStateOf<com.kairo.agent.data.KairoPlugin?>(null)
+            }
+
+            pendingThemeReload?.let { pluginName ->
+                androidx.compose.material3.AlertDialog(
+                    onDismissRequest = { pendingThemeReload = null },
+                    containerColor = palette.surface,
+                    titleContentColor = Color(0xFFE3E3E3),
+                    textContentColor = Color(0xFF9AA0A6),
+                    title = { Text("Reload to Apply Theme?", fontWeight = FontWeight.SemiBold) },
+                    text = { Text("Kairo needs to reload to apply \"$pluginName\". Reload now?") },
+                    confirmButton = {
+                        Button(onClick = {
+                            pendingThemeReload = null
+                            (ctx as? android.app.Activity)?.recreate()
+                        }) { Text("Reload Now") }
+                    },
+                    dismissButton = {
+                        TextButton(onClick = { pendingThemeReload = null }) { Text("Later", color = Color(0xFF9AA0A6)) }
+                    }
+                )
+            }
+
+            pendingLangInstant?.let { langPlugin ->
+                val code = langPlugin.langCode ?: "en"
+                androidx.compose.material3.AlertDialog(
+                    onDismissRequest = { pendingLangInstant = null },
+                    containerColor = palette.surface,
+                    titleContentColor = Color(0xFFE3E3E3),
+                    textContentColor = Color(0xFF9AA0A6),
+                    title = { Text("Use ${langPlugin.name} Now?", fontWeight = FontWeight.SemiBold) },
+                    text = { Text("Would you like to switch Kairo's UI and AI response language to ${langPlugin.name} right now?") },
+                    confirmButton = {
+                        Button(onClick = {
+                            pendingLangInstant = null
+                            onUpdateSettings(state.settings.copy(appLanguage = code, preferredLanguage = code))
+                            com.kairo.agent.data.LocaleHelper.applyAppLanguage(ctx, code, recreateActivity = true)
+                        }) { Text("Use Now") }
+                    },
+                    dismissButton = {
+                        TextButton(onClick = { pendingLangInstant = null }) { Text("Enable Only", color = Color(0xFF9AA0A6)) }
+                    }
+                )
+            }
+
+            Surface(color = palette.surface, shape = RoundedCornerShape(palette.cornerDp.dp)) {
+                Column(modifier = Modifier.fillMaxWidth().padding(14.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Text("Plugins & Extensions", color = palette.accent, style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.SemiBold)
+                    if (plugins.isEmpty()) {
+                        Text(
+                            "No standalone Kairo plugin APKs installed. Install a theme, language, or tool plugin APK to extend Kairo.",
+                            color = Color(0xFF9AA0A6),
+                            style = MaterialTheme.typography.bodySmall
+                        )
+                    } else {
+                        plugins.forEach { plugin ->
+                            var isEnabled by androidx.compose.runtime.remember(plugin.packageName) {
+                                androidx.compose.runtime.mutableStateOf(
+                                    com.kairo.agent.data.PluginManager.isPluginEnabled(ctx, plugin)
+                                )
+                            }
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.SpaceBetween
+                            ) {
+                                Column(modifier = Modifier.weight(1f).padding(end = 8.dp)) {
+                                    Text("${plugin.name} (${plugin.type})", color = Color(0xFFE3E3E3), style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.Medium)
+                                    Text(plugin.description, color = Color(0xFF9AA0A6), style = MaterialTheme.typography.bodySmall)
+                                }
+                                Switch(
+                                    checked = isEnabled,
+                                    onCheckedChange = { checked ->
+                                        com.kairo.agent.data.PluginManager.setPluginEnabled(ctx, plugin, checked)
+                                        isEnabled = checked
+                                        when (plugin.type) {
+                                            "theme" -> pendingThemeReload = if (checked) plugin.name else "Default Theme"
+                                            "language" -> if (checked) pendingLangInstant = plugin
+                                        }
+                                    }
+                                )
+                            }
+                        }
+                    }
+                }
             }
 
             OutlinedButton(

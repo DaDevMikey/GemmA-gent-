@@ -597,8 +597,8 @@ internal fun MainScreenContent(
     val currentVersionName = pkgInfo?.versionName ?: "1.2.0"
     var showWhatsNewDialog by remember {
         val prefs = context.getSharedPreferences("kairo_ui_prefs", Context.MODE_PRIVATE)
-        val lastCode = prefs.getInt("last_seen_version_code", currentVersionCode)
-        val updated = currentVersionCode > lastCode && state.settings.hasCompletedOnboarding
+        val lastCode = prefs.getInt("last_seen_version_code", -1)
+        val updated = lastCode != currentVersionCode && state.settings.hasCompletedOnboarding
         mutableStateOf(updated)
     }
 
@@ -757,6 +757,7 @@ internal fun MainScreenContent(
     var drawerSearchQuery by remember { mutableStateOf("") }
     val listState = rememberLazyListState()
     val localContext = LocalContext.current
+    val palette = com.kairo.agent.ui.theme.LocalKairoPalette.current
 
     LaunchedEffect(partialTranscript) { if (partialTranscript.isNotEmpty()) draft = partialTranscript }
     LaunchedEffect(state.activeTurns.size, state.activeTurns.lastOrNull()?.response?.length) {
@@ -772,7 +773,7 @@ internal fun MainScreenContent(
         drawerState = drawerState,
         drawerContent = {
             ModalDrawerSheet(
-                drawerContainerColor = GeminiDrawerBg,
+                drawerContainerColor = palette.surface,
                 drawerContentColor = GeminiTextPrimary
             ) {
                 Column(
@@ -1016,6 +1017,7 @@ internal fun MainScreenContent(
         Box(
             modifier = modifier
                 .fillMaxSize()
+                .background(palette.bg)
                 .blur(liveBlur)
         ) {
             ReactiveAuroraBackground(
@@ -1487,7 +1489,7 @@ internal fun MainScreenContent(
                         .padding(horizontal = 14.dp, vertical = 10.dp)
                         .animatedAiBorder(isActive = state.isGenerating, cornerRadius = 28.dp),
                     shape = RoundedCornerShape(28.dp),
-                    color = GeminiPillBg
+                    color = palette.pill
                 ) {
                     Row(
                         modifier = Modifier.fillMaxWidth().padding(start = 6.dp, end = 8.dp, top = 6.dp, bottom = 6.dp),

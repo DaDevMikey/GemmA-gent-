@@ -183,21 +183,24 @@ fun GemmaAssistantSheet(
     )
 
     var isFullscreen by remember { mutableStateOf(false) }
-    val horizPad by animateDpAsState(
+    val horizPadRaw by animateDpAsState(
         targetValue = if (isFullscreen) 0.dp else 10.dp,
-        animationSpec = spring(dampingRatio = Spring.DampingRatioLowBouncy, stiffness = Spring.StiffnessMediumLow),
+        animationSpec = spring(dampingRatio = Spring.DampingRatioNoBouncy, stiffness = Spring.StiffnessMediumLow),
         label = "fs_hpad"
     )
-    val vertPad by animateDpAsState(
+    val vertPadRaw by animateDpAsState(
         targetValue = if (isFullscreen) 0.dp else 8.dp,
-        animationSpec = spring(dampingRatio = Spring.DampingRatioLowBouncy, stiffness = Spring.StiffnessMediumLow),
+        animationSpec = spring(dampingRatio = Spring.DampingRatioNoBouncy, stiffness = Spring.StiffnessMediumLow),
         label = "fs_vpad"
     )
-    val cornerRadius by animateDpAsState(
+    val cornerRadiusRaw by animateDpAsState(
         targetValue = if (isFullscreen) 18.dp else 28.dp,
-        animationSpec = spring(dampingRatio = Spring.DampingRatioLowBouncy, stiffness = Spring.StiffnessMediumLow),
+        animationSpec = spring(dampingRatio = Spring.DampingRatioNoBouncy, stiffness = Spring.StiffnessMediumLow),
         label = "fs_corner"
     )
+    val horizPad = horizPadRaw.coerceAtLeast(0.dp)
+    val vertPad = vertPadRaw.coerceAtLeast(0.dp)
+    val cornerRadius = cornerRadiusRaw.coerceAtLeast(0.dp)
     val sheetShape = RoundedCornerShape(cornerRadius)
     val targetBorderWidth = when {
         isListening -> (1.5f + (rmsDb / 12f) * 3.5f).dp
@@ -356,8 +359,8 @@ fun GemmaAssistantSheet(
                                 IconButton(onClick = onToggleMiniMode, modifier = Modifier.size(30.dp)) {
                                     Icon(Icons.Default.Compress, contentDescription = "Mini mode", tint = SecondaryText, modifier = Modifier.size(16.dp))
                                 }
-                                IconButton(onClick = { isFullscreen = !isFullscreen }, modifier = Modifier.size(30.dp)) {
-                                    Icon(Icons.Default.OpenInFull, contentDescription = "Fullscreen", tint = AccentBlue, modifier = Modifier.size(16.dp))
+                                IconButton(onClick = onOpenFullscreen, modifier = Modifier.size(30.dp)) {
+                                    Icon(Icons.Default.OpenInFull, contentDescription = "Open in full app", tint = AccentBlue, modifier = Modifier.size(16.dp))
                                 }
                             }
                         }

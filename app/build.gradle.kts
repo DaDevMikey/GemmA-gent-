@@ -13,8 +13,8 @@ android {
     applicationId = "com.kairo.agent"
     minSdk = 26
     targetSdk = 36
-    versionCode = 24
-    versionName = "1.2.3"
+    versionCode = 25
+    versionName = "1.3.0"
   }
 
   signingConfigs {

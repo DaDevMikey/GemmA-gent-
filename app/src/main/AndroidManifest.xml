@@ -35,6 +35,9 @@
         <intent>
             <action android:name="androidx.health.ACTION_SHOW_PERMISSIONS_RATIONALE" />
         </intent>
+        <intent>
+            <action android:name="com.kairo.agent.PLUGIN" />
+        </intent>
     </queries>
 
     <application

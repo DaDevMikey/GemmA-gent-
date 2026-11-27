@@ -1,0 +1,69 @@
+-- Merging decision tree log ---
+manifest
+ADDED from /home/mikey/Downloads/personal-repos/GemmA/chinese-lang-plugin/src/main/AndroidManifest.xml:2:1-19:12
+INJECTED from /home/mikey/Downloads/personal-repos/GemmA/chinese-lang-plugin/src/main/AndroidManifest.xml:2:1-19:12
+INJECTED from /home/mikey/Downloads/personal-repos/GemmA/chinese-lang-plugin/src/main/AndroidManifest.xml:2:1-19:12
+INJECTED from /home/mikey/Downloads/personal-repos/GemmA/chinese-lang-plugin/src/main/AndroidManifest.xml:2:1-19:12
+	package
+		INJECTED from /home/mikey/Downloads/personal-repos/GemmA/chinese-lang-plugin/src/main/AndroidManifest.xml
+	android:versionName
+		INJECTED from /home/mikey/Downloads/personal-repos/GemmA/chinese-lang-plugin/src/main/AndroidManifest.xml
+	android:versionCode
+		INJECTED from /home/mikey/Downloads/personal-repos/GemmA/chinese-lang-plugin/src/main/AndroidManifest.xml
+	xmlns:android
+		ADDED from /home/mikey/Downloads/personal-repos/GemmA/chinese-lang-plugin/src/main/AndroidManifest.xml:2:11-69
+application
+ADDED from /home/mikey/Downloads/personal-repos/GemmA/chinese-lang-plugin/src/main/AndroidManifest.xml:3:5-18:19
+INJECTED from /home/mikey/Downloads/personal-repos/GemmA/chinese-lang-plugin/src/main/AndroidManifest.xml:3:5-18:19
+	android:extractNativeLibs
+		INJECTED from /home/mikey/Downloads/personal-repos/GemmA/chinese-lang-plugin/src/main/AndroidManifest.xml
+	android:label
+		ADDED from /home/mikey/Downloads/personal-repos/GemmA/chinese-lang-plugin/src/main/AndroidManifest.xml:5:9-36
+	android:allowBackup
+		ADDED from /home/mikey/Downloads/personal-repos/GemmA/chinese-lang-plugin/src/main/AndroidManifest.xml:4:9-35
+service#com.kairo.plugin.zh.ChineseLangPluginService
+ADDED from /home/mikey/Downloads/personal-repos/GemmA/chinese-lang-plugin/src/main/AndroidManifest.xml:6:9-17:19
+	android:label
+		ADDED from /home/mikey/Downloads/personal-repos/GemmA/chinese-lang-plugin/src/main/AndroidManifest.xml:9:13-44
+	android:exported
+		ADDED from /home/mikey/Downloads/personal-repos/GemmA/chinese-lang-plugin/src/main/AndroidManifest.xml:8:13-36
+	android:name
+		ADDED from /home/mikey/Downloads/personal-repos/GemmA/chinese-lang-plugin/src/main/AndroidManifest.xml:7:13-53
+intent-filter#action:name:com.kairo.agent.PLUGIN
+ADDED from /home/mikey/Downloads/personal-repos/GemmA/chinese-lang-plugin/src/main/AndroidManifest.xml:10:13-12:29
+action#com.kairo.agent.PLUGIN
+ADDED from /home/mikey/Downloads/personal-repos/GemmA/chinese-lang-plugin/src/main/AndroidManifest.xml:11:17-65
+	android:name
+		ADDED from /home/mikey/Downloads/personal-repos/GemmA/chinese-lang-plugin/src/main/AndroidManifest.xml:11:25-62
+meta-data#kairo.plugin.type
+ADDED from /home/mikey/Downloads/personal-repos/GemmA/chinese-lang-plugin/src/main/AndroidManifest.xml:13:13-84
+	android:value
+		ADDED from /home/mikey/Downloads/personal-repos/GemmA/chinese-lang-plugin/src/main/AndroidManifest.xml:13:57-81
+	android:name
+		ADDED from /home/mikey/Downloads/personal-repos/GemmA/chinese-lang-plugin/src/main/AndroidManifest.xml:13:24-56
+meta-data#kairo.plugin.name
+ADDED from /home/mikey/Downloads/personal-repos/GemmA/chinese-lang-plugin/src/main/AndroidManifest.xml:14:13-91
+	android:value
+		ADDED from /home/mikey/Downloads/personal-repos/GemmA/chinese-lang-plugin/src/main/AndroidManifest.xml:14:57-88
+	android:name
+		ADDED from /home/mikey/Downloads/personal-repos/GemmA/chinese-lang-plugin/src/main/AndroidManifest.xml:14:24-56
+meta-data#kairo.plugin.description
+ADDED from /home/mikey/Downloads/personal-repos/GemmA/chinese-lang-plugin/src/main/AndroidManifest.xml:15:13-156
+	android:value
+		ADDED from /home/mikey/Downloads/personal-repos/GemmA/chinese-lang-plugin/src/main/AndroidManifest.xml:15:64-153
+	android:name
+		ADDED from /home/mikey/Downloads/personal-repos/GemmA/chinese-lang-plugin/src/main/AndroidManifest.xml:15:24-63
+meta-data#kairo.plugin.lang_code
+ADDED from /home/mikey/Downloads/personal-repos/GemmA/chinese-lang-plugin/src/main/AndroidManifest.xml:16:13-83
+	android:value
+		ADDED from /home/mikey/Downloads/personal-repos/GemmA/chinese-lang-plugin/src/main/AndroidManifest.xml:16:62-80
+	android:name
+		ADDED from /home/mikey/Downloads/personal-repos/GemmA/chinese-lang-plugin/src/main/AndroidManifest.xml:16:24-61
+uses-sdk
+INJECTED from /home/mikey/Downloads/personal-repos/GemmA/chinese-lang-plugin/src/main/AndroidManifest.xml reason: use-sdk injection requested
+INJECTED from /home/mikey/Downloads/personal-repos/GemmA/chinese-lang-plugin/src/main/AndroidManifest.xml
+INJECTED from /home/mikey/Downloads/personal-repos/GemmA/chinese-lang-plugin/src/main/AndroidManifest.xml
+	android:targetSdkVersion
+		INJECTED from /home/mikey/Downloads/personal-repos/GemmA/chinese-lang-plugin/src/main/AndroidManifest.xml
+	android:minSdkVersion
+		INJECTED from /home/mikey/Downloads/personal-repos/GemmA/chinese-lang-plugin/src/main/AndroidManifest.xml

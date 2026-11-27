@@ -185,16 +185,12 @@ class AssistantOverlayActivity : ComponentActivity() {
                         }
                         com.kairo.agent.data.OverlayHandoffHolder.setTurns(turnsToHandoff)
                         runCatching {
-                            startActivity(
-                                Intent(this, MainActivity::class.java).apply {
-                                    addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_SINGLE_TOP)
-                                    putExtra("from_overlay_handoff", true)
-                                }
-                            )
+                            val launch = packageManager.getLaunchIntentForPackage(packageName)
+                                ?: Intent(this, MainActivity::class.java)
+                            launch.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_SINGLE_TOP)
+                            startActivity(launch)
                         }
-                        android.os.Handler(android.os.Looper.getMainLooper()).postDelayed({
-                            if (!isFinishing && !isDestroyed) finish()
-                        }, 240L)
+                        finish()
                     },
                     onDismiss = { finish() }
                 )
@@ -311,9 +307,9 @@ class AssistantOverlayActivity : ComponentActivity() {
     }
 
     override fun onDestroy() {
-        activeGenerationJob?.cancel()
-        voiceController.release()
-        engine.shutdown()
+        runCatching { activeGenerationJob?.cancel() }
+        runCatching { voiceController.release() }
+        runCatching { engine.shutdown() }
         super.onDestroy()
     }
 

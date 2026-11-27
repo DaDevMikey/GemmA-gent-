@@ -138,21 +138,23 @@ class CompatibilityChecker(private val context: Context) {
     private fun isSocAllowlisted(socInfo: String): Boolean {
         val upper = socInfo.uppercase()
         val allowlist = listOf(
-            "SM8750", // Snapdragon 8 Elite
-            "SM8850", // Snapdragon 8 Elite 2 / Gen 5
-            "SM8950", // Future 8-series
-            "8 ELITE",
-            "SUN", // SM8750 board/platform codename
-            "TENSOR G5",
-            "TENSOR G6",
-            "LAGUNA", // Tensor G5 codename
-            "MALIBU",
-            "EXYNOS 2500",
-            "EXYNOS2500",
-            "S5E9955", // Exynos 2500
-            "EXYNOS 2600",
-            "EXYNOS2600",
-            "S5E9965" // Exynos 2600
+            // Qualcomm Snapdragon 8 Gen 3, 8 Elite, 8 Elite 2+
+            "SM8650", "PINEAPPLE", "8 GEN 3",
+            "SM8750", "SUN", "8 ELITE",
+            "SM8850", "SM8950",
+            // Google Tensor G3, G4, G5, G6+
+            "TENSOR G3", "ZUMA",
+            "TENSOR G4", "ZUMAPRO",
+            "TENSOR G5", "LAGUNA",
+            "TENSOR G6", "MALIBU",
+            // Samsung Exynos 2400, 2500, 2600+
+            "EXYNOS 2400", "EXYNOS2400", "S5E9945",
+            "EXYNOS 2500", "EXYNOS2500", "S5E9955",
+            "EXYNOS 2600", "EXYNOS2600", "S5E9965",
+            // MediaTek Dimensity 9300, 9400, 9500+
+            "MT6989", "DIMENSITY 9300",
+            "MT6991", "DIMENSITY 9400",
+            "MT6993", "DIMENSITY 9500"
         )
         return allowlist.any { upper.contains(it) }
     }

@@ -32,4 +32,4 @@ plugins {
 
 rootProject.name = "GemmA"
 
-include(":app")
+include(":app", ":oneui-theme-plugin", ":chinese-lang-plugin")

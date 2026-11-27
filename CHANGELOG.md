@@ -1,5 +1,13 @@
 # Changelog
 
+## v1.3.0
+- **Standalone Plugin System (`com.kairo.agent.PLUGIN`)**: Installable, non-launchable extension APKs for Themes, Language Packs, and Tools (see `PLUGINS.md`)
+- **One UI Design Theme Plugin (`:oneui-theme-plugin`)**: Live OLED black + `#0381FE` One UI Blue + `oneui-icons` squircle theme (credits: `tribalfs/oneui-design` & `thatjoshguy67/oneui-icons`) with reload confirmation
+- **Chinese Language Pack Plugin (`:chinese-lang-plugin`)**: Reference standalone language pack APK adding Simplified Chinese (`zh`) UI & AI response support with instant activation
+- **Expanded SoC Allowlist + AICore Developer Tip**: Added Snapdragon 8 Gen 3+, Exynos 2400/2500/2600+, Tensor G3–G6+, and MediaTek Dimensity 9300–9500+, plus Developer Options AICore setup guidance
+- **Popup Fullscreen Fix**: Fixed negative-padding crash (`GemmaAssistantSheet`) and wired the fullscreen button directly to open the active chat in the full app
+- **Settings & Post-Update UX**: Restored **Re-run Setup Wizard** in full-screen `SettingsScreen` and fixed the post-update **What's New** changelog dialog
+
 ## v1.2.3
 - Converted Settings into its own full-screen `SettingsScreen` instead of a cluttered bottom-sheet popup
 - Decluttered the `Kairo • Powered by Gemma 4` sheet to focus on model/engine selection and Preferred Language (moving Updates & Release Notes to Settings)
