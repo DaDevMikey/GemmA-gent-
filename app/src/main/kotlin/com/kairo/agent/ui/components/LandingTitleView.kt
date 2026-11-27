@@ -57,7 +57,7 @@ internal class LandingTitleView @JvmOverloads constructor(
         setWillNotDraw(false)
         importantForAccessibility = IMPORTANT_FOR_ACCESSIBILITY_NO
         lettersLayer.updatePaint(titlePaint)
-        if (!usesHardwareBlur) addView(lettersLayer, LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT))
+        addView(lettersLayer, LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT))
         setTitle(title)
     }
 
@@ -328,10 +328,10 @@ internal class LandingTitleView @JvmOverloads constructor(
     private fun setGeometry(value: TitleGeometry) {
         if (geometry == value) return
         geometry = value
-        if (usesHardwareBlur) {
-            rebuildHardwareGlyphLayers()
-        } else {
+        if (streamingMode || !usesHardwareBlur) {
             lettersLayer.geometry = geometry
+        } else {
+            rebuildHardwareGlyphLayers()
         }
         updateAnimationFrame()
     }
@@ -379,17 +379,26 @@ internal class LandingTitleView @JvmOverloads constructor(
     private fun updateAnimationFrame() {
         val totalDuration = if (geometry.glyphs.isEmpty()) 0f else geometry.glyphs.maxOf { it.startTimeMs } + activeMovementMs()
         settled = elapsedMs >= totalDuration
-        for (index in 0 until childCount) getChildAt(index).visibility = if (settled) INVISIBLE else VISIBLE
+        if (streamingMode || !usesHardwareBlur) {
+            lettersLayer.visibility = if (settled) INVISIBLE else VISIBLE
+        } else {
+            for (index in 0 until childCount) {
+                val child = getChildAt(index)
+                if (child !== lettersLayer) {
+                    child.visibility = if (settled) INVISIBLE else VISIBLE
+                }
+            }
+        }
         invalidate()
         if (settled) return
-        if (usesHardwareBlur) {
+        if (streamingMode || !usesHardwareBlur) {
+            lettersLayer.elapsedMs = elapsedMs
+            lettersLayer.invalidate()
+        } else {
             val distance = activeSlideDistance()
             hardwareGlyphLayers.forEach { layer ->
                 layer.updateAnimation(elapsedMs, distance)
             }
-        } else {
-            lettersLayer.elapsedMs = elapsedMs
-            lettersLayer.invalidate()
         }
     }
 
